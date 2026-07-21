@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Outer hexagon -->
+  <polygon points="24,3 44,14 44,34 24,45 4,34 4,14" fill="none" stroke="#3B82F6" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Stylized "M" inside -->
+  <path d="M14 33V18L20 28L24 22L28 28L34 18V33" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Accent dot -->
+  <circle cx="24" cy="14" r="2" fill="#06D6A0"/>
+</svg>

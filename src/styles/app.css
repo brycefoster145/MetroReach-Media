@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #3B82F6;
+  --color-brand-primary-glow: #60A5FA;
+  --color-brand-accent: #06D6A0;
+  --color-brand-accent-glow: #34D399;
+  --color-bg-root: #060912;
+  --color-bg-surface: #0D1117;
+  --color-bg-surface-raised: #141B24;
+  --color-bg-surface-high: #1B2433;
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-border-subtle: #1E293B;
+  --color-border-emphasis: #334155;
+  --color-success: #06D6A0;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    background-color: #060912;
+    color: #F1F5F9;
+  }
+
+  body {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Scroll animations */
+.animate-hidden {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-hidden--sm {
+  transform: translateY(16px);
+}
+
+.animate-hidden--lg {
+  transform: translateY(32px);
+}
+
+.animate-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Card hover */
+.card-hover {
+  transition: all 200ms ease-out;
+}
+.card-hover:hover {
+  border-color: #334155;
+  background-color: #141B24;
+  transform: translateY(-2px);
+}
+
+.featured-card-hover {
+  transition: all 200ms ease-out;
+}
+.featured-card-hover:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Platform icon sequence */
+@keyframes platform-illuminate {
+  0%, 100% { color: #64748B; }
+  40% { color: #3B82F6; }
+  60% { color: #06D6A0; }
+}
+
+@keyframes platform-breathing {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes live-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+.platform-icon-animate {
+  animation: platform-illuminate 0.7s ease-out forwards;
+}
+
+.platform-breathing {
+  animation: platform-breathing 2s ease-in-out infinite;
+}
+
+.live-pulse-ring {
+  animation: live-pulse-ring 2s ease-out infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #60A5FA, #3B82F6, #06D6A0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* FAQ accordion */
+.faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease-out;
+}
+.faq-answer.open {
+  grid-template-rows: 1fr;
+}
+.faq-answer > div {
+  overflow: hidden;
+}
+
+/* Mobile nav backdrop */
+.nav-backdrop {
+  background: rgba(6, 9, 18, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

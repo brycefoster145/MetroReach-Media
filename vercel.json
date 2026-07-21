@@ -1,0 +1,5 @@
+{
+  "buildCommand": "bash build-vercel.sh",
+  "installCommand": "bun install",
+  "framework": null
+}
