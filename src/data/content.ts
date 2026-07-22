@@ -382,6 +382,7 @@ export const footer = {
 };
 
 export const notFound = {
-  headline: "Looks like this page took the day off. Our marketing doesn't.",
+  headline: "Page not found.",
+  subheadline: "But our team of specialists is ready to help.",
   cta: "Back to homepage",
 };
