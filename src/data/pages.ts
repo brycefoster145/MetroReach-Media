@@ -35,48 +35,71 @@ export const aboutPage = {
 };
 
 export const servicesPage = {
-  headline: "Everything your marketing needs. Nothing you don't.",
+  headline: "Premium Social Media Marketing",
   subheadline:
-    "Organic content. Paid ad management. Strategy and creative projects. All managed by a dedicated team of specialists.",
-  blocks: [
+    "A full team of specialists managing every dimension of your social presence — organic, paid, strategy, analytics, and community. No gaps. No excuses.",
+  services: [
     {
-      name: "Organic Social Management",
-      description:
-        "Strategy, content creation, posting, and community management across your chosen platforms. We build your brand presence day by day — educational content, social proof, behind-the-scenes, offers — on a consistent schedule that algorithms reward and audiences trust.",
-      details: [
-        "Platform-native content for Facebook, Instagram, TikTok, LinkedIn, X, YouTube",
-        "Custom content calendar built around your business rhythms",
-        "Brand voice development and visual direction",
-        "Community engagement and response management",
-        "Monthly content performance reports",
+      icon: "Article",
+      name: "Organic Content Management",
+      bullets: [
+        "Platform-native content for Facebook, Instagram, TikTok, LinkedIn, X, and YouTube",
+        "Custom content calendar aligned with your business goals and seasonality",
+        "Brand voice development, visual direction, and content guidelines",
+        "Consistent posting schedule that algorithms reward and audiences trust",
       ],
     },
     {
-      name: "Paid Ad Management",
-      description:
-        "Full-service campaign management from strategy to creative to optimization. We build campaigns that turn ad spend into qualified leads — not just impressions.",
-      details: [
-        "Campaign strategy and audience architecture",
-        "Ad creative (static, carousel, video scripts, YouTube pre-roll)",
-        "Continuous A/B testing and creative refresh",
-        "Bid, budget, and targeting optimization",
-        "Live performance dashboards with CPL and ROAS tracking",
-        "Platforms: Meta (FB + IG), TikTok, Google (Search + Display + YouTube), LinkedIn, X",
+      icon: "Target",
+      name: "Paid Advertising",
+      bullets: [
+        "Full-service campaign management across Meta, TikTok, Google, LinkedIn, and X",
+        "Ad creative — static, carousel, video scripts, and YouTube pre-roll",
+        "Continuous A/B testing, bid optimization, and audience refinement",
+        "Live performance dashboards with real-time CPL and ROAS tracking",
       ],
     },
     {
-      name: "Strategy & Creative Projects",
-      description:
-        "Not every engagement needs a monthly retainer. We offer project-based work for brand positioning, funnel architecture, campaign launches, and creative sprints.",
-      details: [
-        "Brand positioning and messaging frameworks",
-        "Funnel audit and architecture",
-        "Campaign launch packages (creative + strategy + initial management)",
-        "Content sprints (30/60/90 days of content in one delivery)",
+      icon: "Brain",
+      name: "Social Strategy",
+      bullets: [
+        "Competitive landscape analysis and market positioning",
+        "Audience research, segmentation, and platform selection",
+        "Content pillar architecture and messaging frameworks",
+        "Monthly strategy reviews with performance-driven adjustments",
+      ],
+    },
+    {
+      icon: "ChartLineUp",
+      name: "Analytics & Reporting",
+      bullets: [
+        "Live dashboards with CPL, ROAS, engagement, and attribution tracking",
+        "Weekly performance summaries and monthly deep-dive reports",
+        "Actionable insights surfaced by a dedicated performance analyst",
+        "Transparent metrics — no vanity numbers, no hidden slippage",
+      ],
+    },
+    {
+      icon: "ChatCircleText",
+      name: "Community Management",
+      bullets: [
+        "Daily monitoring of comments, DMs, and brand mentions across all platforms",
+        "Prompt, on-brand responses that build trust and engagement",
+        "Review management and reputation monitoring",
+        "No customer interaction goes unanswered — period",
       ],
     },
   ],
-  cta: "See what dedicated marketing looks like.",
+  platforms: [
+    "Facebook",
+    "Instagram",
+    "TikTok",
+    "Google",
+    "YouTube",
+    "LinkedIn",
+    "X",
+  ],
+  cta: "See what a full marketing team can do.",
 };
 
 export const pricingPage = {
@@ -145,49 +168,41 @@ export const pricingPage = {
 };
 
 export const contactPage = {
-  headline: "Let's talk.",
+  headline: "Let's Build Your Pipeline",
   subheadline:
-    "Tell us about your business. We'll tell you if we can help — honestly, no pitch deck attached.",
+    "Tell us about your business and what you need. We'll tell you honestly whether we can help — and exactly how.",
+  contactInfo: {
+    email: "hello@metroreachagency.com",
+    phone: "(555) 555-5555",
+    location: "Austin, TX — serving clients nationwide",
+  },
+  serviceOptions: [
+    "Organic Content Management",
+    "Paid Advertising",
+    "Social Strategy",
+    "Analytics & Reporting",
+    "Community Management",
+    "Full-Service (All of the Above)",
+    "Not Sure Yet",
+  ],
   fields: [
-    { name: "fullName", label: "Full name", type: "text", placeholder: "Your name", required: true },
-    { name: "businessName", label: "Business name", type: "text", placeholder: "Your company", required: true },
+    { name: "fullName", label: "Name", type: "text", placeholder: "Your full name", required: true },
+    { name: "email", label: "Email", type: "email", placeholder: "you@company.com", required: true },
+    { name: "company", label: "Company", type: "text", placeholder: "Your company name", required: true },
     {
-      name: "industry",
-      label: "Industry",
+      name: "serviceInterest",
+      label: "Service Interest",
       type: "select",
-      placeholder: "Select your industry",
-      required: true,
-      options: ["Contractor", "Med Spa", "Real Estate", "Auto Shop", "Clinic", "Salon", "Other"],
-    },
-    {
-      name: "email",
-      label: "Email",
-      type: "email",
-      placeholder: "you@company.com",
+      placeholder: "Select a service",
       required: true,
     },
     {
-      name: "phone",
-      label: "Phone (optional)",
-      type: "tel",
-      placeholder: "(555) 555-5555",
-      required: false,
-    },
-    {
-      name: "frustration",
-      label: "What's your biggest marketing frustration right now?",
+      name: "message",
+      label: "Message",
       type: "textarea",
       placeholder:
-        "E.g., \"I'm spending money on ads and not seeing leads\" or \"I don't know where to start\"",
+        "Tell us about your business, your goals, and what you're looking for in a marketing partner.",
       required: true,
-    },
-    {
-      name: "budget",
-      label: "Monthly marketing budget range",
-      type: "select",
-      placeholder: "Select your budget range",
-      required: true,
-      options: ["Under $1,500", "$1,500–$3,000", "$3,000–$5,500", "$5,500+", "Not sure yet"],
     },
   ],
   nextSteps: [
@@ -195,14 +210,13 @@ export const contactPage = {
     {
       step: 2,
       label:
-        "If we're a fit, we'll set up a 30-minute strategy call to dig into your goals. If we're not, we'll tell you honestly, and point you toward someone who can help.",
+        "If there's a fit, we'll set up a 30-minute strategy call. If not, we'll tell you honestly and point you toward someone who can help.",
     },
     {
       step: 3,
       label: "No hard sell. No canned follow-ups. Straight answers from real marketers who want to earn your business.",
     },
   ],
-  directEmail: "hello@metroreachagency.com",
   confirmation: "Thanks — we'll get back to you within one business day. No autoresponder spam, we promise.",
 };
 
@@ -227,9 +241,9 @@ export const demoPage = {
 };
 
 export const caseStudiesPage = {
-  headline: "Results, not promises.",
+  headline: "Results That Speak for Themselves",
   subheadline:
-    "Three businesses. Three industries. One thing in common: they turned on the engine and their pipeline changed.",
+    "Three businesses. Three industries. One thing in common: they trusted MetroReach Media with their pipeline — and it paid off.",
   studies: [
     {
       name: "Ridgeway Heating & Cooling",
