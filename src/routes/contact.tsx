@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { CheckCircle, WarningCircle, Spinner, Envelope } from "@phosphor-icons/react";
+import { CheckCircle, WarningCircle, Spinner, Envelope, Phone, MapPin } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
@@ -11,17 +11,15 @@ import { sendTelegramMessage } from "~/lib/telegram";
 const submitContact = createServerFn({ method: "POST" })
   .validator((data: unknown) => {
     const d = data as Record<string, string>;
-    if (!d.fullName || !d.businessName || !d.industry || !d.email || !d.frustration || !d.budget) {
+    if (!d.fullName || !d.email || !d.company || !d.serviceInterest || !d.message) {
       throw new Error("Missing required fields");
     }
     return d as {
       fullName: string;
-      businessName: string;
-      industry: string;
       email: string;
-      phone: string;
-      frustration: string;
-      budget: string;
+      company: string;
+      serviceInterest: string;
+      message: string;
     };
   })
   .handler(async ({ data }) => {
@@ -34,8 +32,7 @@ const submitContact = createServerFn({ method: "POST" })
       source: "contact-page",
       timestamp: new Date().toISOString(),
     };
-    
-    // Read existing leads, append new one, write back
+
     let leads: typeof lead[] = [];
     try {
       const raw = fs.readFileSync(LEADS_FILE, "utf-8");
@@ -51,13 +48,11 @@ const submitContact = createServerFn({ method: "POST" })
     lines.push("🚀 <b>New Lead — MetroReach Media</b>");
     lines.push("");
     lines.push(`Name: ${data.fullName}`);
-    lines.push(`Business: ${data.businessName}`);
-    lines.push(`Industry: ${data.industry}`);
     lines.push(`Email: ${data.email}`);
-    if (data.phone) lines.push(`Phone: ${data.phone}`);
-    lines.push(`Budget: ${data.budget}`);
+    lines.push(`Company: ${data.company}`);
+    lines.push(`Service Interest: ${data.serviceInterest}`);
     lines.push("");
-    lines.push(`<b>Message:</b> ${data.frustration}`);
+    lines.push(`<b>Message:</b> ${data.message}`);
     lines.push("");
     lines.push(`<a href="https://7d5924e3a6715d74efa480bc8bb2da91.ctonew.app/leads">View all leads →</a>`);
     sendTelegramMessage(lines.join("\n")).catch(() => {
@@ -73,12 +68,10 @@ export const Route = createFileRoute("/contact")({
 
 type FormData = {
   fullName: string;
-  businessName: string;
-  industry: string;
   email: string;
-  phone: string;
-  frustration: string;
-  budget: string;
+  company: string;
+  serviceInterest: string;
+  message: string;
 };
 
 type FormErrors = Partial<Record<keyof FormData, string>>;
@@ -86,12 +79,10 @@ type FormErrors = Partial<Record<keyof FormData, string>>;
 function Contact() {
   const [form, setForm] = useState<FormData>({
     fullName: "",
-    businessName: "",
-    industry: "",
     email: "",
-    phone: "",
-    frustration: "",
-    budget: "",
+    company: "",
+    serviceInterest: "",
+    message: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
@@ -99,13 +90,12 @@ function Contact() {
   function validate(): FormErrors {
     const e: FormErrors = {};
     if (!form.fullName.trim()) e.fullName = "Name is required";
-    if (!form.businessName.trim()) e.businessName = "Business name is required";
-    if (!form.industry) e.industry = "Industry is required";
     if (!form.email.trim()) e.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = "Enter a valid email";
-    if (!form.frustration.trim()) e.frustration = "Tell us what's frustrating you";
-    if (!form.budget) e.budget = "Budget range is required";
+    if (!form.company.trim()) e.company = "Company is required";
+    if (!form.serviceInterest) e.serviceInterest = "Please select a service";
+    if (!form.message.trim()) e.message = "Message is required";
     return e;
   }
 
@@ -135,8 +125,6 @@ function Contact() {
     }
   }
 
-  const fieldMeta = contactPage.fields;
-
   return (
     <section className="py-24 bg-bg-root min-h-dvh">
       <Container>
@@ -145,139 +133,239 @@ function Contact() {
           description={contactPage.subheadline}
         />
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16">
-          {/* Left: text */}
-          <div>
-            <h3 className="text-lg font-semibold font-heading text-text-primary mb-4">
-              What happens next
-            </h3>
-            <ol className="space-y-4">
-              {contactPage.nextSteps.map((step) => (
-                <li
-                  key={step.step}
-                  className="flex items-start gap-4 text-text-secondary"
-                >
-                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-primary/10 text-brand-primary text-sm font-semibold flex items-center justify-center">
-                    {step.step}
-                  </span>
-                  <span className="text-sm leading-relaxed pt-1">{step.label}</span>
-                </li>
-              ))}
-            </ol>
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-16">
+          {/* Left: Contact Info Panel */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl bg-bg-surface border border-border-subtle p-8 lg:p-10">
+              <h3 className="text-lg font-semibold font-heading text-text-primary mb-6">
+                Get in touch
+              </h3>
 
-            <div className="mt-10 flex items-center gap-3 text-text-muted">
-              <Envelope size={20} />
-              <a
-                href={`mailto:${contactPage.directEmail}`}
-                className="text-sm text-text-secondary hover:text-brand-primary transition-colors"
-              >
-                {contactPage.directEmail}
-              </a>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center gap-3 text-text-secondary">
+                  <Envelope size={20} weight="duotone" className="text-brand-primary flex-shrink-0" />
+                  <a
+                    href={`mailto:${contactPage.contactInfo.email}`}
+                    className="text-sm hover:text-brand-primary transition-colors"
+                  >
+                    {contactPage.contactInfo.email}
+                  </a>
+                </div>
+                <div className="flex items-center gap-3 text-text-secondary">
+                  <Phone size={20} weight="duotone" className="text-brand-primary flex-shrink-0" />
+                  <span className="text-sm">{contactPage.contactInfo.phone}</span>
+                </div>
+                <div className="flex items-center gap-3 text-text-secondary">
+                  <MapPin size={20} weight="duotone" className="text-brand-primary flex-shrink-0" />
+                  <span className="text-sm">{contactPage.contactInfo.location}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-border-subtle pt-6">
+                <h4 className="text-sm font-semibold font-heading text-text-primary mb-4">
+                  What happens next
+                </h4>
+                <ol className="space-y-4">
+                  {contactPage.nextSteps.map((step) => (
+                    <li
+                      key={step.step}
+                      className="flex items-start gap-3 text-text-secondary"
+                    >
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-semibold flex items-center justify-center">
+                        {step.step}
+                      </span>
+                      <span className="text-sm leading-relaxed">{step.label}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           </div>
 
-          {/* Right: form */}
-          {status === "success" ? (
-            <div className="flex flex-col items-center justify-center text-center gap-4 py-12">
-              <CheckCircle size={48} weight="duotone" className="text-brand-accent" />
-              <p className="text-lg font-semibold text-text-primary">
-                Message sent
-              </p>
-              <p className="text-sm text-text-secondary max-w-sm">
-                {contactPage.confirmation}
-              </p>
-            </div>
-          ) : (
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-5 bg-bg-surface border border-border-subtle rounded-2xl p-8"
-              noValidate
-            >
-              {status === "error" && (
-                <div className="flex items-center gap-2 text-sm text-error bg-error/10 rounded-lg px-4 py-3">
-                  <WarningCircle size={18} />
-                  Something went wrong. Please try again or email us directly.
-                </div>
-              )}
+          {/* Right: Contact Form */}
+          <div className="lg:col-span-3">
+            {status === "success" ? (
+              <div className="flex flex-col items-center justify-center text-center gap-4 py-16 bg-bg-surface border border-border-subtle rounded-2xl">
+                <CheckCircle size={48} weight="duotone" className="text-brand-accent" />
+                <p className="text-lg font-semibold text-text-primary">
+                  Message sent
+                </p>
+                <p className="text-sm text-text-secondary max-w-sm">
+                  {contactPage.confirmation}
+                </p>
+              </div>
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-5 bg-bg-surface border border-border-subtle rounded-2xl p-8 lg:p-10"
+                noValidate
+              >
+                {status === "error" && (
+                  <div className="flex items-center gap-2 text-sm text-error bg-error/10 rounded-lg px-4 py-3">
+                    <WarningCircle size={18} />
+                    Something went wrong. Please try again or email us directly.
+                  </div>
+                )}
 
-              {fieldMeta.map((field) => {
-                const name = field.name as keyof FormData;
-                const isTextarea = field.type === "textarea";
-                const isSelect = field.type === "select";
-                const Tag = isTextarea ? "textarea" : "input";
-
-                return (
-                  <div key={field.name}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Name */}
+                  <div>
                     <label
-                      htmlFor={field.name}
+                      htmlFor="fullName"
                       className="block text-sm font-medium text-text-primary mb-1.5"
                     >
-                      {field.label}
-                      {field.required && (
-                        <span className="text-brand-accent ml-1">*</span>
-                      )}
+                      Name <span className="text-brand-accent">*</span>
                     </label>
-                    {isSelect ? (
-                      <select
-                        id={field.name}
-                        name={field.name}
-                        value={form[name]}
-                        onChange={handleChange}
-                        required={field.required}
-                        className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
-                          errors[name]
-                            ? "border-error"
-                            : "border-border-subtle focus:border-brand-primary"
-                        } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
-                      >
-                        <option value="">{field.placeholder}</option>
-                        {"options" in field &&
-                          field.options.map((opt: string) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                      </select>
-                    ) : (
-                      <Tag
-                        id={field.name}
-                        name={field.name}
-                        type={isTextarea ? undefined : field.type}
-                        placeholder={field.placeholder}
-                        value={form[name]}
-                        onChange={handleChange}
-                        required={field.required}
-                        rows={isTextarea ? 4 : undefined}
-                        className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
-                          errors[name]
-                            ? "border-error"
-                            : "border-border-subtle focus:border-brand-primary"
-                        } text-text-primary placeholder:text-text-muted outline-none transition-colors resize-vertical`}
-                      />
-                    )}
-                    {errors[name] && (
-                      <p className="text-xs text-error mt-1.5">{errors[name]}</p>
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="Your full name"
+                      value={form.fullName}
+                      onChange={handleChange}
+                      required
+                      className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
+                        errors.fullName
+                          ? "border-error"
+                          : "border-border-subtle focus:border-brand-primary"
+                      } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                    />
+                    {errors.fullName && (
+                      <p className="text-xs text-error mt-1.5">{errors.fullName}</p>
                     )}
                   </div>
-                );
-              })}
 
-              <Button
-                type="submit"
-                className="w-full justify-center"
-                disabled={status === "submitting"}
-              >
-                {status === "submitting" ? (
-                  <>
-                    <Spinner size={18} className="animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Send message"
-                )}
-              </Button>
-            </form>
-          )}
+                  {/* Email */}
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-medium text-text-primary mb-1.5"
+                    >
+                      Email <span className="text-brand-accent">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="you@company.com"
+                      value={form.email}
+                      onChange={handleChange}
+                      required
+                      className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
+                        errors.email
+                          ? "border-error"
+                          : "border-border-subtle focus:border-brand-primary"
+                      } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                    />
+                    {errors.email && (
+                      <p className="text-xs text-error mt-1.5">{errors.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Company */}
+                <div>
+                  <label
+                    htmlFor="company"
+                    className="block text-sm font-medium text-text-primary mb-1.5"
+                  >
+                    Company <span className="text-brand-accent">*</span>
+                  </label>
+                  <input
+                    id="company"
+                    name="company"
+                    type="text"
+                    placeholder="Your company name"
+                    value={form.company}
+                    onChange={handleChange}
+                    required
+                    className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
+                      errors.company
+                        ? "border-error"
+                        : "border-border-subtle focus:border-brand-primary"
+                    } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                  />
+                  {errors.company && (
+                    <p className="text-xs text-error mt-1.5">{errors.company}</p>
+                  )}
+                </div>
+
+                {/* Service Interest */}
+                <div>
+                  <label
+                    htmlFor="serviceInterest"
+                    className="block text-sm font-medium text-text-primary mb-1.5"
+                  >
+                    Service Interest <span className="text-brand-accent">*</span>
+                  </label>
+                  <select
+                    id="serviceInterest"
+                    name="serviceInterest"
+                    value={form.serviceInterest}
+                    onChange={handleChange}
+                    required
+                    className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
+                      errors.serviceInterest
+                        ? "border-error"
+                        : "border-border-subtle focus:border-brand-primary"
+                    } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                  >
+                    <option value="">Select a service</option>
+                    {contactPage.serviceOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.serviceInterest && (
+                    <p className="text-xs text-error mt-1.5">{errors.serviceInterest}</p>
+                  )}
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label
+                    htmlFor="message"
+                    className="block text-sm font-medium text-text-primary mb-1.5"
+                  >
+                    Message <span className="text-brand-accent">*</span>
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    placeholder="Tell us about your business, your goals, and what you're looking for in a marketing partner."
+                    value={form.message}
+                    onChange={handleChange}
+                    required
+                    rows={5}
+                    className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
+                      errors.message
+                        ? "border-error"
+                        : "border-border-subtle focus:border-brand-primary"
+                    } text-text-primary placeholder:text-text-muted outline-none transition-colors resize-vertical`}
+                  />
+                  {errors.message && (
+                    <p className="text-xs text-error mt-1.5">{errors.message}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full justify-center"
+                  disabled={status === "submitting"}
+                >
+                  {status === "submitting" ? (
+                    <>
+                      <Spinner size={18} className="animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send message"
+                  )}
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
       </Container>
     </section>
