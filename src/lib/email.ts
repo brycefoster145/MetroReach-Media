@@ -1,3 +1,5 @@
+import { MailService, type MailDataRequired } from "@sendgrid/mail";
+
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const TOKEN_URL = "https://login.microsoftonline.com";
 
@@ -7,6 +9,8 @@ const ALLOWED_FROM: ReadonlySet<string> = new Set([
   "reports@metroreachagency.com",
   "support@metroreachagency.com",
 ]);
+
+const SENDGRID_DEFAULT_FROM = "bryce@metroreachagency.com";
 
 export { ALLOWED_FROM };
 
@@ -24,6 +28,15 @@ interface SendResult {
   error?: string;
 }
 
+// --- SendGrid setup (only if SENDGRID_API_KEY is set) ---
+const sendgridApiKey = process.env.SENDGRID_API_KEY;
+let sgMail: MailService | null = null;
+if (sendgridApiKey) {
+  sgMail = new MailService();
+  sgMail.setApiKey(sendgridApiKey);
+}
+
+// --- Microsoft Graph token cache ---
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
@@ -76,7 +89,10 @@ async function getAccessToken(): Promise<string> {
 }
 
 /**
- * Send an email through Microsoft 365 / Graph API using client credentials.
+ * Send an email.
+ *
+ * When SENDGRID_API_KEY is set, uses SendGrid as the primary backend.
+ * Otherwise falls back to Microsoft 365 / Graph API using client credentials.
  *
  * `from` must be one of the agency's verified addresses:
  * bryce@, ads@, reports@, support@metroreachagency.com
@@ -99,6 +115,34 @@ export async function sendEmail({
     };
   }
 
+  // --- SendGrid path (primary when API key is configured) ---
+  if (sgMail) {
+    try {
+      const msg: MailDataRequired = {
+        to,
+        from: from || SENDGRID_DEFAULT_FROM,
+        subject,
+        html: body,
+      };
+      if (replyTo) {
+        msg.replyTo = replyTo;
+      }
+
+      const [response] = await sgMail.send(msg);
+
+      return {
+        success: true,
+        messageId:
+          (response.headers as Record<string, string>)?.["x-message-id"] ||
+          `sendgrid-${Date.now()}`,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, error: `SendGrid error: ${message}` };
+    }
+  }
+
+  // --- Microsoft Graph fallback ---
   try {
     const token = await getAccessToken();
 
