@@ -2,7 +2,7 @@
  * MCP (Model Context Protocol) route for the Buffer API.
  *
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/buffer.
- * Wraps the Buffer REST API (https://api.bufferapp.com/1/).
+ * Wraps the Buffer GraphQL API (https://api.buffer.com/graphql).
  *
  * Integrated into the MetroReach Media TanStack Start site.
  *
@@ -20,67 +20,60 @@ import { createFileRoute } from "@tanstack/react-router";
 // Config
 // ---------------------------------------------------------------------------
 
-const BUFFER_BASE = "https://api.bufferapp.com/1";
+const BUFFER_GRAPHQL = "https://api.buffer.com/graphql";
 const BUFFER_TOKEN = process.env.BUFFER_ACCESS_TOKEN ?? "";
+const BUFFER_ORG_ID =
+  process.env.BUFFER_ORG_ID ?? "6a603e49b90c45bdaab82cee";
 const SERVER_NAME = "mcp-buffer";
 const SERVER_VERSION = "1.0.0";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// GraphQL request helper
 // ---------------------------------------------------------------------------
 
-/** Thin wrapper around Buffer API requests. */
-async function bufferRequest<T = unknown>(
-  method: "GET" | "POST",
-  path: string,
-  body?: Record<string, unknown>,
-): Promise<T> {
-  const url = `${BUFFER_BASE}${path}`;
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${BUFFER_TOKEN}`,
-    Accept: "application/json",
-  };
-
-  const init: RequestInit = { method, headers };
-
-  if (body) {
-    headers["Content-Type"] = "application/x-www-form-urlencoded";
-    const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(body)) {
-      if (v !== undefined && v !== null) {
-        if (Array.isArray(v)) {
-          for (const item of v) params.append(k, String(item));
-        } else {
-          params.append(k, String(v));
-        }
-      }
-    }
-    init.body = params.toString();
-  }
-
-  const res = await fetch(url, init);
-  const data = (await res.json()) as T & { error?: string; message?: string };
-
-  if (!res.ok || (data as any).error) {
-    const msg =
-      (data as any).error ?? (data as any).message ?? `HTTP ${res.status}`;
-    throw new Error(`Buffer API error: ${msg}`);
-  }
-
-  return data;
+interface GraphQLResponse<T = unknown> {
+  data?: T;
+  errors?: Array<{ message: string; extensions?: Record<string, unknown> }>;
 }
 
-/** Return a JSON-RPC 2.0 error response. */
-function jsonRpcError(
-  id: unknown,
-  code: number,
-  message: string,
-): Record<string, unknown> {
-  return {
-    jsonrpc: "2.0",
-    id,
-    error: { code, message },
-  };
+/**
+ * Send a GraphQL query or mutation to the Buffer GraphQL API.
+ * Returns the `data` field on success, throws on GraphQL or network errors.
+ */
+async function graphqlRequest<T = unknown>(
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<T> {
+  const body: Record<string, unknown> = { query };
+  if (variables && Object.keys(variables).length > 0) {
+    body.variables = variables;
+  }
+
+  const res = await fetch(BUFFER_GRAPHQL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${BUFFER_TOKEN}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const json = (await res.json()) as GraphQLResponse<T>;
+
+  // GraphQL-level errors (non-nullable field failures, etc.)
+  if (json.errors?.length) {
+    const messages = json.errors.map((e) => e.message).join("; ");
+    throw new Error(`Buffer GraphQL error: ${messages}`);
+  }
+
+  if (!json.data) {
+    throw new Error(
+      `Buffer GraphQL returned no data (HTTP ${res.status})`,
+    );
+  }
+
+  return json.data;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +81,17 @@ function jsonRpcError(
 // ---------------------------------------------------------------------------
 
 async function listProfiles() {
-  const data = await bufferRequest("GET", "/profiles.json");
+  const data = await graphqlRequest<{
+    channels?: Array<{ id: string; name: string; service: string }>;
+  }>(`
+    query ListChannels($orgId: ID!) {
+      channels(input: { organizationId: $orgId }) {
+        id
+        name
+        service
+      }
+    }
+  `, { orgId: BUFFER_ORG_ID });
   return data;
 }
 
@@ -98,54 +101,138 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  const body: Record<string, unknown> = {
-    "profile_ids[]": [args.profile_id],
+  // Build the mutation input. The Buffer GraphQL schema for post creation
+  // uses a CreatePostInput type. Fields are mapped as closely as possible.
+  const input: Record<string, unknown> = {
+    profileId: args.profile_id,
     text: args.text,
   };
-  if (args.scheduled_at) body.scheduled_at = args.scheduled_at;
 
-  // Buffer legacy API: media is attached via media[link], media[photo], etc.
-  if (args.media_urls?.length) {
-    if (args.media_urls.length === 1) {
-      const url = args.media_urls[0];
-      const ext = url.split(".").pop()?.toLowerCase();
-      if (ext && ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
-        body["media[photo]"] = url;
-      } else if (ext && ["mp4", "mov", "avi"].includes(ext)) {
-        body["media[video]"] = url;
-      } else {
-        body["media[link]"] = url;
-      }
-    }
+  if (args.scheduled_at) {
+    input.scheduledAt = args.scheduled_at;
   }
 
-  return bufferRequest("POST", "/updates/create.json", body);
+  if (args.media_urls?.length) {
+    input.mediaUrls = args.media_urls;
+  }
+
+  const data = await graphqlRequest<{
+    createPost?: {
+      id: string;
+      status: string;
+      text: string;
+      scheduledAt: string | null;
+    };
+  }>(`
+    mutation CreatePost($input: CreatePostInput!) {
+      createPost(input: $input) {
+        id
+        status
+        text
+        scheduledAt
+      }
+    }
+  `, { input });
+  return data;
 }
 
 async function getPost(args: { post_id: string }) {
-  return bufferRequest("GET", `/updates/${args.post_id}.json`);
+  const data = await graphqlRequest<{
+    post?: {
+      id: string;
+      status: string;
+      text: string;
+      scheduledAt: string | null;
+      profileId: string;
+      statistics?: {
+        clicks: number;
+        likes: number;
+        comments: number;
+        retweets: number;
+        reach: number;
+        impressions: number;
+      };
+    };
+  }>(`
+    query GetPost($id: ID!) {
+      post(id: $id) {
+        id
+        status
+        text
+        scheduledAt
+        profileId
+        statistics {
+          clicks
+          likes
+          comments
+          retweets
+          reach
+          impressions
+        }
+      }
+    }
+  `, { id: args.post_id });
+  return data;
 }
 
 async function listPendingPosts(args: { profile_id: string }) {
-  return bufferRequest(
-    "GET",
-    `/profiles/${args.profile_id}/updates/pending.json`,
-  );
+  const data = await graphqlRequest<{
+    pendingPosts?: Array<{
+      id: string;
+      text: string;
+      status: string;
+      scheduledAt: string | null;
+    }>;
+  }>(`
+    query ListPendingPosts($profileId: ID!) {
+      pendingPosts(profileId: $profileId) {
+        id
+        text
+        status
+        scheduledAt
+      }
+    }
+  `, { profileId: args.profile_id });
+  return data;
 }
 
 async function getAnalytics(args: { post_id?: string; profile_id?: string }) {
   if (args.post_id) {
-    const data = await bufferRequest(
-      "GET",
-      `/updates/${args.post_id}/interactions.json`,
-    );
-    return data;
+    return getPost({ post_id: args.post_id });
   }
   if (args.profile_id) {
-    const data = await bufferRequest(
-      "GET",
-      `/profiles/${args.profile_id}/updates/sent.json?count=50`,
-    );
+    // For profile-level analytics, query recent sent posts for the profile
+    const data = await graphqlRequest<{
+      sentPosts?: Array<{
+        id: string;
+        text: string;
+        status: string;
+        statistics?: {
+          clicks: number;
+          likes: number;
+          comments: number;
+          retweets: number;
+          reach: number;
+          impressions: number;
+        };
+      }>;
+    }>(`
+      query ProfileAnalytics($profileId: ID!) {
+        sentPosts(profileId: $profileId, first: 50) {
+          id
+          text
+          status
+          statistics {
+            clicks
+            likes
+            comments
+            retweets
+            reach
+            impressions
+          }
+        }
+      }
+    `, { profileId: args.profile_id });
     return data;
   }
   throw new Error("Either post_id or profile_id is required for analytics");
@@ -284,6 +371,19 @@ type RpcRequest = {
   method: string;
   params?: Record<string, unknown>;
 };
+
+/** Return a JSON-RPC 2.0 error response. */
+function jsonRpcError(
+  id: unknown,
+  code: number,
+  message: string,
+): Record<string, unknown> {
+  return {
+    jsonrpc: "2.0",
+    id,
+    error: { code, message },
+  };
+}
 
 async function dispatch(req: RpcRequest): Promise<unknown> {
   const { method, params, id } = req;
