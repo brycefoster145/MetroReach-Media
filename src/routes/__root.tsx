@@ -66,8 +66,11 @@ export const Route = createRootRoute({
   notFoundComponent: () => (
     <div className="min-h-dvh flex flex-col items-center justify-center gap-6 px-6 text-center bg-bg-root">
       <h1 className="text-4xl md:text-5xl font-bold font-heading text-text-primary">
-        Looks like this page took the day off. Our marketing doesn't.
+        Page not found.
       </h1>
+      <p className="text-lg text-text-secondary max-w-md">
+        But our team of specialists is ready to help.
+      </p>
       <a
         href="/"
         className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200"
