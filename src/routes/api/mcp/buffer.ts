@@ -77,18 +77,53 @@ async function graphqlRequest<T = unknown>(
 }
 
 // ---------------------------------------------------------------------------
+// Shared types
+// ---------------------------------------------------------------------------
+
+interface Channel {
+  id: string;
+  name: string;
+  service: string;
+  displayName?: string;
+  avatar?: string;
+  isDisconnected?: boolean;
+}
+
+interface PostMetric {
+  type: string;
+  name: string;
+  description?: string;
+  value: number;
+  unit: string;
+}
+
+interface Post {
+  id: string;
+  status: string;
+  text: string;
+  dueAt: string | null;
+  channelId: string;
+  channelService?: string;
+  metrics?: PostMetric[];
+  assets?: unknown;
+}
+
+// ---------------------------------------------------------------------------
 // Tool implementations
 // ---------------------------------------------------------------------------
 
 async function listProfiles() {
   const data = await graphqlRequest<{
-    channels?: Array<{ id: string; name: string; service: string }>;
+    channels?: Channel[];
   }>(`
-    query ListChannels($orgId: ID!) {
+    query ListChannels($orgId: OrganizationId!) {
       channels(input: { organizationId: $orgId }) {
         id
         name
         service
+        displayName
+        avatar
+        isDisconnected
       }
     }
   `, { orgId: BUFFER_ORG_ID });
@@ -101,19 +136,46 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  // Build the mutation input. The Buffer GraphQL schema for post creation
-  // uses a CreatePostInput type. Fields are mapped as closely as possible.
+  // Build AssetInput entries from media_urls.
+  // Each URL becomes a link asset. Image/video URLs use the appropriate type.
+  const assets: Array<Record<string, unknown>> = [];
+  if (args.media_urls?.length) {
+    for (const url of args.media_urls) {
+      // Detect image URLs by extension
+      const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+      const videoExts = [".mp4", ".mov", ".webm", ".avi"];
+      const lower = url.toLowerCase();
+
+      if (imageExts.some((ext) => lower.includes(ext))) {
+        assets.push({
+          image: { url, thumbnailUrl: null },
+        });
+      } else if (videoExts.some((ext) => lower.includes(ext))) {
+        assets.push({
+          video: { url, thumbnailUrl: null },
+        });
+      } else {
+        // Default to link asset
+        assets.push({
+          link: { url, title: null, description: null, thumbnailUrl: null },
+        });
+      }
+    }
+  }
+
+  // Build CreatePostInput matching Buffer's current schema
   const input: Record<string, unknown> = {
-    profileId: args.profile_id,
+    channelId: args.profile_id,
     text: args.text,
+    assets,
   };
 
   if (args.scheduled_at) {
-    input.scheduledAt = args.scheduled_at;
-  }
-
-  if (args.media_urls?.length) {
-    input.mediaUrls = args.media_urls;
+    input.mode = "customScheduled";
+    input.dueAt = args.scheduled_at;
+    input.schedulingType = "notification";
+  } else {
+    input.mode = "shareNow";
   }
 
   const data = await graphqlRequest<{
@@ -121,7 +183,7 @@ async function createPost(args: {
       id: string;
       status: string;
       text: string;
-      scheduledAt: string | null;
+      dueAt: string | null;
     };
   }>(`
     mutation CreatePost($input: CreatePostInput!) {
@@ -129,7 +191,7 @@ async function createPost(args: {
         id
         status
         text
-        scheduledAt
+        dueAt
       }
     }
   `, { input });
@@ -142,57 +204,75 @@ async function getPost(args: { post_id: string }) {
       id: string;
       status: string;
       text: string;
-      scheduledAt: string | null;
-      profileId: string;
-      statistics?: {
-        clicks: number;
-        likes: number;
-        comments: number;
-        retweets: number;
-        reach: number;
-        impressions: number;
-      };
+      dueAt: string | null;
+      channelId: string;
+      channelService?: string;
+      metrics?: PostMetric[];
     };
   }>(`
-    query GetPost($id: ID!) {
-      post(id: $id) {
+    query GetPost($postId: PostId!) {
+      post(input: { id: $postId }) {
         id
         status
         text
-        scheduledAt
-        profileId
-        statistics {
-          clicks
-          likes
-          comments
-          retweets
-          reach
-          impressions
+        dueAt
+        channelId
+        channelService
+        metrics {
+          type
+          name
+          description
+          value
+          unit
         }
       }
     }
-  `, { id: args.post_id });
+  `, { postId: args.post_id });
   return data;
 }
 
 async function listPendingPosts(args: { profile_id: string }) {
+  // Use the posts query with filter for scheduled status
   const data = await graphqlRequest<{
-    pendingPosts?: Array<{
-      id: string;
-      text: string;
-      status: string;
-      scheduledAt: string | null;
-    }>;
+    posts?: {
+      edges?: Array<{
+        node: {
+          id: string;
+          text: string;
+          status: string;
+          dueAt: string | null;
+          channelId: string;
+        };
+      }>;
+    };
   }>(`
-    query ListPendingPosts($profileId: ID!) {
-      pendingPosts(profileId: $profileId) {
-        id
-        text
-        status
-        scheduledAt
+    query ListPendingPosts($orgId: OrganizationId!, $channelIds: [ChannelId!]!) {
+      posts(
+        input: {
+          organizationId: $orgId
+          filter: {
+            channelIds: $channelIds
+            status: [scheduled]
+          }
+        }
+        first: 50
+        sort: { field: dueAt, direction: asc }
+      ) {
+        edges {
+          node {
+            id
+            text
+            status
+            dueAt
+            channelId
+          }
+        }
       }
     }
-  `, { profileId: args.profile_id });
+  `, {
+    orgId: BUFFER_ORG_ID,
+    channelIds: [args.profile_id],
+  });
   return data;
 }
 
@@ -201,38 +281,87 @@ async function getAnalytics(args: { post_id?: string; profile_id?: string }) {
     return getPost({ post_id: args.post_id });
   }
   if (args.profile_id) {
-    // For profile-level analytics, query recent sent posts for the profile
+    // For profile-level analytics, use aggregatedPostMetrics for the past 30 days
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
     const data = await graphqlRequest<{
-      sentPosts?: Array<{
-        id: string;
-        text: string;
-        status: string;
-        statistics?: {
-          clicks: number;
-          likes: number;
-          comments: number;
-          retweets: number;
-          reach: number;
-          impressions: number;
-        };
-      }>;
+      aggregatedPostMetrics?: {
+        metrics: Array<{
+          type: string;
+          name: string;
+          description?: string;
+          value: number;
+          unit: string;
+        }>;
+        metricsUpdatedAt: string;
+      };
+      posts?: {
+        edges?: Array<{
+          node: {
+            id: string;
+            text: string;
+            status: string;
+            dueAt: string | null;
+            metrics?: PostMetric[];
+          };
+        }>;
+      };
     }>(`
-      query ProfileAnalytics($profileId: ID!) {
-        sentPosts(profileId: $profileId, first: 50) {
-          id
-          text
-          status
-          statistics {
-            clicks
-            likes
-            comments
-            retweets
-            reach
-            impressions
+      query ProfileAnalytics(
+        $orgId: OrganizationId!,
+        $channelIds: [ChannelId!]!,
+        $start: DateTime!,
+        $end: DateTime!
+      ) {
+        aggregatedPostMetrics(
+          input: {
+            organizationId: $orgId
+            channelIds: $channelIds
+            startDateTime: $start
+            endDateTime: $end
+          }
+        ) {
+          metrics {
+            type
+            name
+            description
+            value
+            unit
+          }
+          metricsUpdatedAt
+        }
+        posts(
+          input: {
+            organizationId: $orgId
+            filter: { channelIds: $channelIds, status: [sent] }
+          }
+          first: 20
+          sort: { field: dueAt, direction: desc }
+        ) {
+          edges {
+            node {
+              id
+              text
+              status
+              dueAt
+              metrics {
+                type
+                name
+                description
+                value
+                unit
+              }
+            }
           }
         }
       }
-    `, { profileId: args.profile_id });
+    `, {
+      orgId: BUFFER_ORG_ID,
+      channelIds: [args.profile_id],
+      start: thirtyDaysAgo.toISOString(),
+      end: now.toISOString(),
+    });
     return data;
   }
   throw new Error("Either post_id or profile_id is required for analytics");
@@ -257,9 +386,9 @@ const tools: ToolDef[] = [
   {
     name: "buffer_list_profiles",
     description:
-      "List all social media profiles connected to your Buffer account. " +
-      "Returns profile IDs, service types (twitter, facebook, instagram, etc.), " +
-      "and formatted usernames.",
+      "List all social media profiles (channels) connected to your Buffer account. " +
+      "Returns channel IDs, service types (twitter, facebook, instagram, etc.), " +
+      "display names, and connection status.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -271,8 +400,9 @@ const tools: ToolDef[] = [
     name: "buffer_create_post",
     description:
       "Create and optionally schedule a social media post via Buffer. " +
-      "Provide profile_id, the text content, optional media_urls (images/videos/links), " +
-      "and an optional scheduled_at timestamp (ISO 8601) to schedule the post for later. " +
+      "Provide profile_id (channel ID from buffer_list_profiles), the text content, " +
+      "optional media_urls (images/videos/links), and an optional scheduled_at " +
+      "timestamp (ISO 8601) to schedule the post for later. " +
       "Returns the created post with its Buffer ID and status.",
     inputSchema: {
       type: "object",
@@ -280,7 +410,7 @@ const tools: ToolDef[] = [
         profile_id: {
           type: "string",
           description:
-            "The Buffer profile ID to post to (from buffer_list_profiles).",
+            "The Buffer channel ID to post to (from buffer_list_profiles).",
         },
         text: {
           type: "string",
@@ -306,7 +436,8 @@ const tools: ToolDef[] = [
     name: "buffer_get_post",
     description:
       "Retrieve a single Buffer post by its ID. Returns full post details " +
-      "including status, text, scheduled time, and attached media.",
+      "including status, text, scheduled time, channel ID, and metrics " +
+      "(impressions, likes, comments, clicks, reach, etc.).",
     inputSchema: {
       type: "object",
       properties: {
@@ -323,13 +454,13 @@ const tools: ToolDef[] = [
     name: "buffer_list_pending_posts",
     description:
       "List all pending (scheduled but not yet published) posts for a given " +
-      "Buffer profile.",
+      "Buffer channel.",
     inputSchema: {
       type: "object",
       properties: {
         profile_id: {
           type: "string",
-          description: "The Buffer profile ID (from buffer_list_profiles).",
+          description: "The Buffer channel ID (from buffer_list_profiles).",
         },
       },
       required: ["profile_id"],
@@ -339,9 +470,10 @@ const tools: ToolDef[] = [
   {
     name: "buffer_get_analytics",
     description:
-      "Get analytics data from Buffer. Pass post_id to get interactions " +
-      "(clicks, retweets, likes, comments, etc.) for a specific post. " +
-      "Pass profile_id to get recent sent posts with their stats. " +
+      "Get analytics data from Buffer. Pass post_id to get per-post metrics " +
+      "(impressions, likes, comments, clicks, reach, engagement rate, etc.). " +
+      "Pass profile_id to get aggregated metrics for the past 30 days plus " +
+      "recent sent posts with their stats. " +
       "At least one of post_id or profile_id is required.",
     inputSchema: {
       type: "object",
@@ -353,7 +485,7 @@ const tools: ToolDef[] = [
         profile_id: {
           type: "string",
           description:
-            "Buffer profile ID to get recent posts with analytics for.",
+            "Buffer channel ID to get aggregated analytics and recent post stats for.",
         },
       },
     },
