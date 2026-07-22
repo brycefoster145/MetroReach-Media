@@ -2,10 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
-import fs from "node:fs";
-import path from "node:path";
-
-const BOOKINGS_FILE = path.join(process.cwd(), "..", "bookings.json");
 
 interface Booking {
   fullName: string;
@@ -19,6 +15,10 @@ interface Booking {
 }
 
 const getBookings = createServerFn({ method: "GET" }).handler(async (): Promise<Booking[]> => {
+  const { default: fs } = await import("node:fs");
+  const { default: path } = await import("node:path");
+  const BOOKINGS_FILE = path.join(process.cwd(), "..", "bookings.json");
+
   try {
     const raw = fs.readFileSync(BOOKINGS_FILE, "utf-8");
     return JSON.parse(raw) as Booking[];

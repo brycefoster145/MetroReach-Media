@@ -13,6 +13,15 @@ export default defineConfig({
     // rejects a proxied request with "Blocked request".
     allowedHosts: true,
   },
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress unused-external-import warnings from TanStack internals
+        if (warning.code === "UNUSED_EXTERNAL_IMPORT") return;
+        warn(warning);
+      },
+    },
+  },
   plugins: [
     tailwindcss(),
     tsConfigPaths({

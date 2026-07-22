@@ -6,11 +6,7 @@ import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
 import { contactPage } from "~/data/pages";
-import fs from "node:fs";
-import path from "node:path";
 import { sendTelegramMessage } from "~/lib/telegram";
-
-const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
 
 const submitContact = createServerFn({ method: "POST" })
   .validator((data: unknown) => {
@@ -29,6 +25,10 @@ const submitContact = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data }) => {
+    const { default: fs } = await import("node:fs");
+    const { default: path } = await import("node:path");
+    const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
+
     const lead = {
       ...data,
       source: "contact-page",

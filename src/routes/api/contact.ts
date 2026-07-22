@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import fs from "node:fs";
-import path from "node:path";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { sendEmail } from "~/lib/email";
-
-const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
 
 function confirmationEmail(name: string): string {
   return `
@@ -60,6 +56,10 @@ export const Route = createFileRoute("/api/contact")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { default: fs } = await import("node:fs");
+        const { default: path } = await import("node:path");
+        const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
+
         let body: Record<string, string>;
         try {
           body = await request.json();
