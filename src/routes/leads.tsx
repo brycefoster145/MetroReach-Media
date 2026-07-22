@@ -2,10 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
-import fs from "node:fs";
-import path from "node:path";
-
-const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
 
 interface Lead {
   fullName: string;
@@ -20,6 +16,10 @@ interface Lead {
 }
 
 const getLeads = createServerFn({ method: "GET" }).handler(async (): Promise<Lead[]> => {
+  const { default: fs } = await import("node:fs");
+  const { default: path } = await import("node:path");
+  const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
+
   try {
     const raw = fs.readFileSync(LEADS_FILE, "utf-8");
     return JSON.parse(raw) as Lead[];
