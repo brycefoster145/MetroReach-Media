@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 312">
+  <defs>
+    <linearGradient id="fb-wash" x1="0" y1="0.65" x2="1" y2="1">
+      <stop offset="0%" stop-color="#060912" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#06D6A0" stop-opacity="0.04"/>
+    </linearGradient>
+    <radialGradient id="dot-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06D6A0" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#06D6A0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="820" height="312" fill="#060912"/>
+  <rect x="0" y="0" width="820" height="312" fill="url(#fb-wash)"/>
+  <g transform="translate(64, 86) scale(0.875)">
+    <path d="M 0,120 L 0,0 L 44,0 L 80,62 L 116,0 L 160,0 L 160,120 Z" fill="#F1F5F9"/>
+    <circle cx="142" cy="112" r="8" fill="url(#dot-glow)"/>
+    <circle cx="142" cy="112" r="4" fill="#06D6A0"/>
+  </g>
+  <text x="232" y="160" font-family="Space Grotesk, system-ui, -apple-system, sans-serif" font-weight="700" font-size="42" letter-spacing="-0.02em">
+    <tspan fill="#F1F5F9">Metro</tspan><tspan fill="#06D6A0">Reach</tspan>
+  </text>
+  <line x1="64" y1="230" x2="420" y2="230" stroke="#1E293B" stroke-width="1"/>
+  <text x="64" y="260" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="400" font-size="14" fill="#64748B" letter-spacing="0.04em">PREMIUM SOCIAL MEDIA MARKETING</text>
+</svg>

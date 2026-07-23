@@ -89,7 +89,7 @@ function ServiceCategory() {
         <Container>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {categoryServices.map((svc) => {
-              const isVerified = svc.pipelineStatus === "verified";
+              const isCartReady = ["verified", "production-proven", "optimized"].includes(svc.pipelineStatus);
               const isInCart = items.some((i) => i.slug === svc.slug);
               const justAdded = addedSlug === svc.slug;
 
@@ -108,7 +108,7 @@ function ServiceCategory() {
                     <span className="text-sm font-semibold text-brand-primary">
                       {svc.price}
                     </span>
-                    {isVerified ? (
+                    {isCartReady ? (
                       <button
                         onClick={() =>
                           handleAdd({
