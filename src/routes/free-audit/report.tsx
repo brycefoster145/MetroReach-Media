@@ -185,6 +185,33 @@ function FreeAuditReportPage() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
 
+    // ── Priority 0: URL hash (encodes the full result — cannot fail) ──
+    const hash = window.location.hash.slice(1); // remove leading #
+    if (hash.startsWith("data=")) {
+      try {
+        const base64 = hash.slice(5); // remove "data=" prefix
+        // Safe base64 decoding for Unicode strings
+        const json = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        );
+        const parsed = JSON.parse(json) as AuditResult;
+        // Also cache in sessionStorage so page refreshes work
+        // (the hash persists on refresh but it's good to have a backup)
+        try {
+          sessionStorage.setItem("audit-result", JSON.stringify(parsed));
+        } catch {}
+        setAudit(parsed);
+        setLoading(false);
+        return;
+      } catch (e) {
+        // Hash decoding failed — not critical, fall through to next priority
+        console.warn("Failed to decode audit from URL hash, falling back to sessionStorage", e);
+      }
+    }
+
     // ── Priority 1: sessionStorage (works across Vercel serverless instances) ──
     try {
       const cached = sessionStorage.getItem("audit-result");
@@ -205,7 +232,7 @@ function FreeAuditReportPage() {
       // sessionStorage unavailable (SSR, etc.) — fall through
     }
 
-    // ── Priority 2: server-side file loader (works on localhost, fails on Vercel) ──
+    // ── Priority 2: server-side loader (Postgres) ──
     if (!id) {
       setError("No report ID provided.");
       setLoading(false);
