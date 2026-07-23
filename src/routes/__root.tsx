@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { siteMeta } from "~/data/content";
 import { Navbar } from "~/components/Navbar";
 import { Footer } from "~/components/Footer";
+import { CartProvider } from "~/context/CartContext";
 
 import appCss from "~/styles/app.css?url";
 
@@ -84,11 +85,13 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <RootDocument>
-      <Navbar />
-      <Outlet />
-      <Footer />
-    </RootDocument>
+    <CartProvider>
+      <RootDocument>
+        <Navbar />
+        <Outlet />
+        <Footer />
+      </RootDocument>
+    </CartProvider>
   );
 }
 

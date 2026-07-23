@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Check } from "@phosphor-icons/react";
 import {
   FacebookLogo,
@@ -25,6 +25,14 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; weight?: "fil
   Brain,
   ChartLineUp,
   ChatCircleText,
+};
+
+const categorySlugs: Record<string, string> = {
+  "Organic Content Management": "organic-content",
+  "Paid Advertising": "paid-advertising",
+  "Social Strategy": "social-strategy",
+  "Analytics & Reporting": "analytics-reporting",
+  "Community Management": "community-management",
 };
 
 const platformIcons = [
@@ -71,20 +79,23 @@ function Services() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {servicesPage.services.map((svc, i) => {
               const IconComponent = iconMap[svc.icon];
+              const slug = categorySlugs[svc.name];
               return (
-                <div
+                <Link
                   key={svc.name}
-                  className={`rounded-2xl bg-bg-surface-raised border border-border-subtle p-8 card-hover flex flex-col ${
+                  to="/services/$category"
+                  params={{ category: slug }}
+                  className={`group rounded-2xl bg-bg-surface-raised border border-border-subtle p-8 flex flex-col transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.08)] hover:border-brand-primary/20 hover:-translate-y-1 ${
                     i === 0 ? "lg:col-span-3 md:col-span-2" : ""
                   }`}
                 >
                   <div className="flex items-center gap-4 mb-5">
                     {IconComponent && (
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center group-hover:bg-brand-primary/15 transition-colors duration-300">
                         <IconComponent size={24} weight="duotone" className="text-brand-primary" />
                       </div>
                     )}
-                    <h3 className="text-xl font-semibold font-heading text-text-primary">
+                    <h3 className="text-xl font-semibold font-heading text-text-primary group-hover:text-brand-primary transition-colors duration-300">
                       {svc.name}
                     </h3>
                   </div>
@@ -100,7 +111,11 @@ function Services() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                  <div className="mt-6 pt-4 border-t border-border-subtle flex items-center gap-2 text-sm font-medium text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0">
+                    View services
+                    <ArrowRight size={14} weight="bold" />
+                  </div>
+                </Link>
               );
             })}
           </div>

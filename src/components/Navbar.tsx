@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { List, X } from "@phosphor-icons/react";
+import { List, X, ShoppingCart } from "@phosphor-icons/react";
 import { Button } from "./Button";
+import { useCart } from "~/context/CartContext";
 
 const links = [
   { label: "Services", href: "/services" },
@@ -13,6 +14,7 @@ const links = [
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { itemCount } = useCart();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 10);
@@ -64,7 +66,19 @@ export function Navbar() {
         </div>
 
         {/* Desktop CTA */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex items-center gap-4">
+          <a
+            href="/cart"
+            className="relative p-2 text-text-secondary hover:text-brand-primary transition-colors"
+            aria-label="View cart"
+          >
+            <ShoppingCart size={22} weight="regular" />
+            {itemCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-bold text-text-primary bg-brand-accent rounded-full">
+                {itemCount}
+              </span>
+            )}
+          </a>
           <Button href="/contact">Start getting leads</Button>
         </div>
 

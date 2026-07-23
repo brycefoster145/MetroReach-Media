@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { Check, LockOpen } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
@@ -11,33 +10,6 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function Pricing() {
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedCode, setAppliedCode] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  function handleApply() {
-    const trimmed = promoCode.trim();
-    if (trimmed) {
-      setAppliedCode(trimmed);
-      setMessage("Code applied!");
-    } else {
-      setAppliedCode(null);
-      setMessage(null);
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      handleApply();
-    }
-  }
-
-  function getPaymentLink(baseUrl: string) {
-    if (!appliedCode) return baseUrl;
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    return `${baseUrl}${separator}prefilled_promo_code=${encodeURIComponent(appliedCode)}`;
-  }
-
   return (
     <section className="py-24 bg-bg-root min-h-dvh">
       <Container>
@@ -46,35 +18,9 @@ function Pricing() {
           description={pricingPage.subheadline}
         />
 
-        {/* Promo Code */}
-        <div className="flex flex-col items-center gap-2 mb-10">
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Enter code"
-              aria-label="Promo Code"
-              className="bg-bg-surface border border-border-subtle rounded-full px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary transition-colors duration-200 w-48"
-            />
-            <Button
-              variant="ghost"
-              onClick={handleApply}
-              className="!px-5 !py-2 text-sm !rounded-full"
-            >
-              Apply
-            </Button>
-          </div>
-          {message && (
-            <p className="text-sm text-brand-accent font-medium">{message}</p>
-          )}
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {pricingPage.tiers.map((tier) => {
             const isFeatured = tier.featured;
-            const link = getPaymentLink(tier.paymentLink);
 
             return (
               <div
@@ -149,13 +95,13 @@ function Pricing() {
 
                   {/* CTA */}
                   {isFeatured ? (
-                    <Button href={link} className="w-full justify-center">
+                    <Button href={tier.paymentLink} className="w-full justify-center">
                       Get started
                     </Button>
                   ) : (
                     <Button
                       variant="ghost"
-                      href={link}
+                      href={tier.paymentLink}
                       className="w-full justify-center"
                     >
                       Get started
