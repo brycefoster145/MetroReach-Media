@@ -200,22 +200,8 @@ export const Route = createFileRoute("/api/audit/submit")({
           // (e.g. across Vercel serverless instances).
           await saveAuditResult(lead.id, JSON.stringify(result));
 
-          // Also save the full result to the audits directory for the report page
-          // Gracefully handle read-only filesystems (Vercel serverless)
-          try {
-            const { mkdir, writeFile } = await import("node:fs/promises");
-            const { join } = await import("node:path");
-            const auditsDir = "/home/team/shared/data/audits";
-            await mkdir(auditsDir, { recursive: true });
-            await writeFile(
-              join(auditsDir, `${lead.id}.json`),
-              JSON.stringify(result, null, 2),
-              "utf-8"
-            );
-          } catch (fsErr: any) {
-            console.warn("Audit file write skipped (read-only filesystem):", fsErr.message);
-            // Non-critical — lead record already contains all data via markComplete
-          }
+          // Audit result is persisted to Postgres via saveAuditResult above.
+          // No filesystem writes needed — the report page loads from the database.
 
           // ── Step 3: Send email notification ──
           try {

@@ -1,19 +1,14 @@
 /**
- * Lead Store — In-memory primary storage with file-based fallback.
+ * Lead Store — PostgreSQL-backed persistent storage.
  * MetroReach Digital
  *
- * On Vercel's serverless environment (read-only filesystem), leads are stored
- * in an in-memory Map. On local/dev systems, leads are also persisted to disk
- * at /home/team/shared/data/audit-leads/<id>.json.
- *
- * The in-memory store is sufficient for the full audit flow:
- *   submit → analyze → report
- * all within a single serverless function invocation.
+ * All leads and audit results are stored in Neon Postgres.
+ * This ensures reports are accessible from any browser, any device,
+ * across all Vercel serverless instances.
  */
 
-import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,50 +65,6 @@ export interface LeadRecord {
 }
 
 // ---------------------------------------------------------------------------
-// Storage backends
-// ---------------------------------------------------------------------------
-
-const LEADS_DIR = "/home/team/shared/data/audit-leads";
-
-/** In-memory store — always available, used as primary storage on Vercel. */
-const memoryStore = new Map<string, LeadRecord>();
-
-/**
- * Whether we've confirmed the filesystem is writable.
- * null = unchecked, true = writable, false = read-only (use memory only).
- */
-let fsWritable: boolean | null = null;
-
-function leadPath(id: string): string {
-  return join(LEADS_DIR, `${id}.json`);
-}
-
-/**
- * Probe whether the leads directory is writable. Runs once per cold start.
- */
-async function checkWritable(): Promise<boolean> {
-  if (fsWritable !== null) return fsWritable;
-
-  const testPath = join(LEADS_DIR, ".write-test");
-  try {
-    await mkdir(LEADS_DIR, { recursive: true });
-    await writeFile(testPath, "ok", "utf-8");
-    // Clean up the test file
-    try {
-      const { unlink } = await import("node:fs/promises");
-      await unlink(testPath);
-    } catch {
-      // Best effort — non-critical
-    }
-    fsWritable = true;
-  } catch {
-    fsWritable = false;
-  }
-
-  return fsWritable;
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -125,15 +76,13 @@ function sanitizeId(id: string): string {
   return id.replace(/[^a-zA-Z0-9\-]/g, "");
 }
 
-// ---------------------------------------------------------------------------
-// CRUD
-// ---------------------------------------------------------------------------
-
-export async function createLead(formData: LeadFormData): Promise<LeadRecord> {
-  const id = generateLeadId();
+function buildLeadRecord(
+  id: string,
+  formData: LeadFormData,
+  overrides: Partial<LeadRecord> = {}
+): LeadRecord {
   const now = new Date().toISOString();
-
-  const lead: LeadRecord = {
+  return {
     id,
     contactInfo: {
       name: formData.contactName,
@@ -156,47 +105,34 @@ export async function createLead(formData: LeadFormData): Promise<LeadRecord> {
     auditResultJson: null,
     createdAt: now,
     updatedAt: now,
+    ...overrides,
   };
+}
 
-  // Always store in memory
-  memoryStore.set(id, lead);
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
 
-  // Try disk if writable
-  const writable = await checkWritable();
-  if (writable) {
-    try {
-      await mkdir(LEADS_DIR, { recursive: true });
-      await writeFile(leadPath(id), JSON.stringify(lead, null, 2), "utf-8");
-    } catch {
-      // Disk write failed — lead is safe in memory
-    }
-  }
+export async function createLead(formData: LeadFormData): Promise<LeadRecord> {
+  const id = generateLeadId();
+  const email = formData.email.toLowerCase();
+  const lead = buildLeadRecord(id, formData);
+
+  await sql`
+    INSERT INTO leads (id, email, form_data)
+    VALUES (${id}, ${email}, ${sql.json(lead)})
+  `;
 
   return lead;
 }
 
 export async function getLead(id: string): Promise<LeadRecord | null> {
   const safeId = sanitizeId(id);
-
-  // Check memory first
-  const memLead = memoryStore.get(safeId);
-  if (memLead) return memLead;
-
-  // Fall back to disk
-  const writable = await checkWritable();
-  if (writable) {
-    try {
-      const raw = await readFile(leadPath(safeId), "utf-8");
-      const lead = JSON.parse(raw) as LeadRecord;
-      // Populate memory cache
-      memoryStore.set(safeId, lead);
-      return lead;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
+  const rows = await sql`
+    SELECT form_data FROM leads WHERE id = ${safeId}
+  `;
+  if (rows.length === 0) return null;
+  return rows[0].form_data as LeadRecord;
 }
 
 export async function updateLead(
@@ -204,68 +140,35 @@ export async function updateLead(
   updates: Partial<LeadRecord>
 ): Promise<LeadRecord | null> {
   const safeId = sanitizeId(id);
-
-  // Get existing lead (checks memory first, then disk)
   const lead = await getLead(safeId);
   if (!lead) return null;
 
   const updated: LeadRecord = {
     ...lead,
     ...updates,
-    id: lead.id, // never overwrite ID
-    createdAt: lead.createdAt, // never overwrite created
+    id: lead.id,
+    createdAt: lead.createdAt,
     updatedAt: new Date().toISOString(),
   };
 
-  // Always update memory
-  memoryStore.set(safeId, updated);
-
-  // Try disk if writable
-  const writable = await checkWritable();
-  if (writable) {
-    try {
-      await mkdir(LEADS_DIR, { recursive: true });
-      await writeFile(leadPath(safeId), JSON.stringify(updated, null, 2), "utf-8");
-    } catch {
-      // Disk write failed — lead is safe in memory
-    }
-  }
+  await sql`
+    UPDATE leads
+    SET form_data = ${sql.json(updated)}
+    WHERE id = ${safeId}
+  `;
 
   return updated;
 }
 
 export async function findLeadByEmail(email: string): Promise<LeadRecord | null> {
   const normalized = email.toLowerCase();
-
-  // Check memory first
-  for (const [, lead] of memoryStore) {
-    if (lead.contactInfo.email.toLowerCase() === normalized) {
-      return lead;
-    }
-  }
-
-  // Fall back to disk
-  const writable = await checkWritable();
-  if (writable) {
-    try {
-      await mkdir(LEADS_DIR, { recursive: true });
-      const files = await readdir(LEADS_DIR);
-      for (const file of files) {
-        if (!file.endsWith(".json")) continue;
-        const raw = await readFile(join(LEADS_DIR, file), "utf-8");
-        const lead = JSON.parse(raw) as LeadRecord;
-        if (lead.contactInfo.email.toLowerCase() === normalized) {
-          // Populate memory
-          memoryStore.set(lead.id, lead);
-          return lead;
-        }
-      }
-    } catch {
-      // Directory doesn't exist or is empty — not an error
-    }
-  }
-
-  return null;
+  const rows = await sql`
+    SELECT form_data FROM leads WHERE email = ${normalized}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  return rows[0].form_data as LeadRecord;
 }
 
 // ---------------------------------------------------------------------------
@@ -319,21 +222,48 @@ export async function markPdfGenerated(id: string): Promise<void> {
   await updateLead(id, { pdfGenerated: true });
 }
 
+// ---------------------------------------------------------------------------
+// Audit results (separate table for efficient retrieval)
+// ---------------------------------------------------------------------------
+
 /**
- * Save the full audit result JSON to the lead record.
- * This allows the report page to retrieve the full result even
- * when the filesystem audit file is unavailable (e.g. Vercel serverless).
+ * Save the full audit result JSON to the audit_results table.
+ * This is the primary retrieval path for the report page — it loads
+ * from Postgres, so it works from any browser, any device.
  */
 export async function saveAuditResult(id: string, resultJson: string): Promise<void> {
+  const safeId = sanitizeId(id);
+  // Also store in the lead record for backward compatibility
   await updateLead(id, { auditResultJson: resultJson });
+
+  // Upsert into audit_results
+  await sql`
+    INSERT INTO audit_results (id, lead_id, result_json)
+    VALUES (${`audit-${safeId}`}, ${safeId}, ${sql.json(JSON.parse(resultJson))})
+    ON CONFLICT (id) DO UPDATE SET result_json = EXCLUDED.result_json
+  `;
 }
 
 /**
- * Retrieve the full audit result from the lead record.
+ * Retrieve the full audit result from the audit_results table.
  * Returns the parsed object or null if not found.
+ * Falls back to the lead record if no dedicated audit_result row exists.
  */
 export async function getAuditResult(id: string): Promise<Record<string, unknown> | null> {
-  const lead = await getLead(id);
+  const safeId = sanitizeId(id);
+
+  // Try audit_results table first
+  const rows = await sql`
+    SELECT result_json FROM audit_results WHERE lead_id = ${safeId}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+  if (rows.length > 0) {
+    return rows[0].result_json as Record<string, unknown>;
+  }
+
+  // Fall back to lead record
+  const lead = await getLead(safeId);
   if (!lead || !lead.auditResultJson) return null;
   try {
     return JSON.parse(lead.auditResultJson) as Record<string, unknown>;

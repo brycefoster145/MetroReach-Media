@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { getAuditResult } from "~/lib/lead-store";
 import {
   ArrowRight,
@@ -31,27 +29,10 @@ import { Container } from "~/components/Container";
 import type { AuditResult } from "~/lib/audit-analyzer";
 
 // ---------------------------------------------------------------------------
-// Server function to load stored audit
+// Server function to load stored audit from Postgres
 // ---------------------------------------------------------------------------
 
 const loadAudit = createServerFn({ method: "GET" })
-  .validator((id: string) => id)
-  .handler(async ({ data: id }) => {
-    const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
-    try {
-      const raw = await readFile(
-        join("/home/team/shared/data/audits", `${safeId}.json`),
-        "utf-8"
-      );
-      return JSON.parse(raw) as AuditResult;
-    } catch {
-      return null;
-    }
-  });
-
-// Fallback: load audit from the lead store (works across Vercel serverless instances
-// where the filesystem-based loadAudit can't find files written in a different invocation).
-const loadAuditFromStore = createServerFn({ method: "GET" })
   .validator((id: string) => id)
   .handler(async ({ data: id }) => {
     const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
@@ -232,21 +213,11 @@ function FreeAuditReportPage() {
     }
 
     const tryLoad = async () => {
-      // Try filesystem first (works locally)
       let data: AuditResult | null = null;
       try {
         data = await loadAudit({ data: id });
       } catch {
-        // Fall through to lead store
-      }
-
-      // ── Priority 3: lead store fallback (works across Vercel instances) ──
-      if (!data) {
-        try {
-          data = await loadAuditFromStore({ data: id });
-        } catch {
-          // Both methods failed
-        }
+        // Fall through
       }
 
       if (!data) {
