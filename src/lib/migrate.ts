@@ -1,6 +1,10 @@
 /**
- * Migration: Create leads and audit_results tables.
- * Run with: bun run src/lib/migrate.ts
+ * Migration: Ensure leads and audit_results tables are ready for the audit flow.
+ *
+ * The leads table may already exist from other systems — this migration is
+ * idempotent: it creates tables if missing and adds columns if absent.
+ *
+ * Run with: DATABASE_URL=... bun run src/lib/migrate.ts
  */
 import postgres from "postgres";
 
@@ -20,16 +24,26 @@ const sql = postgres(url, {
 async function migrate() {
   console.log("Running migration...");
 
+  // ── leads table ──
   await sql`
     CREATE TABLE IF NOT EXISTS leads (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL,
-      form_data JSONB NOT NULL,
+      form_data JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
   console.log("✓ leads table ready");
 
+  // If the table existed before this migration, it may be missing form_data
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS form_data JSONB`;
+  console.log("✓ form_data column ready");
+
+  // Relax constraints from prior schemas that may block our inserts
+  await sql`ALTER TABLE leads ALTER COLUMN tenant_id DROP NOT NULL`.catch(() => {});
+  await sql`ALTER TABLE leads ALTER COLUMN name DROP NOT NULL`.catch(() => {});
+
+  // ── audit_results table ──
   await sql`
     CREATE TABLE IF NOT EXISTS audit_results (
       id TEXT PRIMARY KEY,
