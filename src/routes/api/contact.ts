@@ -93,7 +93,11 @@ export const Route = createFileRoute("/api/contact")({
         }
 
         leads.push(lead);
-        fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
+        try {
+          fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
+        } catch {
+          // Read-only filesystem (Vercel) — leads stored via Telegram/email instead
+        }
 
         // Send Telegram notification (non-blocking)
         const tgLines: string[] = [];
