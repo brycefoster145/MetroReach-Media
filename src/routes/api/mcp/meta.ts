@@ -22,6 +22,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
 const META_TOKEN = process.env.META_ACCESS_TOKEN ?? "";
+// The token is a PAGE token; /me endpoints resolve to the page.
+// For ad account access we must query the user's ad accounts explicitly.
+const META_USER_ID = process.env.META_USER_ID ?? "27853154407634636";
 const SERVER_NAME = "mcp-meta";
 const SERVER_VERSION = "1.0.0";
 
@@ -93,6 +96,9 @@ async function graphApiRequest<T = unknown>(
 // ---------------------------------------------------------------------------
 
 async function listAdAccounts() {
+  // Use explicit user ID instead of /me because the token is a PAGE token.
+  // /me/adaccounts on a page token tries to find "adaccounts" field on a Page
+  // object, which doesn't exist — causing "(#100) Tried accessing nonexisting field".
   const data = await graphApiRequest<{
     data?: Array<{
       id: string;
@@ -100,7 +106,7 @@ async function listAdAccounts() {
       account_status: number;
       currency: string;
     }>;
-  }>("GET", "/me/adaccounts", {
+  }>("GET", `/${META_USER_ID}/adaccounts`, {
     fields: "id,name,account_status,currency",
   });
   return data;
