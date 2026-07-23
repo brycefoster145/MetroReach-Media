@@ -621,6 +621,7 @@ export const subServices = [
   { slug: "social-listening-community", category: "community-management", name: "Social Listening", description: "Monitor brand mentions, industry conversations, and competitor activity to surface opportunities and risks.", price: "From $500/month", pipelineStatus: "verified" },
   { slug: "influencer-research", category: "community-management", name: "Influencer Research", description: "Identify and evaluate potential influencer partners aligned with your brand, audience, and campaign goals.", price: "From $750/month", pipelineStatus: "verified" },
   { slug: "community-engagement-templates", category: "community-management", name: "Community Engagement Templates", description: "Ready-to-use response templates for common interactions — maintaining brand voice while saving time.", price: "$300", pipelineStatus: "verified" },
+  { slug: "platform-setup-community", category: "community-management", name: "Platform Setup & Optimization", description: "Professional setup and optimization of business profiles — bios, highlights, links, and settings configured for maximum discoverability.", price: "From $750", pipelineStatus: "verified" },
 ];
 
 export const cookiePolicyPage = {
