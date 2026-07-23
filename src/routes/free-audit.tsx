@@ -163,6 +163,7 @@ function FreeAudit() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    console.log("handleSubmit called", form);
     if (!validate()) return;
 
     setStatus("submitting");
@@ -175,14 +176,24 @@ function FreeAudit() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      // Try to parse JSON; if parsing fails, treat as network/server error
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("We couldn't reach our servers. Please check your connection and try again.");
+      }
+
       if (!res.ok) {
         throw new Error(data.error || "Something went wrong. Please try again.");
       }
 
       setStatus("success");
-      window.location.href = data.redirect;
+      if (data.redirect) {
+        window.location.href = data.redirect;
+      }
     } catch (err: any) {
+      console.error("Audit form submission error:", err);
       setStatus("error");
       setErrorMessage(err.message || "An unexpected error occurred. Please try again.");
     }
