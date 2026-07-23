@@ -36,7 +36,7 @@ function isValidEmail(str: string): boolean {
 // Owner: create this Payment Link at https://dashboard.stripe.com/payment-links
 const STRIPE_PREMIUM_AUDIT_LINK =
   process.env.STRIPE_PREMIUM_AUDIT_LINK ||
-  "https://buy.stripe.com/PLACEHOLDER_PREMIUM_AUDIT";
+  "https://buy.stripe.com/bJe7sLcTy6Ds0OQ2tv1ck1t";
 
 // ---------------------------------------------------------------------------
 // Route Handler
