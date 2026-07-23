@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, Check, ArrowUpRight } from "@phosphor-icons/react";
 import {
   FacebookLogo,
@@ -50,6 +50,13 @@ export const Route = createFileRoute("/services")({
 });
 
 function Services() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // When on a child category route (e.g., /services/organic-content),
+  // render only the <Outlet /> so the child page content is shown.
+  if (pathname !== "/services") {
+    return <Outlet />;
+  }
 
   return (
     <main>
