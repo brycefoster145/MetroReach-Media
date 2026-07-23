@@ -227,6 +227,20 @@ async function createAdAccount(args: {
 // Page management tools
 // ---------------------------------------------------------------------------
 
+async function listMyPages() {
+  const data = await graphApiRequest<{
+    data?: Array<{
+      id: string;
+      name: string;
+      access_token: string;
+      category: string;
+    }>;
+  }>("GET", "/me/accounts", {
+    fields: "id,name,access_token,category",
+  });
+  return data;
+}
+
 async function listOwnedPages(args: { business_id: string }) {
   const data = await graphApiRequest<{
     data?: Array<{
@@ -518,6 +532,19 @@ const tools: ToolDef[] = [
       required: ["business_id"],
     },
     handler: listOwnedPages,
+  },
+  {
+    name: "meta_list_my_pages",
+    description:
+      "List all Facebook Pages accessible by the current access token via /me/accounts. " +
+      "Returns page IDs, names, categories, and access tokens. " +
+      "Use this to discover which pages the token can manage before updating page details.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+    handler: listMyPages,
   },
   {
     name: "meta_get_page",
