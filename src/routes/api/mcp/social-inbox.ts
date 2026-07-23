@@ -49,15 +49,18 @@ interface GraphApiError {
 /**
  * Make a request to the Facebook Graph API.
  * The access_token is appended as a query parameter (Facebook auth pattern).
+ * Pass an optional tokenOverride to use a page access token instead of META_TOKEN.
  */
 async function graphApiRequest<T = unknown>(
   method: "GET" | "POST",
   path: string,
   params?: Record<string, string>,
   body?: Record<string, unknown>,
+  tokenOverride?: string,
 ): Promise<T> {
+  const token = tokenOverride || META_TOKEN;
   const url = new URL(`${GRAPH_API_BASE}${path}`);
-  url.searchParams.set("access_token", META_TOKEN);
+  url.searchParams.set("access_token", token);
 
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -93,6 +96,32 @@ async function graphApiRequest<T = unknown>(
   }
 
   return json as T;
+}
+
+/** Cache for the page access token so we don't fetch it on every request. */
+let cachedPageToken: string | null = null;
+
+/**
+ * Exchanges the user access token for a page access token via GET /me/accounts.
+ * Returns the page token for the given pageId, or null if not found / not permitted.
+ */
+async function getPageAccessToken(pageId: string): Promise<string | null> {
+  if (cachedPageToken) return cachedPageToken;
+
+  try {
+    const data = await graphApiRequest<{
+      data?: Array<{ id: string; access_token: string }>;
+    }>("GET", "/me/accounts", { fields: "id,access_token" });
+
+    const page = data.data?.find((p) => p.id === pageId);
+    if (page?.access_token) {
+      cachedPageToken = page.access_token;
+      return page.access_token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -132,24 +161,48 @@ async function getReviews(args: { pageId?: string; limit?: number }) {
   const pageId = args.pageId || DEFAULT_PAGE_ID;
   const limit = args.limit ?? DEFAULT_LIMIT;
 
-  const data = await graphApiRequest<{
-    data?: Array<{
-      reviewer?: { name: string; id: string };
-      rating?: number;
-      review_text?: string;
-      created_time: string;
-      has_review?: boolean;
-      open_graph_story?: unknown;
-    }>;
-  }>(
-    "GET",
-    `/${pageId}/ratings`,
-    {
-      fields: "reviewer{name,id},rating,review_text,created_time,has_review,open_graph_story",
-      limit: String(limit),
-    },
-  );
-  return data;
+  try {
+    // /ratings requires a page access token, not a user token.
+    // Try to exchange the user token for a page token first.
+    const pageToken = await getPageAccessToken(pageId);
+    if (!pageToken) {
+      return {
+        error: true,
+        message: "Unable to fetch reviews: could not obtain a page access token. The current user token may not have pages_read_engagement or pages_show_list permission.",
+        missing_permission: "pages_read_engagement / pages_show_list",
+        hint: "Reviews require a page access token. Ensure the app has pages_read_engagement and pages_show_list permissions, and the page is connected to the authenticated user.",
+      };
+    }
+
+    const data = await graphApiRequest<{
+      data?: Array<{
+        reviewer?: { name: string; id: string };
+        rating?: number;
+        review_text?: string;
+        created_time: string;
+        has_review?: boolean;
+        open_graph_story?: unknown;
+      }>;
+    }>(
+      "GET",
+      `/${pageId}/ratings`,
+      {
+        fields: "reviewer{name,id},rating,review_text,created_time,has_review,open_graph_story",
+        limit: String(limit),
+      },
+      undefined,
+      pageToken,
+    );
+    return data;
+  } catch (err: any) {
+    const message = err.message ?? String(err);
+    return {
+      error: true,
+      message: `Unable to fetch reviews: ${message}`,
+      missing_permission: "pages_read_engagement",
+      hint: "The /ratings endpoint requires a page access token with pages_read_engagement permission.",
+    };
+  }
 }
 
 async function getEngagement(args: { pageId?: string; postId?: string; limit?: number }) {
@@ -197,6 +250,10 @@ async function getMessages(args: { pageId?: string; limit?: number }) {
   const limit = args.limit ?? DEFAULT_LIMIT;
 
   try {
+    // Conversations may require a page access token — try to exchange first
+    const pageToken = await getPageAccessToken(pageId);
+    const token = pageToken || META_TOKEN;
+
     const data = await graphApiRequest<{
       data?: Array<{
         id: string;
@@ -215,6 +272,8 @@ async function getMessages(args: { pageId?: string; limit?: number }) {
         fields: "messages{message,from,created_time}",
         limit: String(limit),
       },
+      undefined,
+      token,
     );
     return data;
   } catch (err: any) {
@@ -234,50 +293,70 @@ async function getIgComments(args: { igUserId?: string; limit?: number }) {
   const igUserId = args.igUserId || DEFAULT_IG_USER_ID;
   const limit = args.limit ?? DEFAULT_LIMIT;
 
-  const data = await graphApiRequest<{
-    data?: Array<{
-      id: string;
-      comments?: {
-        data?: Array<{
-          id: string;
-          text?: string;
-          timestamp: string;
-          username?: string;
-          like_count?: number;
-        }>;
-      };
-    }>;
-  }>(
-    "GET",
-    `/${igUserId}/media`,
-    {
-      fields: "comments{id,text,timestamp,username,like_count}",
-      limit: String(limit),
-    },
-  );
-  return data;
+  try {
+    const data = await graphApiRequest<{
+      data?: Array<{
+        id: string;
+        comments?: {
+          data?: Array<{
+            id: string;
+            text?: string;
+            timestamp: string;
+            username?: string;
+            like_count?: number;
+          }>;
+        };
+      }>;
+    }>(
+      "GET",
+      `/${igUserId}/media`,
+      {
+        fields: "comments{id,text,timestamp,username,like_count}",
+        limit: String(limit),
+      },
+    );
+    return data;
+  } catch (err: any) {
+    const message = err.message ?? String(err);
+    return {
+      error: true,
+      message: `Unable to fetch Instagram comments: ${message}`,
+      missing_permission: "instagram_basic, instagram_manage_comments",
+      hint: "Instagram media comments require instagram_basic and instagram_manage_comments permissions, and the Instagram Business Account must be linked to the Facebook Page.",
+    };
+  }
 }
 
 async function getIgMentions(args: { igUserId?: string; limit?: number }) {
   const igUserId = args.igUserId || DEFAULT_IG_USER_ID;
   const limit = args.limit ?? DEFAULT_LIMIT;
 
-  const data = await graphApiRequest<{
-    data?: Array<{
-      id: string;
-      caption?: string;
-      media_type?: string;
-      timestamp: string;
-    }>;
-  }>(
-    "GET",
-    `/${igUserId}/tags`,
-    {
-      fields: "id,caption,media_type,timestamp",
-      limit: String(limit),
-    },
-  );
-  return data;
+  try {
+    const data = await graphApiRequest<{
+      data?: Array<{
+        id: string;
+        caption?: string;
+        media_type?: string;
+        timestamp: string;
+      }>;
+    }>(
+      "GET",
+      `/${igUserId}/tags`,
+      {
+        fields: "id,caption,media_type,timestamp",
+        limit: String(limit),
+      },
+    );
+    return data;
+  } catch (err: any) {
+    const message = err.message ?? String(err);
+    return {
+      error: true,
+      message: `Unable to fetch Instagram mentions: ${message}`,
+      missing_permission: "instagram_basic",
+      hint: "Instagram mentions/tags require instagram_basic permission and the Instagram Business Account must be linked to the Facebook Page.",
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
