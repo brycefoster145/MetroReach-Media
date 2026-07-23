@@ -266,7 +266,46 @@ function FreeAuditReportPage() {
   const primaryRec = serviceRecommendations[0];
 
   return (
-    <main>
+    <>
+      {/* Print styles */}
+      <style>{`
+        @media print {
+          @page { margin: 0.75in; size: letter; }
+          body { 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          header, nav, footer, .no-print, button, a[href="/services"], a[href="/contact"] {
+            display: none !important;
+          }
+          /* Hide CTA section */
+          section.bg-bg-surface:last-of-type,
+          section:has(.no-print) {
+            display: none !important;
+          }
+          /* Ensure report content is visible */
+          main { padding: 0 !important; }
+          section { break-inside: avoid; page-break-inside: avoid; }
+          h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
+          .rounded-2xl, .rounded-xl, .rounded-full { 
+            border-radius: 8px !important; 
+          }
+          /* Show print-only elements */
+          .print-only { display: block !important; }
+          /* Ensure text is readable on white paper */
+          .text-text-primary { color: #111827 !important; }
+          .text-text-secondary { color: #374151 !important; }
+          .text-text-muted { color: #6b7280 !important; }
+          .bg-bg-root, .bg-bg-surface, .bg-bg-surface-raised, .bg-bg-surface-high {
+            background: #ffffff !important;
+            border-color: #e5e7eb !important;
+          }
+          /* Ensure gauge and score bars render */
+          svg { max-width: 100%; }
+        }
+      `}</style>
+      <main>
       {/* ── Header ── */}
       <section className="relative py-16 lg:py-24 bg-bg-root overflow-hidden border-b border-border-subtle">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_500px_at_50%_50%,rgba(59,130,246,0.04),transparent)] pointer-events-none" />
@@ -635,9 +674,27 @@ function FreeAuditReportPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-16 bg-bg-surface border-t border-border-subtle">
+      <section className="py-16 bg-bg-surface border-t border-border-subtle no-print">
         <Container>
           <div className="max-w-xl mx-auto text-center">
+            {/* PDF Download */}
+            <div className="mb-8">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-text-secondary hover:text-brand-primary transition-colors duration-200 border border-border-subtle rounded-full px-6 py-3 hover:border-brand-primary/40"
+                title="Download or print this report as PDF"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 6V2h8v4M2 10h12v4H2v-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                Download PDF
+              </button>
+              <p className="text-xs text-text-muted mt-2">
+                Opens your browser's print dialog — select "Save as PDF" to download.
+              </p>
+            </div>
+
             <h2 className="text-2xl font-bold font-heading text-text-primary mb-4">
               Ready to implement these recommendations?
             </h2>
@@ -656,13 +713,22 @@ function FreeAuditReportPage() {
                   <ArrowRight size={18} weight="bold" />
                 </a>
               ) : (
-                <a
-                  href="/contact"
-                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
-                >
-                  Start My Growth Plan
-                  <ArrowRight size={18} weight="bold" />
-                </a>
+                <div className="w-full sm:w-auto">
+                  <a
+                    href="/contact"
+                    className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
+                  >
+                    Start My Growth Plan
+                    <ArrowRight size={18} weight="bold" />
+                  </a>
+                  {primaryRec && (
+                    <p className="text-xs text-text-muted mt-3 max-w-sm mx-auto leading-relaxed">
+                      We're preparing {primaryRec.name.toLowerCase()} for instant checkout. 
+                      In the meantime, our team will reach out within 24 hours to discuss your 
+                      personalized growth plan.
+                    </p>
+                  )}
+                </div>
               )}
               <a
                 href="/services"
@@ -681,6 +747,14 @@ function FreeAuditReportPage() {
           </div>
         </Container>
       </section>
+
+      {/* ── Print-only footer ── */}
+      <div className="print-only hidden">
+        <p style={{ fontSize: "10px", color: "#6b7280", textAlign: "center", marginTop: "40px", borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+          Prepared by Metro Reach Media &bull; metroreachagency.com &bull; {auditDate}
+        </p>
+      </div>
     </main>
+    </>
   );
 }

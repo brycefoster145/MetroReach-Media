@@ -15,8 +15,10 @@ import {
   markAnalyzing,
   markComplete,
   markFailed,
+  markEmailSent,
   type LeadFormData,
 } from "~/lib/lead-store";
+import { sendEmail } from "~/lib/email";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -202,6 +204,74 @@ export const Route = createFileRoute("/api/audit/submit")({
             JSON.stringify(result, null, 2),
             "utf-8"
           );
+
+          // ── Step 3: Send email notification ──
+          try {
+            const reportUrl = `https://www.metroreachagency.com/free-audit/report?id=${lead.id}`;
+            const primaryRec = result.serviceRecommendations[0];
+            const emailBody = `
+              <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 20px; background: #fafafa;">
+                <div style="background: #ffffff; border-radius: 16px; padding: 40px 32px; border: 1px solid #e5e7eb;">
+                  <h1 style="font-size: 24px; font-weight: 700; color: #111827; margin: 0 0 8px;">
+                    Your Free Social Media Audit is Ready
+                  </h1>
+                  <p style="font-size: 15px; color: #6b7280; margin: 0 0 32px; line-height: 1.6;">
+                    Metro Reach Media completed a comprehensive analysis of ${result.formData.businessName}'s online presence.
+                    Here's a snapshot of what we found.
+                  </p>
+
+                  <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                      <div style="width: 56px; height: 56px; border-radius: 50%; background: ${result.scores.overall >= 70 ? '#ecfdf5' : result.scores.overall >= 40 ? '#fffbeb' : '#fef2f2'}; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 20px; font-weight: 700; color: ${result.scores.overall >= 70 ? '#059669' : result.scores.overall >= 40 ? '#d97706' : '#dc2626'};">
+                          ${result.scores.overall}
+                        </span>
+                      </div>
+                      <div>
+                        <p style="font-size: 14px; font-weight: 600; color: #111827; margin: 0 0 2px;">Overall Marketing Score</p>
+                        <p style="font-size: 13px; color: #6b7280; margin: 0;">out of 100 — ${result.scores.overall >= 70 ? 'Strong Foundation' : result.scores.overall >= 40 ? 'Growth Opportunity' : 'Needs Attention'}</p>
+                      </div>
+                    </div>
+                    <p style="font-size: 14px; color: #374151; margin: 0 0 12px; line-height: 1.6;">${result.executiveSummary}</p>
+                  </div>
+
+                  ${primaryRec ? `
+                  <div style="background: #eff6ff; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #dbeafe;">
+                    <p style="font-size: 13px; font-weight: 600; color: #1d4ed8; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em;">Recommended Growth Plan</p>
+                    <p style="font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 8px;">${primaryRec.name} — ${primaryRec.price}${primaryRec.billingFrequency ? '/' + primaryRec.billingFrequency : ''}</p>
+                    <p style="font-size: 14px; color: #374151; margin: 0; line-height: 1.6;">${primaryRec.reason.slice(0, 200)}...</p>
+                  </div>
+                  ` : ''}
+
+                  <a href="${reportUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 14px 32px; border-radius: 9999px; text-decoration: none; font-weight: 600; font-size: 15px;">
+                    View Full Report →
+                  </a>
+
+                  <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0; line-height: 1.5;">
+                    Prepared by Metro Reach Media for ${result.formData.businessName}.<br/>
+                    Questions? Reply to this email or contact us at bryce@metroreachagency.com.
+                  </p>
+                </div>
+              </div>
+            `;
+
+            const emailResult = await sendEmail({
+              to: formData.email,
+              from: "reports@metroreachagency.com",
+              subject: "Your Free Social Media Audit is Ready — Metro Reach Media",
+              body: emailBody,
+            });
+
+            if (emailResult.success) {
+              await markEmailSent(lead.id);
+            } else {
+              console.error("Email send failed for lead", lead.id, ":", emailResult.error);
+              // Don't break the flow — online report is the fallback
+            }
+          } catch (emailErr: any) {
+            console.error("Email delivery error for lead", lead.id, ":", emailErr.message || emailErr);
+            // Don't break the flow — online report is the fallback
+          }
 
           return new Response(
             JSON.stringify({
