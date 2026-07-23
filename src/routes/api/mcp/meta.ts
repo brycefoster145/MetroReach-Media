@@ -12,6 +12,7 @@
  *   meta_get_campaign_insights — get performance insights for a campaign
  *   meta_create_campaign     — create a new campaign
  *   meta_list_ad_sets        — list ad sets for an ad account
+ *   meta_create_ad_account   — create a new ad account under a Business Manager
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -188,6 +189,29 @@ async function listAdSets(args: { ad_account_id: string }) {
   return data;
 }
 
+async function createAdAccount(args: {
+  business_id: string;
+  name: string;
+  currency?: string;
+  timezone_id: number;
+}) {
+  const body: Record<string, unknown> = {
+    name: args.name,
+    currency: args.currency ?? "USD",
+    timezone_id: args.timezone_id,
+  };
+
+  const data = await graphApiRequest<{
+    id?: string;
+  }>(
+    "POST",
+    `/${args.business_id}/adaccount`,
+    undefined,
+    body,
+  );
+  return data;
+}
+
 // ---------------------------------------------------------------------------
 // Tool registry (MCP tools/list schema)
 // ---------------------------------------------------------------------------
@@ -313,6 +337,38 @@ const tools: ToolDef[] = [
       required: ["ad_account_id"],
     },
     handler: listAdSets,
+  },
+  {
+    name: "meta_create_ad_account",
+    description:
+      "Create a new ad account under a Facebook Business Manager. " +
+      "Provide the business_id, ad account name, currency, and timezone_id. " +
+      "Common timezone IDs: 1=Pacific, 7=Mountain, 13=Central, 43=Eastern, 78=Toronto. " +
+      "Returns the new ad account ID on success.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        business_id: {
+          type: "string",
+          description: "Facebook Business Manager ID (numeric string).",
+        },
+        name: {
+          type: "string",
+          description: "Ad account name (e.g., 'MetroReach Agency').",
+        },
+        currency: {
+          type: "string",
+          description: "ISO 4217 currency code. Default: USD.",
+        },
+        timezone_id: {
+          type: "integer",
+          description:
+            "Timezone ID. Common: 1=Pacific, 7=Mountain, 13=Central, 43=Eastern, 78=Toronto.",
+        },
+      },
+      required: ["business_id", "name", "timezone_id"],
+    },
+    handler: createAdAccount,
   },
 ];
 
