@@ -738,6 +738,13 @@ function FreeAuditReportPage() {
               </a>
             </div>
             <p className="text-xs text-text-muted mt-8 pt-8 border-t border-border-subtle">
+              Want a deeper analysis?{" "}
+              <a href="/premium-audit" className="text-brand-primary hover:text-brand-accent transition-colors font-semibold">
+                Upgrade to our Premium Growth Audit
+              </a>{" "}
+              — 12 categories, priority matrix, growth roadmap, and more.
+            </p>
+            <p className="text-xs text-text-muted mt-3">
               Prepared by Metro Reach Media. Questions?{" "}
               <a href="/contact" className="text-brand-primary hover:text-brand-accent transition-colors">
                 Contact us
