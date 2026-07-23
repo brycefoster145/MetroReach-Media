@@ -48,6 +48,14 @@ export const servicesPage = {
         "Brand voice development, visual direction, and content guidelines",
         "Consistent posting schedule that algorithms reward and audiences trust",
       ],
+      subServices: [
+        { name: "Monthly Content Calendar", description: "Planned posting schedule with captions" },
+        { name: "Caption Writing", description: "Platform-specific hooks, body, CTAs" },
+        { name: "Profile & Bio Optimization", description: "First-impression polish across all platforms" },
+        { name: "Hashtag Research", description: "Ranked hashtag bank by industry, location, and niche" },
+        { name: "Posting Schedule Optimization", description: "Timing and cadence that algorithms reward" },
+        { name: "Platform Setup", description: "Facebook, Instagram, LinkedIn, TikTok business configuration" },
+      ],
     },
     {
       icon: "Target",
@@ -57,6 +65,12 @@ export const servicesPage = {
         "Ad creative — static, carousel, video scripts, and YouTube pre-roll",
         "Continuous A/B testing, bid optimization, and audience refinement",
         "Live performance dashboards with real-time CPL and ROAS tracking",
+      ],
+      subServices: [
+        { name: "Meta Ads Management", description: "Campaign strategy, build, optimization, reporting" },
+        { name: "Ad Account Setup", description: "Business Manager configuration and payment setup" },
+        { name: "Pixel & Conversion Tracking", description: "Proper event tracking and attribution" },
+        { name: "Landing Page Review", description: "Conversion-focused assessment and recommendations" },
       ],
     },
     {
@@ -68,6 +82,15 @@ export const servicesPage = {
         "Content pillar architecture and messaging frameworks",
         "Monthly strategy reviews with performance-driven adjustments",
       ],
+      subServices: [
+        { name: "Social Media Audit", description: "Comprehensive profile, content, and competitive analysis" },
+        { name: "Competitor Analysis", description: "Market positioning and gap identification" },
+        { name: "Social Media Strategy", description: "Platform selection, content pillars, messaging framework" },
+        { name: "Content Strategy", description: "Content architecture aligned with business goals" },
+        { name: "Campaign Strategy", description: "Seasonal and promotional campaign planning" },
+        { name: "Audience Research", description: "Segmentation, demographics, behavioral insights" },
+        { name: "Organic Growth Strategy", description: "Follower and engagement acceleration plan" },
+      ],
     },
     {
       icon: "ChartLineUp",
@@ -78,6 +101,13 @@ export const servicesPage = {
         "Actionable insights surfaced by a dedicated performance analyst",
         "Transparent metrics — no vanity numbers, no hidden slippage",
       ],
+      subServices: [
+        { name: "Monthly Performance Reports", description: "Deep-dive analysis with insights and recommendations" },
+        { name: "Weekly Performance Summaries", description: "Snapshots of key metrics and trends" },
+        { name: "KPI Dashboard Setup", description: "Live dashboard with CPL, ROAS, engagement tracking" },
+        { name: "Competitor Benchmark Reports", description: "How you stack up against your market" },
+        { name: "Executive Reports", description: "Boardroom-ready summaries for leadership" },
+      ],
     },
     {
       icon: "ChatCircleText",
@@ -87,6 +117,14 @@ export const servicesPage = {
         "Prompt, on-brand responses that build trust and engagement",
         "Review management and reputation monitoring",
         "No customer interaction goes unanswered — period",
+      ],
+      subServices: [
+        { name: "Daily Engagement", description: "Proactive outbound engagement with target accounts" },
+        { name: "Comment & DM Management", description: "No interaction goes unanswered" },
+        { name: "Reputation Monitoring", description: "Review tracking across platforms" },
+        { name: "Review Response", description: "Professional, on-brand responses to every review" },
+        { name: "Review Generation Campaign", description: "Systematic review collection from happy clients" },
+        { name: "Social Listening", description: "Brand mentions, competitor activity, industry trends" },
       ],
     },
   ],
