@@ -119,7 +119,7 @@ async function getComments(args: { pageId?: string; limit?: number; since?: stri
     }>;
   }>(
     "GET",
-    `/${pageId}/feed`,
+    `/${pageId}/posts`,
     {
       fields: "comments{id,message,created_time,from{name,id},like_count,comment_count}",
       limit: String(limit),
