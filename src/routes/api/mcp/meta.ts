@@ -13,6 +13,11 @@
  *   meta_create_campaign     — create a new campaign
  *   meta_list_ad_sets        — list ad sets for an ad account
  *   meta_create_ad_account   — create a new ad account under a Business Manager
+ *   meta_list_owned_pages    — list pages owned by a Business Manager
+ *   meta_get_page            — get page details (name, about, website, username, cover)
+ *   meta_update_page         — update page fields (name, about, website, username)
+ *   meta_update_page_cover   — upload and set a new cover photo for a page
+ *   meta_update_page_picture — set a new profile picture for a page
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -219,6 +224,108 @@ async function createAdAccount(args: {
 }
 
 // ---------------------------------------------------------------------------
+// Page management tools
+// ---------------------------------------------------------------------------
+
+async function listOwnedPages(args: { business_id: string }) {
+  const data = await graphApiRequest<{
+    data?: Array<{
+      id: string;
+      name: string;
+      access_token: string;
+      category: string;
+    }>;
+  }>("GET", `/${args.business_id}/owned_pages`, {
+    fields: "id,name,access_token,category",
+  });
+  return data;
+}
+
+async function getPage(args: { page_id: string }) {
+  const data = await graphApiRequest<{
+    id: string;
+    name: string;
+    about?: string;
+    website?: string;
+    username?: string;
+    cover?: {
+      id: string;
+      source: string;
+    };
+    picture?: {
+      data: { url: string };
+    };
+    link?: string;
+  }>("GET", `/${args.page_id}`, {
+    fields: "id,name,about,website,username,cover,picture,link",
+  });
+  return data;
+}
+
+async function updatePage(args: {
+  page_id: string;
+  name?: string;
+  about?: string;
+  website?: string;
+  username?: string;
+}) {
+  const body: Record<string, unknown> = {};
+  if (args.name) body.name = args.name;
+  if (args.about) body.about = args.about;
+  if (args.website) body.website = args.website;
+  if (args.username) body.username = args.username;
+
+  const data = await graphApiRequest<{ success?: boolean }>(
+    "POST",
+    `/${args.page_id}`,
+    undefined,
+    body,
+  );
+  return data;
+}
+
+async function updatePageCover(args: { page_id: string; photo_url: string }) {
+  // Step 1: Upload the photo to the page
+  const photoUpload = await graphApiRequest<{ id: string; post_id?: string }>(
+    "POST",
+    `/${args.page_id}/photos`,
+    undefined,
+    {
+      url: args.photo_url,
+      published: false,
+    },
+  );
+
+  if (!photoUpload.id) {
+    throw new Error("Failed to upload cover photo — no photo ID returned");
+  }
+
+  // Step 2: Set the uploaded photo as the cover
+  const result = await graphApiRequest<{ success?: boolean }>(
+    "POST",
+    `/${args.page_id}`,
+    undefined,
+    {
+      cover: photoUpload.id,
+    },
+  );
+
+  return { photo_id: photoUpload.id, result };
+}
+
+async function updatePagePicture(args: { page_id: string; picture_url: string }) {
+  const data = await graphApiRequest<{ success?: boolean }>(
+    "POST",
+    `/${args.page_id}/picture`,
+    undefined,
+    {
+      url: args.picture_url,
+    },
+  );
+  return data;
+}
+
+// ---------------------------------------------------------------------------
 // Tool registry (MCP tools/list schema)
 // ---------------------------------------------------------------------------
 
@@ -393,6 +500,122 @@ const tools: ToolDef[] = [
       required: ["business_id", "name", "timezone_id", "end_advertiser", "media_agency", "partner"],
     },
     handler: createAdAccount,
+  },
+  {
+    name: "meta_list_owned_pages",
+    description:
+      "List all Facebook Pages owned by a Business Manager. " +
+      "Returns page IDs, names, categories, and access tokens. " +
+      "Requires a business_id (e.g., 1892194778251520).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        business_id: {
+          type: "string",
+          description: "Facebook Business Manager ID (numeric string).",
+        },
+      },
+      required: ["business_id"],
+    },
+    handler: listOwnedPages,
+  },
+  {
+    name: "meta_get_page",
+    description:
+      "Get details for a specific Facebook Page. " +
+      "Returns name, about section, website, username, cover photo URL, profile picture URL, and page link. " +
+      "Requires a page_id.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        page_id: {
+          type: "string",
+          description: "Facebook Page ID (numeric string).",
+        },
+      },
+      required: ["page_id"],
+    },
+    handler: getPage,
+  },
+  {
+    name: "meta_update_page",
+    description:
+      "Update a Facebook Page's basic information. " +
+      "Can update name, about (bio/description), website link, and username/handle. " +
+      "All fields are optional — only provided fields will be updated. " +
+      "Requires a page_id. Returns success confirmation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        page_id: {
+          type: "string",
+          description: "Facebook Page ID (numeric string).",
+        },
+        name: {
+          type: "string",
+          description: "New page name (optional).",
+        },
+        about: {
+          type: "string",
+          description: "New about/bio text (optional).",
+        },
+        website: {
+          type: "string",
+          description: "New website URL (optional).",
+        },
+        username: {
+          type: "string",
+          description: "New username/handle without @ (optional).",
+        },
+      },
+      required: ["page_id"],
+    },
+    handler: updatePage,
+  },
+  {
+    name: "meta_update_page_cover",
+    description:
+      "Upload and set a new cover photo for a Facebook Page. " +
+      "Provide a publicly accessible image URL and the page_id. " +
+      "The image is uploaded then set as the cover in two steps. " +
+      "Recommended dimensions: 820x312 pixels (851x315 also accepted).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        page_id: {
+          type: "string",
+          description: "Facebook Page ID (numeric string).",
+        },
+        photo_url: {
+          type: "string",
+          description: "Publicly accessible URL of the cover image.",
+        },
+      },
+      required: ["page_id", "photo_url"],
+    },
+    handler: updatePageCover,
+  },
+  {
+    name: "meta_update_page_picture",
+    description:
+      "Set a new profile picture for a Facebook Page. " +
+      "Provide a publicly accessible image URL and the page_id. " +
+      "Recommended: square image, minimum 180x180 pixels.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        page_id: {
+          type: "string",
+          description: "Facebook Page ID (numeric string).",
+        },
+        picture_url: {
+          type: "string",
+          description: "Publicly accessible URL of the profile picture image.",
+        },
+      },
+      required: ["page_id", "picture_url"],
+    },
+    handler: updatePagePicture,
   },
 ];
 
