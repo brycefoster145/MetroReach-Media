@@ -188,6 +188,17 @@ function FreeAudit() {
         throw new Error(data.error || "Something went wrong. Please try again.");
       }
 
+      // Save the full audit result to sessionStorage so the report page
+      // can access it even on Vercel where serverless instances are ephemeral.
+      if (data.result) {
+        try {
+          sessionStorage.setItem("audit-result", JSON.stringify(data.result));
+        } catch {
+          // sessionStorage might be full or unavailable — non-critical,
+          // the report page will fall back to the server-side loader.
+        }
+      }
+
       setStatus("success");
       if (data.redirect) {
         window.location.href = data.redirect;

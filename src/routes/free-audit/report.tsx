@@ -187,6 +187,27 @@ function FreeAuditReportPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
+
+    // ── Priority 1: sessionStorage (works across Vercel serverless instances) ──
+    try {
+      const cached = sessionStorage.getItem("audit-result");
+      if (cached) {
+        const parsed = JSON.parse(cached) as AuditResult;
+        // Verify the ID matches (defense against stale cache)
+        if (!id || parsed.id === id) {
+          sessionStorage.removeItem("audit-result"); // clean up after use
+          setAudit(parsed);
+          setLoading(false);
+          return;
+        }
+        // ID mismatch — clear stale cache and fall through
+        sessionStorage.removeItem("audit-result");
+      }
+    } catch {
+      // sessionStorage unavailable (SSR, etc.) — fall through
+    }
+
+    // ── Priority 2: server-side loader (works on localhost, fails on Vercel) ──
     if (!id) {
       setError("No report ID provided.");
       setLoading(false);

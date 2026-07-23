@@ -284,6 +284,7 @@ export const Route = createFileRoute("/api/audit/submit")({
               id: lead.id,
               success: true,
               redirect: `/free-audit/report?id=${lead.id}`,
+              result,
             }),
             { status: 200, headers: { "Content-Type": "application/json" } }
           );
