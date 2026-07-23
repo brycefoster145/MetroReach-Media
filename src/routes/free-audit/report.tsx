@@ -20,9 +20,13 @@ import {
   Buildings,
   Clock,
   CurrencyDollar,
+  ChatCircleText,
+  Article,
+  MapPin,
+  ThumbsUp,
+  SealCheck,
 } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
-import { Button } from "~/components/Button";
 import type { AuditResult } from "~/lib/audit-analyzer";
 
 // ---------------------------------------------------------------------------
@@ -35,7 +39,7 @@ const loadAudit = createServerFn({ method: "GET" })
     const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
     try {
       const raw = await readFile(
-        join("/home/team/shared/audits", `${safeId}.json`),
+        join("/home/team/shared/data/audits", `${safeId}.json`),
         "utf-8"
       );
       return JSON.parse(raw) as AuditResult;
@@ -86,45 +90,90 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
   const barColor =
     pct >= 0.7 ? "bg-success" : pct >= 0.4 ? "bg-warning" : "bg-error";
   const textColor =
-    pct >= 0.7
-      ? "text-success"
-      : pct >= 0.4
-        ? "text-warning"
-        : "text-error";
+    pct >= 0.7 ? "text-success" : pct >= 0.4 ? "text-warning" : "text-error";
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-2 rounded-full bg-bg-surface-high overflow-hidden">
+      <div className="flex-1 h-2.5 rounded-full bg-bg-surface-high overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ${barColor}`}
           style={{ width: `${Math.max(pct * 100, 2)}%` }}
         />
       </div>
-      <span className={`text-sm font-bold font-heading tabular-nums ${textColor}`}>
+      <span className={`text-sm font-bold font-heading tabular-nums min-w-[2rem] text-right ${textColor}`}>
         {score}
       </span>
     </div>
   );
 }
 
+function GaugeRing({ score }: { score: number }) {
+  const pct = score / 100;
+  const circumference = 2 * Math.PI * 54;
+  const dashOffset = circumference * (1 - pct);
+  const color =
+    pct >= 0.7 ? "#06D6A0" : pct >= 0.4 ? "#F59E0B" : "#EF4444";
+
+  return (
+    <div className="relative w-36 h-36">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+        <circle
+          cx="60" cy="60" r="54"
+          fill="none"
+          stroke="#1B2433"
+          strokeWidth="8"
+        />
+        <circle
+          cx="60" cy="60" r="54"
+          fill="none"
+          stroke={color}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          className="transition-all duration-1000 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="text-3xl font-bold font-heading tabular-nums"
+          style={{ color }}
+        >
+          {score}
+        </span>
+        <span className="text-xs text-text-muted">out of 100</span>
+      </div>
+    </div>
+  );
+}
+
 const categoryIcons: Record<string, React.ComponentType<{ size?: number; weight?: "fill"; className?: string }>> = {
   overallMarketing: ChartBar,
-  socialMediaHealth: Users,
+  socialPresence: Users,
   branding: Star,
-  contentQuality: Target,
-  engagement: Lightning,
+  contentQuality: Article,
+  postingConsistency: Clock,
+  engagement: ChatCircleText,
+  profileOptimization: SealCheck,
   website: Globe,
-  localVisibility: MagnifyingGlass,
+  localVisibility: MapPin,
+  reputation: ThumbsUp,
 };
 
-const categoryLabels: Record<string, string> = {
-  overallMarketing: "Overall Marketing",
-  socialMediaHealth: "Social Media Health",
-  branding: "Branding",
-  contentQuality: "Content Quality",
-  engagement: "Engagement",
-  website: "Website",
-  localVisibility: "Local Visibility",
-};
+function ConfidenceBadge({ confidence }: { confidence: "high" | "moderate" | "limited" }) {
+  const config = {
+    high: { color: "bg-success/15 text-success border-success/30", label: "High Confidence", icon: CheckCircle },
+    moderate: { color: "bg-warning/15 text-warning border-warning/30", label: "Moderate Confidence", icon: WarningCircle },
+    limited: { color: "bg-text-muted/15 text-text-muted border-text-muted/30", label: "Limited Data", icon: WarningCircle },
+  };
+  const c = config[confidence];
+  const Icon = c.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${c.color}`}>
+      <Icon size={14} weight="fill" />
+      {c.label}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -139,7 +188,7 @@ function FreeAuditReportPage() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
     if (!id) {
-      setError("No audit ID provided.");
+      setError("No report ID provided.");
       setLoading(false);
       return;
     }
@@ -153,7 +202,7 @@ function FreeAuditReportPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError("Failed to load report. Please try again.");
+        setError("We couldn't load your report. Please try again.");
         setLoading(false);
       });
   }, []);
@@ -196,8 +245,10 @@ function FreeAuditReportPage() {
     weaknesses,
     quickWins,
     serviceRecommendations,
+    recommendationConfidence,
+    confidenceExplanation,
     competitorSnapshot,
-    estimatedGrowthPotential,
+    executiveSummary,
     timestamp,
   } = audit;
 
@@ -207,12 +258,12 @@ function FreeAuditReportPage() {
     day: "numeric",
   });
 
+  const overall = scores.overall;
   const overallColor =
-    scores.overall >= 70
-      ? "text-success"
-      : scores.overall >= 40
-        ? "text-warning"
-        : "text-error";
+    overall >= 70 ? "text-success" : overall >= 40 ? "text-warning" : "text-error";
+
+  // Find top recommendation
+  const primaryRec = serviceRecommendations[0];
 
   return (
     <main>
@@ -225,30 +276,22 @@ function FreeAuditReportPage() {
               Social Media Audit &bull; {auditDate}
             </p>
             <p className="text-sm text-text-secondary mb-2">
-              Prepared by MetroReach Digital for
+              Prepared by Metro Reach Media for
             </p>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-heading text-text-primary tracking-tight mb-8">
               {formData.businessName}
             </h1>
 
             {/* Overall Score Card */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-2xl bg-bg-surface-raised border border-border-subtle">
-              <div className="flex-shrink-0 text-center sm:text-left">
-                <div
-                  className={`text-6xl md:text-7xl font-bold font-heading ${overallColor} tabular-nums`}
-                >
-                  {scores.overall}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-6 rounded-2xl bg-bg-surface-raised border border-border-subtle">
+              <GaugeRing score={overall} />
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <div className="flex flex-wrap items-center gap-3 mb-2 justify-center sm:justify-start">
+                  <ScoreBadge score={overall} />
+                  <ConfidenceBadge confidence={recommendationConfidence} />
                 </div>
-                <p className="text-sm text-text-muted mt-1">out of 100</p>
-              </div>
-              <div className="flex-1 min-w-0">
-                <ScoreBadge score={scores.overall} />
                 <p className="text-sm text-text-secondary mt-2 leading-relaxed">
-                  {scores.overall >= 70
-                    ? `${formData.businessName} has a strong digital marketing foundation. Our team's analysis shows you're ahead of most local competitors — the opportunity now is to scale and dominate your market.`
-                    : scores.overall >= 40
-                      ? `${formData.businessName} has the basics in place, but our analysis identified clear gaps that are costing you leads. Each gap represents an opportunity — close them, and your pipeline transforms.`
-                      : `${formData.businessName}'s digital presence needs foundational work. Our team's review found significant gaps across key marketing dimensions. The upside: every improvement from here translates directly to more visibility, trust, and leads.`}
+                  {executiveSummary}
                 </p>
               </div>
             </div>
@@ -256,35 +299,52 @@ function FreeAuditReportPage() {
         </Container>
       </section>
 
-      {/* ── Score Breakdown ── */}
+      {/* ── Category Scores ── */}
       <section className="py-16 bg-bg-surface">
         <Container>
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold font-heading text-text-primary mb-8">
+            <h2 className="text-2xl font-bold font-heading text-text-primary mb-2">
               Category Scores
             </h2>
-            <div className="space-y-5">
+            <p className="text-text-secondary mb-8">
+              Metro Reach Media analyzed {formData.businessName} across 9 marketing dimensions.
+              Each score is based on evidence found during our review.
+            </p>
+            <div className="space-y-4">
               {scores.categories.map((cat) => {
                 const Icon = categoryIcons[cat.name] || ChartBar;
                 return (
-                  <div
-                    key={cat.name}
-                    className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-5"
-                  >
+                  <div key={cat.name} className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-5">
                     <div className="flex items-center gap-3 mb-3">
-                      <Icon
-                        size={22}
-                        weight="fill"
-                        className="text-brand-primary flex-shrink-0"
-                      />
-                      <span className="text-sm font-medium text-text-secondary">
-                        {cat.label}
-                      </span>
+                      <Icon size={22} weight="fill" className="text-brand-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium text-text-secondary">{cat.label}</span>
+                          <span className={`text-sm font-bold tabular-nums ${
+                            cat.score >= 70 ? "text-success" : cat.score >= 40 ? "text-warning" : "text-error"
+                          }`}>
+                            {cat.score}/100
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <ScoreBar score={cat.score} />
                     <p className="text-sm text-text-secondary mt-3 leading-relaxed">
                       {cat.observation}
                     </p>
+                    {cat.evidence && cat.evidence.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border-subtle">
+                        <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1.5">Evidence</p>
+                        <ul className="space-y-1">
+                          {cat.evidence.map((e, i) => (
+                            <li key={i} className="text-xs text-text-muted flex items-start gap-1.5">
+                              <span className="text-brand-primary mt-0.5">•</span>
+                              {e}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -302,29 +362,50 @@ function FreeAuditReportPage() {
               Website Analysis
             </h2>
             <div className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-6">
-              <p className="text-sm text-text-secondary leading-relaxed mb-4">
-                {website.observation}
-              </p>
-              {website.fetched && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: "Page Title", ok: !!website.title },
-                    { label: "Meta Description", ok: !!website.description },
-                    { label: "HTTPS Secure", ok: website.hasHttps },
-                    { label: "Open Graph Tags", ok: website.hasOpenGraph },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className={`text-xs font-medium px-3 py-2 rounded-lg ${
-                        item.ok
-                          ? "bg-success/10 text-success"
-                          : "bg-error/10 text-error"
-                      }`}
-                    >
-                      {item.ok ? "✓" : "✗"} {item.label}
-                    </div>
-                  ))}
+              {website.fetched ? (
+                <>
+                  <p className="text-sm text-text-secondary leading-relaxed mb-4">
+                    Metro Reach Media successfully analyzed {formData.websiteUrl || "your website"}.
+                    We found {website.title ? `a page title ("${website.title.slice(0, 80)}${website.title.length > 80 ? "..." : ""}"), ` : "no page title, "}
+                    {website.description ? "a meta description, " : "no meta description, "}
+                    and approximately {website.wordCount.toLocaleString()} words of content.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "Page Title", ok: !!website.title },
+                      { label: "Meta Description", ok: !!website.description },
+                      { label: "HTTPS Secure", ok: website.hasHttps },
+                      { label: "Open Graph Tags", ok: website.hasOpenGraph },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className={`text-xs font-medium px-3 py-2 rounded-lg ${
+                          item.ok ? "bg-success/10 text-success" : "bg-error/10 text-error"
+                        }`}
+                      >
+                        {item.ok ? "✓" : "✗"} {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : formData.websiteUrl?.trim() ? (
+                <div className="text-center py-4">
+                  <WarningCircle size={24} weight="fill" className="text-warning mx-auto mb-3" />
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    Metro Reach Media attempted to analyze {formData.websiteUrl} but was unable to reach the site.
+                    This could mean the site is down, the URL is incorrect, or security settings are blocking external review.
+                  </p>
+                  <p className="text-sm text-text-secondary mt-2">
+                    If potential customers experience the same issue, they'll leave immediately.
+                  </p>
+                  <a href="/free-audit" className="inline-block mt-4 text-sm text-brand-primary hover:text-brand-accent transition-colors">
+                    Try again with a different URL →
+                  </a>
                 </div>
+              ) : (
+                <p className="text-sm text-text-secondary text-center py-4">
+                  No website URL was provided. A website is often the first place customers go after discovering your business.
+                </p>
               )}
             </div>
           </div>
@@ -340,16 +421,13 @@ function FreeAuditReportPage() {
               <div>
                 <h2 className="text-xl font-bold font-heading text-text-primary mb-6 flex items-center gap-2">
                   <Medal size={22} weight="fill" className="text-brand-accent" />
-                  Top Strengths
+                  What You're Doing Well
                 </h2>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {strengths.map((s, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl bg-bg-surface-raised border border-border-subtle p-4"
-                    >
+                    <div key={i} className="rounded-xl bg-bg-surface-raised border border-border-subtle p-4">
                       <div className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-success/15 flex items-center justify-center">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-success/15 flex items-center justify-center mt-0.5">
                           <CheckCircle size={14} weight="fill" className="text-success" />
                         </span>
                         <p className="text-sm text-text-secondary leading-relaxed">{s}</p>
@@ -362,26 +440,15 @@ function FreeAuditReportPage() {
               {/* Weaknesses */}
               <div>
                 <h2 className="text-xl font-bold font-heading text-text-primary mb-6 flex items-center gap-2">
-                  <WarningCircle
-                    size={22}
-                    weight="fill"
-                    className="text-warning"
-                  />
-                  Priority Weaknesses
+                  <WarningCircle size={22} weight="fill" className="text-warning" />
+                  Highest-Priority Opportunities
                 </h2>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {weaknesses.map((w, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl bg-bg-surface-raised border border-border-subtle p-4"
-                    >
+                    <div key={i} className="rounded-xl bg-bg-surface-raised border border-border-subtle p-4">
                       <div className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-warning/15 flex items-center justify-center">
-                          <WarningCircle
-                            size={14}
-                            weight="fill"
-                            className="text-warning"
-                          />
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-warning/15 flex items-center justify-center mt-0.5">
+                          <WarningCircle size={14} weight="fill" className="text-warning" />
                         </span>
                         <p className="text-sm text-text-secondary leading-relaxed">{w}</p>
                       </div>
@@ -394,25 +461,8 @@ function FreeAuditReportPage() {
         </Container>
       </section>
 
-      {/* ── Competitor Snapshot ── */}
-      <section className="py-16 bg-bg-root border-t border-border-subtle">
-        <Container>
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold font-heading text-text-primary mb-6 flex items-center gap-2">
-              <Buildings size={22} weight="fill" className="text-brand-primary" />
-              Competitor Snapshot
-            </h2>
-            <div className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-6">
-              <p className="text-sm text-text-secondary leading-relaxed">
-                {competitorSnapshot}
-              </p>
-            </div>
-          </div>
-        </Container>
-      </section>
-
       {/* ── Quick Wins ── */}
-      <section className="py-16 bg-bg-surface border-t border-border-subtle">
+      <section className="py-16 bg-bg-root border-t border-border-subtle">
         <Container>
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold font-heading text-text-primary mb-2">
@@ -423,17 +473,10 @@ function FreeAuditReportPage() {
             </p>
             <div className="space-y-4">
               {quickWins.map((win, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-6"
-                >
+                <div key={i} className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-6">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                      <Lightning
-                        size={20}
-                        weight="fill"
-                        className="text-brand-accent"
-                      />
+                      <Lightning size={20} weight="fill" className="text-brand-accent" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -449,9 +492,7 @@ function FreeAuditReportPage() {
                         >
                           {win.impactLevel} Impact
                         </span>
-                        <span className="text-xs text-text-muted">
-                          {win.timeEstimate}
-                        </span>
+                        <span className="text-xs text-text-muted">{win.timeEstimate}</span>
                       </div>
                       <p className="text-sm text-text-secondary mb-3">
                         <span className="font-semibold text-text-primary">Issue:</span>{" "}
@@ -470,39 +511,43 @@ function FreeAuditReportPage() {
         </Container>
       </section>
 
-      {/* ── Estimated Growth Potential ── */}
-      <section className="py-16 bg-bg-root border-t border-border-subtle">
+      {/* ── Competitor Snapshot ── */}
+      <section className="py-16 bg-bg-surface border-t border-border-subtle">
         <Container>
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold font-heading text-text-primary mb-6 flex items-center gap-2">
-              <ChartBar size={22} weight="fill" className="text-brand-primary" />
-              Estimated Growth Potential
+              <Buildings size={22} weight="fill" className="text-brand-primary" />
+              Competitor Snapshot
             </h2>
             <div className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-6">
               <p className="text-sm text-text-secondary leading-relaxed">
-                {estimatedGrowthPotential}
+                {competitorSnapshot}
               </p>
             </div>
           </div>
         </Container>
       </section>
 
-      {/* ── Service Recommendations ── */}
-      <section className="py-16 bg-bg-surface border-t border-border-subtle">
+      {/* ── Recommended Service ── */}
+      <section className="py-16 bg-bg-root border-t border-border-subtle">
         <Container>
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold font-heading text-text-primary mb-2">
-              Recommended Service Package
+              Your Recommended Growth Plan
             </h2>
-            <p className="text-text-secondary mb-8">
-              Based on our team's analysis of your scores and gaps, here's what we
-              recommend to move the needle fastest.
+            <p className="text-text-secondary mb-2">
+              Based on Metro Reach Media's analysis of {formData.businessName}'s scores and identified gaps,
+              here is the service we recommend to move the needle fastest.
             </p>
+            <div className="mb-8">
+              <ConfidenceBadge confidence={recommendationConfidence} />
+              <p className="text-xs text-text-muted mt-2">{confidenceExplanation}</p>
+            </div>
 
             <div className="space-y-6">
               {serviceRecommendations.map((rec, i) => (
                 <div
-                  key={i}
+                  key={rec.slug}
                   className={`rounded-2xl border p-6 ${
                     i === 0
                       ? "bg-bg-surface-raised border-brand-primary/30 ring-1 ring-brand-primary/10"
@@ -519,11 +564,7 @@ function FreeAuditReportPage() {
 
                   <div className="flex items-start gap-4 mb-5">
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                      <ShoppingCart
-                        size={20}
-                        weight="fill"
-                        className="text-brand-primary"
-                      />
+                      <ShoppingCart size={20} weight="fill" className="text-brand-primary" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold font-heading text-text-primary mb-1">
@@ -539,41 +580,52 @@ function FreeAuditReportPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-14">
                     <div className="rounded-xl bg-bg-surface p-4">
                       <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
-                        What's Wrong
+                        Problems Addressed
                       </p>
-                      <p className="text-sm text-text-secondary">{rec.whatIsWrong}</p>
+                      <ul className="space-y-1">
+                        {rec.problemsAddressed.map((p, j) => (
+                          <li key={j} className="text-sm text-text-secondary flex items-start gap-1.5">
+                            <span className="text-brand-primary mt-0.5">•</span>
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                     <div className="rounded-xl bg-bg-surface p-4">
                       <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
-                        Why It Matters
+                        Deliverables
                       </p>
-                      <p className="text-sm text-text-secondary">{rec.whyItMatters}</p>
+                      <ul className="space-y-1">
+                        {rec.deliverables.map((d, j) => (
+                          <li key={j} className="text-sm text-text-secondary flex items-start gap-1.5">
+                            <span className="text-brand-primary mt-0.5">•</span>
+                            {d}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                     <div className="rounded-xl bg-bg-surface p-4">
                       <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
                         <Clock size={12} weight="fill" /> Timeline
                       </p>
-                      <p className="text-sm text-text-secondary">
-                        {rec.estimatedTimeline}
-                      </p>
+                      <p className="text-sm text-text-secondary">{rec.estimatedTimeline}</p>
                     </div>
                     <div className="rounded-xl bg-bg-surface p-4">
                       <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1 flex items-center gap-1.5">
                         <CurrencyDollar size={12} weight="fill" /> Investment
                       </p>
                       <p className="text-sm font-semibold text-text-primary">
-                        {rec.monthlyInvestment}
+                        {rec.price}{rec.billingFrequency ? `/${rec.billingFrequency}` : ""}
                       </p>
                     </div>
                   </div>
 
+                  {/* Post-purchase */}
                   <div className="ml-14 mt-5">
-                    <p className="text-sm text-text-secondary">
-                      <span className="font-semibold text-text-primary">
-                        Service:
-                      </span>{" "}
-                      {rec.whichService}
+                    <p className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                      After Purchase
                     </p>
+                    <p className="text-sm text-text-secondary">{rec.postPurchase}</p>
                   </div>
                 </div>
               ))}
@@ -583,32 +635,45 @@ function FreeAuditReportPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-16 bg-bg-root border-t border-border-subtle">
+      <section className="py-16 bg-bg-surface border-t border-border-subtle">
         <Container>
           <div className="max-w-xl mx-auto text-center">
             <h2 className="text-2xl font-bold font-heading text-text-primary mb-4">
               Ready to implement these recommendations?
             </h2>
             <p className="text-text-secondary mb-8">
-              MetroReach Digital can handle this for you. Our team of specialists
+              Metro Reach Media can handle this for you. Our team of specialists
               manages every dimension of social media — strategy, creative, posting,
               engagement, and analytics — so you get the results without the overhead.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button href="/contact">
-                Start My Growth Plan
-                <ArrowRight size={18} weight="bold" />
-              </Button>
-              <Button href="/services" variant="ghost">
-                Compare All Service Packages
-              </Button>
+              {primaryRec?.stripeLink ? (
+                <a
+                  href={primaryRec.stripeLink}
+                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
+                >
+                  Start My Growth Plan
+                  <ArrowRight size={18} weight="bold" />
+                </a>
+              ) : (
+                <a
+                  href="/contact"
+                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
+                >
+                  Start My Growth Plan
+                  <ArrowRight size={18} weight="bold" />
+                </a>
+              )}
+              <a
+                href="/services"
+                className="border border-border-emphasis text-text-primary rounded-full px-6 py-2.5 text-sm hover:border-brand-primary hover:text-brand-primary inline-flex items-center gap-2 font-semibold transition-all duration-200"
+              >
+                Compare All Services
+              </a>
             </div>
             <p className="text-xs text-text-muted mt-8 pt-8 border-t border-border-subtle">
-              Prepared by MetroReach Digital. Questions?{" "}
-              <a
-                href="/contact"
-                className="text-brand-primary hover:text-brand-accent transition-colors"
-              >
+              Prepared by Metro Reach Media. Questions?{" "}
+              <a href="/contact" className="text-brand-primary hover:text-brand-accent transition-colors">
                 Contact us
               </a>
               .

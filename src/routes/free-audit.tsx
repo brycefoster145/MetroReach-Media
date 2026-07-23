@@ -22,32 +22,55 @@ const industries = [
   "Restaurant",
   "Law Firm",
   "Dental Practice",
+  "Home Services",
   "Other",
+] as const;
+
+const primaryGoals = [
+  "Generate more leads",
+  "Improve brand awareness",
+  "Increase website traffic",
+  "Get more reviews",
+  "Expand to new platforms",
+  "Build a consistent social presence",
+  "All of the above",
 ] as const;
 
 interface FormState {
   businessName: string;
   websiteUrl: string;
+  industry: string;
+  location: string;
+  primaryGoal: string;
   facebookUrl: string;
   instagramUrl: string;
-  tiktokUrl: string;
   linkedinUrl: string;
-  industry: string;
-  goals: string;
+  tiktokUrl: string;
+  googleBusinessUrl: string;
+  contactName: string;
   email: string;
+  phone: string;
+  consent: boolean;
 }
 
 const initialForm: FormState = {
   businessName: "",
   websiteUrl: "",
+  industry: "",
+  location: "",
+  primaryGoal: "",
   facebookUrl: "",
   instagramUrl: "",
-  tiktokUrl: "",
   linkedinUrl: "",
-  industry: "",
-  goals: "",
+  tiktokUrl: "",
+  googleBusinessUrl: "",
+  contactName: "",
   email: "",
+  phone: "",
+  consent: false,
 };
+
+type FieldName = keyof FormState;
 
 export const Route = createFileRoute("/free-audit")({
   component: FreeAudit,
@@ -55,11 +78,11 @@ export const Route = createFileRoute("/free-audit")({
 
 function FreeAudit() {
   const [form, setForm] = useState<FormState>(initialForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const update = (field: keyof FormState, value: string) => {
+  const update = (field: FieldName, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -71,12 +94,69 @@ function FreeAudit() {
   };
 
   const validate = (): boolean => {
-    const errs: Partial<Record<keyof FormState, string>> = {};
-    if (!form.businessName.trim()) errs.businessName = "Business name is required.";
-    if (!form.websiteUrl.trim()) errs.websiteUrl = "Website URL is required.";
-    if (!form.email.trim()) errs.email = "Email address is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+    const errs: Partial<Record<FieldName, string>> = {};
+
+    // Required text fields
+    const required: { field: FieldName; label: string }[] = [
+      { field: "businessName", label: "Business name" },
+      { field: "websiteUrl", label: "Website URL" },
+      { field: "industry", label: "Industry" },
+      { field: "location", label: "Business location" },
+      { field: "primaryGoal", label: "Primary goal" },
+      { field: "contactName", label: "Contact name" },
+      { field: "email", label: "Email address" },
+    ];
+
+    for (const { field, label } of required) {
+      if (typeof form[field] === "string" && !(form[field] as string).trim()) {
+        errs[field] = `${label} is required.`;
+      }
+    }
+
+    // Email format
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = "Enter a valid email address.";
+    }
+
+    // Website URL format
+    if (form.websiteUrl.trim()) {
+      try {
+        const url = new URL(form.websiteUrl.trim());
+        if (url.protocol !== "http:" && url.protocol !== "https:") {
+          errs.websiteUrl = "Enter a valid URL starting with http:// or https://";
+        }
+      } catch {
+        errs.websiteUrl = "Enter a valid URL (e.g., https://yourbusiness.com)";
+      }
+    }
+
+    // Social URL format (optional but validate if provided)
+    const socialUrls: { field: FieldName; label: string }[] = [
+      { field: "facebookUrl", label: "Facebook URL" },
+      { field: "instagramUrl", label: "Instagram URL" },
+      { field: "linkedinUrl", label: "LinkedIn URL" },
+      { field: "tiktokUrl", label: "TikTok URL" },
+      { field: "googleBusinessUrl", label: "Google Business Profile URL" },
+    ];
+    for (const { field, label } of socialUrls) {
+      const val = form[field] as string;
+      if (val.trim()) {
+        try {
+          const url = new URL(val.trim());
+          if (url.protocol !== "http:" && url.protocol !== "https:") {
+            errs[field] = `Enter a valid ${label}.`;
+          }
+        } catch {
+          errs[field] = `Enter a valid ${label}.`;
+        }
+      }
+    }
+
+    // Consent
+    if (!form.consent) {
+      errs.consent = "Please confirm your consent to continue.";
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -112,6 +192,7 @@ function FreeAudit() {
     "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
   const labelClass = "block text-sm font-medium text-text-secondary mb-2";
   const errorClass = "text-xs text-error mt-1.5";
+  const optionalClass = "text-text-muted font-normal";
 
   return (
     <main>
@@ -129,7 +210,7 @@ function FreeAudit() {
               Get Your Free Social Media Audit
             </h1>
             <p className="text-lg lg:text-xl text-text-secondary max-w-2xl mx-auto">
-              Our team analyzes your digital presence across your website and social
+              Metro Reach Media analyzes your digital presence across your website and social
               platforms — then delivers a detailed report with scores, strengths,
               weaknesses, and a clear growth plan. No templates. No fluff.
             </p>
@@ -154,7 +235,7 @@ function FreeAudit() {
                   },
                   {
                     icon: ChartBar,
-                    text: "Social media health scoring across every platform you share",
+                    text: "10-category social media health scoring with evidence-based observations",
                   },
                   {
                     icon: ShieldCheck,
@@ -162,7 +243,7 @@ function FreeAudit() {
                   },
                   {
                     icon: Lightning,
-                    text: "3–4 Quick Wins you can implement today with zero budget",
+                    text: "Quick Wins you can implement today with zero budget",
                   },
                   {
                     icon: ArrowRight,
@@ -190,7 +271,7 @@ function FreeAudit() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-8" noValidate>
-              {/* Business Info */}
+              {/* ── Business Information ── */}
               <fieldset className="space-y-5">
                 <legend className="text-lg font-semibold font-heading text-text-primary mb-1">
                   About Your Business
@@ -209,9 +290,7 @@ function FreeAudit() {
                     onChange={(e) => update("businessName", e.target.value)}
                     required
                   />
-                  {errors.businessName && (
-                    <p className={errorClass}>{errors.businessName}</p>
-                  )}
+                  {errors.businessName && <p className={errorClass}>{errors.businessName}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -228,13 +307,11 @@ function FreeAudit() {
                       onChange={(e) => update("websiteUrl", e.target.value)}
                       required
                     />
-                    {errors.websiteUrl && (
-                      <p className={errorClass}>{errors.websiteUrl}</p>
-                    )}
+                    {errors.websiteUrl && <p className={errorClass}>{errors.websiteUrl}</p>}
                   </div>
                   <div>
                     <label htmlFor="industry" className={labelClass}>
-                      Industry
+                      Industry <span className="text-error">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -242,6 +319,7 @@ function FreeAudit() {
                         className={`${inputClass} appearance-none pr-10`}
                         value={form.industry}
                         onChange={(e) => update("industry", e.target.value)}
+                        required
                       >
                         <option value="" disabled>
                           Select your industry
@@ -258,93 +336,167 @@ function FreeAudit() {
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
                       />
                     </div>
+                    {errors.industry && <p className={errorClass}>{errors.industry}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label htmlFor="location" className={labelClass}>
+                      Business Location (City/State) <span className="text-error">*</span>
+                    </label>
+                    <input
+                      id="location"
+                      type="text"
+                      className={inputClass}
+                      placeholder="Austin, TX"
+                      value={form.location}
+                      onChange={(e) => update("location", e.target.value)}
+                      required
+                    />
+                    {errors.location && <p className={errorClass}>{errors.location}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="primaryGoal" className={labelClass}>
+                      Primary Goal <span className="text-error">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="primaryGoal"
+                        className={`${inputClass} appearance-none pr-10`}
+                        value={form.primaryGoal}
+                        onChange={(e) => update("primaryGoal", e.target.value)}
+                        required
+                      >
+                        <option value="" disabled>
+                          What's your top priority?
+                        </option>
+                        {primaryGoals.map((goal) => (
+                          <option key={goal} value={goal}>
+                            {goal}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={16}
+                        weight="bold"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                      />
+                    </div>
+                    {errors.primaryGoal && <p className={errorClass}>{errors.primaryGoal}</p>}
                   </div>
                 </div>
               </fieldset>
 
-              {/* Social Profiles */}
+              {/* ── Social Profiles ── */}
               <fieldset className="space-y-5">
                 <legend className="text-lg font-semibold font-heading text-text-primary mb-1">
                   Your Social Profiles
                 </legend>
                 <p className="text-sm text-text-muted -mt-3">
                   Paste the full URLs to your profiles. The more you share, the more
-                  complete your audit.
+                  complete your audit. All fields are optional — we'll analyze what we can.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {([
-                    {
-                      key: "facebookUrl" as const,
-                      label: "Facebook URL",
-                      placeholder: "https://facebook.com/yourpage",
-                    },
-                    {
-                      key: "instagramUrl" as const,
-                      label: "Instagram URL",
-                      placeholder: "https://instagram.com/yourhandle",
-                    },
-                    {
-                      key: "tiktokUrl" as const,
-                      label: "TikTok URL (optional)",
-                      placeholder: "https://tiktok.com/@yourhandle",
-                    },
-                    {
-                      key: "linkedinUrl" as const,
-                      label: "LinkedIn URL (optional)",
-                      placeholder: "https://linkedin.com/company/yourcompany",
-                    },
+                    { key: "facebookUrl" as FieldName, label: "Facebook URL", placeholder: "https://facebook.com/yourpage" },
+                    { key: "instagramUrl" as FieldName, label: "Instagram URL", placeholder: "https://instagram.com/yourhandle" },
+                    { key: "linkedinUrl" as FieldName, label: "LinkedIn URL", placeholder: "https://linkedin.com/company/yourcompany" },
+                    { key: "tiktokUrl" as FieldName, label: "TikTok URL", placeholder: "https://tiktok.com/@yourhandle" },
+                    { key: "googleBusinessUrl" as FieldName, label: "Google Business Profile URL", placeholder: "https://maps.google.com/..." },
                   ]).map(({ key, label, placeholder }) => (
-                    <div key={key}>
+                    <div key={key} className={key === "googleBusinessUrl" ? "sm:col-span-2" : ""}>
                       <label htmlFor={key} className={labelClass}>
-                        {label}
+                        {label} <span className={optionalClass}>(optional)</span>
                       </label>
                       <input
                         id={key}
                         type="url"
                         className={inputClass}
                         placeholder={placeholder}
-                        value={form[key]}
+                        value={form[key] as string}
                         onChange={(e) => update(key, e.target.value)}
                       />
+                      {errors[key] && <p className={errorClass}>{errors[key]}</p>}
                     </div>
                   ))}
                 </div>
               </fieldset>
 
-              {/* Goals */}
-              <fieldset>
-                <label htmlFor="goals" className={labelClass}>
-                  Primary Business Goals
-                </label>
-                <textarea
-                  id="goals"
-                  className={`${inputClass} resize-y min-h-[100px]`}
-                  placeholder="More leads? Better brand visibility? Fill the pipeline? Tell us what success looks like for your business."
-                  value={form.goals}
-                  onChange={(e) => update("goals", e.target.value)}
-                  rows={3}
-                />
+              {/* ── Contact Information ── */}
+              <fieldset className="space-y-5">
+                <legend className="text-lg font-semibold font-heading text-text-primary mb-1">
+                  Your Contact Information
+                </legend>
+
+                <div>
+                  <label htmlFor="contactName" className={labelClass}>
+                    Contact Name <span className="text-error">*</span>
+                  </label>
+                  <input
+                    id="contactName"
+                    type="text"
+                    className={inputClass}
+                    placeholder="Your full name"
+                    value={form.contactName}
+                    onChange={(e) => update("contactName", e.target.value)}
+                    required
+                  />
+                  {errors.contactName && <p className={errorClass}>{errors.contactName}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label htmlFor="email" className={labelClass}>
+                      Email Address <span className="text-error">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      className={inputClass}
+                      placeholder="you@company.com"
+                      value={form.email}
+                      onChange={(e) => update("email", e.target.value)}
+                      required
+                    />
+                    {errors.email && <p className={errorClass}>{errors.email}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="phone" className={labelClass}>
+                      Phone <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      className={inputClass}
+                      placeholder="(555) 555-5555"
+                      value={form.phone}
+                      onChange={(e) => update("phone", e.target.value)}
+                    />
+                  </div>
+                </div>
               </fieldset>
 
-              {/* Email */}
+              {/* ── Consent ── */}
               <fieldset>
-                <label htmlFor="email" className={labelClass}>
-                  Email Address <span className="text-error">*</span>
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className={inputClass}
-                  placeholder="you@company.com"
-                  value={form.email}
-                  onChange={(e) => update("email", e.target.value)}
-                  required
-                />
-                {errors.email && <p className={errorClass}>{errors.email}</p>}
+                <div className="flex items-start gap-3">
+                  <input
+                    id="consent"
+                    type="checkbox"
+                    className="mt-1 w-4 h-4 rounded border-border-emphasis bg-bg-surface-raised text-brand-primary focus:ring-brand-primary/30 cursor-pointer"
+                    checked={form.consent}
+                    onChange={(e) => update("consent", e.target.checked)}
+                  />
+                  <label htmlFor="consent" className="text-sm text-text-secondary cursor-pointer">
+                    I consent to Metro Reach Media analyzing publicly accessible business information{" "}
+                    <span className="text-error">*</span>
+                  </label>
+                </div>
+                {errors.consent && <p className={errorClass}>{errors.consent}</p>}
               </fieldset>
 
-              {/* Submit */}
+              {/* ── Submit ── */}
               <div className="pt-4">
                 <button
                   type="submit"
@@ -390,7 +542,7 @@ function FreeAudit() {
                 {
                   step: "02",
                   label: "Our team reviews your presence",
-                  desc: "We analyze your website, social profiles, and competitive position using our proven methodology.",
+                  desc: "Metro Reach Media analyzes your website, social profiles, and competitive position using our proven methodology.",
                 },
                 {
                   step: "03",
@@ -402,9 +554,7 @@ function FreeAudit() {
                   <p className="text-3xl font-bold font-heading text-brand-primary/30 mb-2">
                     {item.step}
                   </p>
-                  <p className="text-sm font-semibold text-text-primary mb-1">
-                    {item.label}
-                  </p>
+                  <p className="text-sm font-semibold text-text-primary mb-1">{item.label}</p>
                   <p className="text-xs text-text-muted">{item.desc}</p>
                 </div>
               ))}
@@ -418,7 +568,7 @@ function FreeAudit() {
         <Container>
           <div className="text-center max-w-xl mx-auto">
             <p className="text-sm text-text-muted">
-              MetroReach Digital — Premium Social Media Marketing. Our team of
+              Metro Reach Media — Premium Social Media Marketing. Our team of
               specialists has delivered this audit methodology to businesses across
               contracting, med spas, real estate, auto shops, clinics, and salons.
             </p>
