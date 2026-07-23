@@ -176,7 +176,7 @@ async function createPost(args: {
     input.schedulingType = "notification";
   } else {
     input.mode = "shareNow";
-    input.schedulingType = "shareNow";
+    input.schedulingType = "automatic";
   }
 
   const data = await graphqlRequest<{
