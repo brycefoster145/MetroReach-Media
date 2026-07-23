@@ -180,18 +180,24 @@ async function createPost(args: {
 
   const data = await graphqlRequest<{
     createPost?: {
-      id: string;
-      status: string;
-      text: string;
-      dueAt: string | null;
+      post?: {
+        id: string;
+        status: string;
+        text: string;
+        dueAt: string | null;
+      };
     };
   }>(`
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
-        id
-        status
-        text
-        dueAt
+        ... on PostActionSuccess {
+          post {
+            id
+            status
+            text
+            dueAt
+          }
+        }
       }
     }
   `, { input });
