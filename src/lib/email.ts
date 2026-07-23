@@ -1,4 +1,4 @@
-import { MailService, type MailDataRequired } from "@sendgrid/mail";
+import sgMail from "@sendgrid/mail";
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const TOKEN_URL = "https://login.microsoftonline.com";
@@ -30,9 +30,7 @@ interface SendResult {
 
 // --- SendGrid setup (only if SENDGRID_API_KEY is set) ---
 const sendgridApiKey = process.env.SENDGRID_API_KEY;
-let sgMail: MailService | null = null;
 if (sendgridApiKey) {
-  sgMail = new MailService();
   sgMail.setApiKey(sendgridApiKey);
 }
 
@@ -116,19 +114,17 @@ export async function sendEmail({
   }
 
   // --- SendGrid path (primary when API key is configured) ---
-  if (sgMail) {
+  if (sendgridApiKey) {
     try {
-      const msg: MailDataRequired = {
+      const msg: Record<string, unknown> = {
         to,
         from: from || SENDGRID_DEFAULT_FROM,
         subject,
         html: body,
+        replyTo,
       };
-      if (replyTo) {
-        msg.replyTo = replyTo;
-      }
 
-      const [response] = await sgMail.send(msg);
+      const [response] = await sgMail.send(msg as any);
 
       return {
         success: true,

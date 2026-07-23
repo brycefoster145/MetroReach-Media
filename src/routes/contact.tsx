@@ -7,6 +7,55 @@ import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
 import { contactPage } from "~/data/pages";
 import { sendTelegramMessage } from "~/lib/telegram";
+import { sendEmail } from "~/lib/email";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function confirmationEmailHtml(name: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
+  <h2 style="color:#7c3aed;margin-bottom:16px;">Thanks for reaching out, ${escapeHtml(name)}</h2>
+  <p>We received your message and our team will review it within 24 hours. You'll hear from us at this email address.</p>
+  <p style="margin-top:24px;font-size:14px;color:#6b7280;">— MetroReach Media</p>
+</body>
+</html>`.trim();
+}
+
+function notificationEmailHtml(data: {
+  fullName: string;
+  email: string;
+  company: string;
+  serviceInterest: string;
+  message: string;
+}): string {
+  return `
+<!DOCTYPE html>
+<html>
+<body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
+  <h2 style="color:#7c3aed;margin-bottom:8px;">🚀 New Lead — MetroReach Media</h2>
+  <table style="border-collapse:collapse;margin:16px 0;">
+    <tr><td style="font-weight:600;padding:4px 12px 4px 0;white-space:nowrap">Name</td><td>${escapeHtml(data.fullName)}</td></tr>
+    <tr><td style="font-weight:600;padding:4px 12px 4px 0;white-space:nowrap">Email</td><td>${escapeHtml(data.email)}</td></tr>
+    <tr><td style="font-weight:600;padding:4px 12px 4px 0;white-space:nowrap">Company</td><td>${escapeHtml(data.company)}</td></tr>
+    <tr><td style="font-weight:600;padding:4px 12px 4px 0;white-space:nowrap">Service</td><td>${escapeHtml(data.serviceInterest)}</td></tr>
+  </table>
+  <div style="background:#f5f3ff;padding:16px;border-radius:8px;margin:16px 0;">
+    <p style="font-weight:600;margin:0 0 8px;">Message:</p>
+    <p style="margin:0;">${escapeHtml(data.message)}</p>
+  </div>
+  <p style="font-size:14px;color:#6b7280;">Source: contact-page · ${new Date().toISOString()}</p>
+</body>
+</html>`.trim();
+}
 
 const submitContact = createServerFn({ method: "POST" })
   .validator((data: unknown) => {
@@ -57,6 +106,27 @@ const submitContact = createServerFn({ method: "POST" })
     lines.push(`<a href="https://7d5924e3a6715d74efa480bc8bb2da91.ctonew.app/leads">View all leads →</a>`);
     sendTelegramMessage(lines.join("\n")).catch(() => {
       // Silently ignore Telegram failures — don't block form submission
+    });
+
+    // Send confirmation email to the lead (non-blocking)
+    sendEmail({
+      to: data.email,
+      from: "bryce@metroreachagency.com",
+      subject: "We got your message — MetroReach Media",
+      body: confirmationEmailHtml(data.fullName),
+    }).catch(() => {
+      // Silently ignore email failures — don't block form submission
+    });
+
+    // Send notification email to Bryce (non-blocking)
+    sendEmail({
+      to: "bryce@metroreachagency.com",
+      from: "support@metroreachagency.com",
+      subject: `New Lead: ${data.fullName} from ${data.company}`,
+      body: notificationEmailHtml(data),
+      replyTo: data.email,
+    }).catch(() => {
+      // Silently ignore email failures — don't block form submission
     });
 
     return { success: true };
