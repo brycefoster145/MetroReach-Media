@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Check } from "@phosphor-icons/react";
+import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { ArrowRight, Check, CaretDown } from "@phosphor-icons/react";
 import {
   FacebookLogo,
   InstagramLogo,
@@ -27,14 +28,6 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; weight?: "fil
   ChatCircleText,
 };
 
-const categorySlugs: Record<string, string> = {
-  "Organic Content Management": "organic-content",
-  "Paid Advertising": "paid-advertising",
-  "Social Strategy": "social-strategy",
-  "Analytics & Reporting": "analytics-reporting",
-  "Community Management": "community-management",
-};
-
 const platformIcons = [
   { Icon: FacebookLogo, label: "Facebook" },
   { Icon: InstagramLogo, label: "Instagram" },
@@ -50,6 +43,8 @@ export const Route = createFileRoute("/services")({
 });
 
 function Services() {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
   return (
     <main>
       {/* Hero */}
@@ -79,25 +74,39 @@ function Services() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {servicesPage.services.map((svc, i) => {
               const IconComponent = iconMap[svc.icon];
-              const slug = categorySlugs[svc.name];
+              const isExpanded = expandedIndex === i;
               return (
-                <Link
+                <div
                   key={svc.name}
-                  to="/services/$category"
-                  params={{ category: slug }}
-                  className={`group rounded-2xl bg-bg-surface-raised border border-border-subtle p-8 flex flex-col transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.08)] hover:border-brand-primary/20 hover:-translate-y-1 ${
+                  onClick={() => setExpandedIndex(isExpanded ? null : i)}
+                  className={`rounded-2xl bg-bg-surface-raised border border-border-subtle p-8 card-hover flex flex-col cursor-pointer select-none transition-shadow duration-200 ${
                     i === 0 ? "lg:col-span-3 md:col-span-2" : ""
-                  }`}
+                  } ${isExpanded ? "shadow-lg ring-1 ring-brand-primary/20" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpandedIndex(isExpanded ? null : i);
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-4 mb-5">
                     {IconComponent && (
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center group-hover:bg-brand-primary/15 transition-colors duration-300">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center">
                         <IconComponent size={24} weight="duotone" className="text-brand-primary" />
                       </div>
                     )}
-                    <h3 className="text-xl font-semibold font-heading text-text-primary group-hover:text-brand-primary transition-colors duration-300">
+                    <h3 className="text-xl font-semibold font-heading text-text-primary flex-1">
                       {svc.name}
                     </h3>
+                    <CaretDown
+                      size={20}
+                      weight="bold"
+                      className={`text-text-muted flex-shrink-0 transition-transform duration-300 ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                    />
                   </div>
                   <ul className="space-y-3 flex-1">
                     {svc.bullets.map((bullet, j) => (
@@ -111,11 +120,28 @@ function Services() {
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-6 pt-4 border-t border-border-subtle flex items-center gap-2 text-sm font-medium text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0">
-                    View services
-                    <ArrowRight size={14} weight="bold" />
+
+                  {/* Sub-services */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? "max-h-[800px] opacity-100 mt-0" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="mt-5 pt-5 border-t border-border-subtle">
+                      <ul className="space-y-3">
+                        {svc.subServices?.map((sub, j) => (
+                          <li key={j} className="flex items-start gap-3 text-sm">
+                            <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-brand-primary/40 mt-[7px]" />
+                            <div>
+                              <span className="font-semibold text-text-primary">{sub.name}</span>
+                              <span className="text-text-muted"> — {sub.description}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
