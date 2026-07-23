@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getAuditResult } from "~/lib/lead-store";
 import {
   ArrowRight,
   CheckCircle,
@@ -43,6 +44,21 @@ const loadAudit = createServerFn({ method: "GET" })
         "utf-8"
       );
       return JSON.parse(raw) as AuditResult;
+    } catch {
+      return null;
+    }
+  });
+
+// Fallback: load audit from the lead store (works across Vercel serverless instances
+// where the filesystem-based loadAudit can't find files written in a different invocation).
+const loadAuditFromStore = createServerFn({ method: "GET" })
+  .validator((id: string) => id)
+  .handler(async ({ data: id }) => {
+    const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
+    try {
+      const raw = await getAuditResult(safeId);
+      if (!raw) return null;
+      return raw as unknown as AuditResult;
     } catch {
       return null;
     }
@@ -195,7 +211,8 @@ function FreeAuditReportPage() {
         const parsed = JSON.parse(cached) as AuditResult;
         // Verify the ID matches (defense against stale cache)
         if (!id || parsed.id === id) {
-          sessionStorage.removeItem("audit-result"); // clean up after use
+          // Keep the cached data in sessionStorage so page refreshes still work.
+          // Only clear if the ID doesn't match (stale data from a different audit).
           setAudit(parsed);
           setLoading(false);
           return;
@@ -207,25 +224,40 @@ function FreeAuditReportPage() {
       // sessionStorage unavailable (SSR, etc.) — fall through
     }
 
-    // ── Priority 2: server-side loader (works on localhost, fails on Vercel) ──
+    // ── Priority 2: server-side file loader (works on localhost, fails on Vercel) ──
     if (!id) {
       setError("No report ID provided.");
       setLoading(false);
       return;
     }
-    loadAudit({ data: id })
-      .then((data) => {
-        if (!data) {
-          setError("Report not found. It may have expired or the link is incorrect.");
-        } else {
-          setAudit(data);
+
+    const tryLoad = async () => {
+      // Try filesystem first (works locally)
+      let data: AuditResult | null = null;
+      try {
+        data = await loadAudit({ data: id });
+      } catch {
+        // Fall through to lead store
+      }
+
+      // ── Priority 3: lead store fallback (works across Vercel instances) ──
+      if (!data) {
+        try {
+          data = await loadAuditFromStore({ data: id });
+        } catch {
+          // Both methods failed
         }
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("We couldn't load your report. Please try again.");
-        setLoading(false);
-      });
+      }
+
+      if (!data) {
+        setError("Report not found. It may have expired or the link is incorrect.");
+      } else {
+        setAudit(data);
+      }
+      setLoading(false);
+    };
+
+    tryLoad();
   }, []);
 
   // Loading state

@@ -16,6 +16,7 @@ import {
   markComplete,
   markFailed,
   markEmailSent,
+  saveAuditResult,
   type LeadFormData,
 } from "~/lib/lead-store";
 import { sendEmail } from "~/lib/email";
@@ -193,6 +194,11 @@ export const Route = createFileRoute("/api/audit/submit")({
             recommendedPackage,
             result.recommendationConfidence
           );
+
+          // Save the full audit result to the lead store so the report page
+          // can retrieve it even when the filesystem file isn't available
+          // (e.g. across Vercel serverless instances).
+          await saveAuditResult(lead.id, JSON.stringify(result));
 
           // Also save the full result to the audits directory for the report page
           // Gracefully handle read-only filesystems (Vercel serverless)

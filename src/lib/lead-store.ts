@@ -64,6 +64,7 @@ export interface LeadRecord {
   failureReason: string;
   emailSent: boolean;
   pdfGenerated: boolean;
+  auditResultJson: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -152,6 +153,7 @@ export async function createLead(formData: LeadFormData): Promise<LeadRecord> {
     failureReason: "",
     emailSent: false,
     pdfGenerated: false,
+    auditResultJson: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -315,4 +317,27 @@ export async function markEmailSent(id: string): Promise<void> {
 
 export async function markPdfGenerated(id: string): Promise<void> {
   await updateLead(id, { pdfGenerated: true });
+}
+
+/**
+ * Save the full audit result JSON to the lead record.
+ * This allows the report page to retrieve the full result even
+ * when the filesystem audit file is unavailable (e.g. Vercel serverless).
+ */
+export async function saveAuditResult(id: string, resultJson: string): Promise<void> {
+  await updateLead(id, { auditResultJson: resultJson });
+}
+
+/**
+ * Retrieve the full audit result from the lead record.
+ * Returns the parsed object or null if not found.
+ */
+export async function getAuditResult(id: string): Promise<Record<string, unknown> | null> {
+  const lead = await getLead(id);
+  if (!lead || !lead.auditResultJson) return null;
+  try {
+    return JSON.parse(lead.auditResultJson) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }
