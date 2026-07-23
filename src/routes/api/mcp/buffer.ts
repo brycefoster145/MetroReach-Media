@@ -131,7 +131,7 @@ async function listProfiles() {
 }
 
 async function createPost(args: {
-  profile_id: string;
+  channelId: string;
   text: string;
   media_urls?: string[];
   scheduled_at?: string;
@@ -165,7 +165,7 @@ async function createPost(args: {
 
   // Build CreatePostInput matching Buffer's current schema
   const input: Record<string, unknown> = {
-    channelId: args.profile_id,
+    channelId: args.channelId,
     text: args.text,
     assets,
   };
@@ -176,6 +176,7 @@ async function createPost(args: {
     input.schedulingType = "notification";
   } else {
     input.mode = "shareNow";
+    input.schedulingType = "shareNow";
   }
 
   const data = await graphqlRequest<{
@@ -406,14 +407,14 @@ const tools: ToolDef[] = [
     name: "buffer_create_post",
     description:
       "Create and optionally schedule a social media post via Buffer. " +
-      "Provide profile_id (channel ID from buffer_list_profiles), the text content, " +
+      "Provide channelId (channel ID from buffer_list_profiles), the text content, " +
       "optional media_urls (images/videos/links), and an optional scheduled_at " +
       "timestamp (ISO 8601) to schedule the post for later. " +
       "Returns the created post with its Buffer ID and status.",
     inputSchema: {
       type: "object",
       properties: {
-        profile_id: {
+        channelId: {
           type: "string",
           description:
             "The Buffer channel ID to post to (from buffer_list_profiles).",
@@ -434,7 +435,7 @@ const tools: ToolDef[] = [
             "Optional ISO 8601 datetime string to schedule the post. Omit for immediate posting.",
         },
       },
-      required: ["profile_id", "text"],
+      required: ["channelId", "text"],
     },
     handler: createPost,
   },
