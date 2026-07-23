@@ -598,7 +598,7 @@ export const subServices = [
 
   // Social Strategy
   { slug: "social-media-audit-strategy", category: "social-strategy", name: "Social Media Audit", description: "A comprehensive review of your social presence, content performance, and competitive positioning. Delivered as an actionable report with clear recommendations.", price: "$500", pipelineStatus: "building" },
-  { slug: "competitor-analysis", category: "social-strategy", name: "Competitor Analysis", description: "Deep competitive research — what's working for your competitors, where they're vulnerable, and how you can differentiate.", price: "$750", pipelineStatus: "building" },
+  { slug: "competitor-analysis", category: "social-strategy", name: "Competitor Analysis", description: "Deep competitive research — what's working for your competitors, where they're vulnerable, and how you can differentiate.", price: "$750", pipelineStatus: "verified" },
   { slug: "social-media-strategy", category: "social-strategy", name: "Social Media Strategy", description: "A complete social media strategy — platform selection, content pillars, audience targeting, and growth roadmap.", price: "From $1,200", pipelineStatus: "building" },
   { slug: "content-strategy", category: "social-strategy", name: "Content Strategy", description: "Strategic content architecture — pillars, formats, cadence, and distribution plan aligned with business objectives.", price: "From $1,000", pipelineStatus: "building" },
   { slug: "campaign-strategy", category: "social-strategy", name: "Campaign Strategy", description: "End-to-end campaign planning — objectives, creative direction, audience segmentation, and measurement framework.", price: "From $800", pipelineStatus: "building" },
