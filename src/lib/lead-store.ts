@@ -1,10 +1,14 @@
 /**
- * Lead Store — JSON file-based persistence for audit leads.
+ * Lead Store — In-memory primary storage with file-based fallback.
  * MetroReach Digital
  *
- * Saves to /home/team/shared/data/audit-leads/<id>.json
- * Each lead persists independently — analysis, PDF, email, or checkout
- * failure never loses the lead.
+ * On Vercel's serverless environment (read-only filesystem), leads are stored
+ * in an in-memory Map. On local/dev systems, leads are also persisted to disk
+ * at /home/team/shared/data/audit-leads/<id>.json.
+ *
+ * The in-memory store is sufficient for the full audit flow:
+ *   submit → analyze → report
+ * all within a single serverless function invocation.
  */
 
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
@@ -65,13 +69,47 @@ export interface LeadRecord {
 }
 
 // ---------------------------------------------------------------------------
-// Paths
+// Storage backends
 // ---------------------------------------------------------------------------
 
 const LEADS_DIR = "/home/team/shared/data/audit-leads";
 
+/** In-memory store — always available, used as primary storage on Vercel. */
+const memoryStore = new Map<string, LeadRecord>();
+
+/**
+ * Whether we've confirmed the filesystem is writable.
+ * null = unchecked, true = writable, false = read-only (use memory only).
+ */
+let fsWritable: boolean | null = null;
+
 function leadPath(id: string): string {
   return join(LEADS_DIR, `${id}.json`);
+}
+
+/**
+ * Probe whether the leads directory is writable. Runs once per cold start.
+ */
+async function checkWritable(): Promise<boolean> {
+  if (fsWritable !== null) return fsWritable;
+
+  const testPath = join(LEADS_DIR, ".write-test");
+  try {
+    await mkdir(LEADS_DIR, { recursive: true });
+    await writeFile(testPath, "ok", "utf-8");
+    // Clean up the test file
+    try {
+      const { unlink } = await import("node:fs/promises");
+      await unlink(testPath);
+    } catch {
+      // Best effort — non-critical
+    }
+    fsWritable = true;
+  } catch {
+    fsWritable = false;
+  }
+
+  return fsWritable;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,29 +156,58 @@ export async function createLead(formData: LeadFormData): Promise<LeadRecord> {
     updatedAt: now,
   };
 
-  await mkdir(LEADS_DIR, { recursive: true });
-  await writeFile(leadPath(id), JSON.stringify(lead, null, 2), "utf-8");
+  // Always store in memory
+  memoryStore.set(id, lead);
+
+  // Try disk if writable
+  const writable = await checkWritable();
+  if (writable) {
+    try {
+      await mkdir(LEADS_DIR, { recursive: true });
+      await writeFile(leadPath(id), JSON.stringify(lead, null, 2), "utf-8");
+    } catch {
+      // Disk write failed — lead is safe in memory
+    }
+  }
+
   return lead;
 }
 
 export async function getLead(id: string): Promise<LeadRecord | null> {
   const safeId = sanitizeId(id);
-  try {
-    const raw = await readFile(leadPath(safeId), "utf-8");
-    return JSON.parse(raw) as LeadRecord;
-  } catch {
-    return null;
+
+  // Check memory first
+  const memLead = memoryStore.get(safeId);
+  if (memLead) return memLead;
+
+  // Fall back to disk
+  const writable = await checkWritable();
+  if (writable) {
+    try {
+      const raw = await readFile(leadPath(safeId), "utf-8");
+      const lead = JSON.parse(raw) as LeadRecord;
+      // Populate memory cache
+      memoryStore.set(safeId, lead);
+      return lead;
+    } catch {
+      return null;
+    }
   }
+
+  return null;
 }
 
 export async function updateLead(
   id: string,
   updates: Partial<LeadRecord>
 ): Promise<LeadRecord | null> {
-  const lead = await getLead(id);
+  const safeId = sanitizeId(id);
+
+  // Get existing lead (checks memory first, then disk)
+  const lead = await getLead(safeId);
   if (!lead) return null;
 
-  const updated = {
+  const updated: LeadRecord = {
     ...lead,
     ...updates,
     id: lead.id, // never overwrite ID
@@ -148,25 +215,54 @@ export async function updateLead(
     updatedAt: new Date().toISOString(),
   };
 
-  await writeFile(leadPath(id), JSON.stringify(updated, null, 2), "utf-8");
+  // Always update memory
+  memoryStore.set(safeId, updated);
+
+  // Try disk if writable
+  const writable = await checkWritable();
+  if (writable) {
+    try {
+      await mkdir(LEADS_DIR, { recursive: true });
+      await writeFile(leadPath(safeId), JSON.stringify(updated, null, 2), "utf-8");
+    } catch {
+      // Disk write failed — lead is safe in memory
+    }
+  }
+
   return updated;
 }
 
 export async function findLeadByEmail(email: string): Promise<LeadRecord | null> {
-  try {
-    await mkdir(LEADS_DIR, { recursive: true });
-    const files = await readdir(LEADS_DIR);
-    for (const file of files) {
-      if (!file.endsWith(".json")) continue;
-      const raw = await readFile(join(LEADS_DIR, file), "utf-8");
-      const lead = JSON.parse(raw) as LeadRecord;
-      if (lead.contactInfo.email.toLowerCase() === email.toLowerCase()) {
-        return lead;
-      }
+  const normalized = email.toLowerCase();
+
+  // Check memory first
+  for (const [, lead] of memoryStore) {
+    if (lead.contactInfo.email.toLowerCase() === normalized) {
+      return lead;
     }
-  } catch {
-    // Directory doesn't exist or is empty
   }
+
+  // Fall back to disk
+  const writable = await checkWritable();
+  if (writable) {
+    try {
+      await mkdir(LEADS_DIR, { recursive: true });
+      const files = await readdir(LEADS_DIR);
+      for (const file of files) {
+        if (!file.endsWith(".json")) continue;
+        const raw = await readFile(join(LEADS_DIR, file), "utf-8");
+        const lead = JSON.parse(raw) as LeadRecord;
+        if (lead.contactInfo.email.toLowerCase() === normalized) {
+          // Populate memory
+          memoryStore.set(lead.id, lead);
+          return lead;
+        }
+      }
+    } catch {
+      // Directory doesn't exist or is empty — not an error
+    }
+  }
+
   return null;
 }
 
