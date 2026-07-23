@@ -194,11 +194,15 @@ async function createAdAccount(args: {
   name: string;
   currency?: string;
   timezone_id: number;
+  end_advertiser: string;
+  media_agency: string;
 }) {
   const body: Record<string, unknown> = {
     name: args.name,
     currency: args.currency ?? "USD",
     timezone_id: args.timezone_id,
+    end_advertiser: args.end_advertiser,
+    media_agency: args.media_agency,
   };
 
   const data = await graphApiRequest<{
@@ -342,7 +346,9 @@ const tools: ToolDef[] = [
     name: "meta_create_ad_account",
     description:
       "Create a new ad account under a Facebook Business Manager. " +
-      "Provide the business_id, ad account name, currency, and timezone_id. " +
+      "Provide the business_id, ad account name, currency, timezone_id, " +
+      "end_advertiser (Facebook Page ID, App ID, or 'NONE'), and " +
+      "media_agency (Facebook Page ID of the managing agency, or 'NONE'). " +
       "Common timezone IDs: 1=Pacific, 7=Mountain, 13=Central, 43=Eastern, 78=Toronto. " +
       "Returns the new ad account ID on success.",
     inputSchema: {
@@ -365,8 +371,18 @@ const tools: ToolDef[] = [
           description:
             "Timezone ID. Common: 1=Pacific, 7=Mountain, 13=Central, 43=Eastern, 78=Toronto.",
         },
+        end_advertiser: {
+          type: "string",
+          description:
+            "Facebook Page ID, App ID, or 'NONE' for the end advertiser (the entity that will own/run the ad account).",
+        },
+        media_agency: {
+          type: "string",
+          description:
+            "Facebook Page ID of the managing media agency, or 'NONE' if not applicable.",
+        },
       },
-      required: ["business_id", "name", "timezone_id"],
+      required: ["business_id", "name", "timezone_id", "end_advertiser", "media_agency"],
     },
     handler: createAdAccount,
   },
