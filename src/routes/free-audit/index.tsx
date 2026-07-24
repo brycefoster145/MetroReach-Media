@@ -72,7 +72,7 @@ const initialForm: FormState = {
 
 type FieldName = keyof FormState;
 
-export const Route = createFileRoute("/free-audit")({
+export const Route = createFileRoute("/free-audit/")({
   component: FreeAudit,
 });
 
