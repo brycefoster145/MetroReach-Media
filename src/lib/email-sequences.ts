@@ -57,7 +57,7 @@ function emailShell(title: string, content: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
     <tr>
       <td style="padding:32px 32px 8px;">
-        <img src="https://metroreachagency.com/logo.png" alt="MetroReach Digital" style="height:32px;width:auto;display:block;margin:0 0 12px;" />
+        <img src="https://metroreachagency.com/logo-email.png" alt="MetroReach Digital" style="height:32px;width:auto;display:block;margin:0 0 12px;" />
         <p style="font-size:13px;font-weight:600;color:#7c3aed;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Digital</p>
       </td>
     </tr>

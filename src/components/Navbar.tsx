@@ -55,7 +55,7 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center">
-          <img src="/logo.png" alt="MetroReach Media" className="h-8 w-auto" />
+          <img src="/logo-nav.png" alt="MetroReach Media" className="h-8 w-auto" />
         </a>
 
         {/* Desktop Links */}
