@@ -54,6 +54,26 @@ async function migrate() {
   `;
   console.log("✓ audit_results table ready");
 
+  // ── contact_leads table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS contact_leads (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      company TEXT,
+      phone TEXT DEFAULT '',
+      industry TEXT DEFAULT '',
+      message TEXT DEFAULT '',
+      source TEXT DEFAULT 'website',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  // Index on email for deduplication lookups
+  await sql`CREATE INDEX IF NOT EXISTS idx_contact_leads_email ON contact_leads(email)`;
+  // Index on created_at for sorted queries
+  await sql`CREATE INDEX IF NOT EXISTS idx_contact_leads_created_at ON contact_leads(created_at DESC)`;
+  console.log("✓ contact_leads table ready");
+
   await sql.end();
   console.log("Migration complete.");
 }

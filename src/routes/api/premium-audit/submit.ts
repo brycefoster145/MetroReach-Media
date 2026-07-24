@@ -12,6 +12,7 @@ import {
   findLeadByEmail,
   type LeadFormData,
 } from "~/lib/lead-store";
+import { rateLimit, getClientIp } from "~/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,6 +47,16 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ── Rate limiting ──
+        const ip = getClientIp(request);
+        const rl = rateLimit(`premium-audit:${ip}`, 3, 60_000); // max 3 per minute
+        if (!rl.allowed) {
+          return new Response(
+            JSON.stringify({ error: "Too many requests. Please wait a moment before trying again." }),
+            { status: 429, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
         let body: Record<string, unknown>;
         try {
           body = await request.json();

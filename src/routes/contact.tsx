@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { randomBytes } from "node:crypto";
 import { CheckCircle, WarningCircle, Spinner, Envelope, Phone, MapPin } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
 import { contactPage } from "~/data/pages";
+import { sql } from "~/lib/db";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { sendEmail } from "~/lib/email";
 
@@ -72,25 +74,18 @@ const submitContact = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data }) => {
-    const { default: fs } = await import("node:fs");
-    const { default: path } = await import("node:path");
-    const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
+    const id = `contact-${randomBytes(8).toString("hex")}`;
 
-    const lead = {
-      ...data,
-      source: "contact-page",
-      timestamp: new Date().toISOString(),
-    };
-
-    let leads: typeof lead[] = [];
+    // ── Insert into Postgres ──
     try {
-      const raw = fs.readFileSync(LEADS_FILE, "utf-8");
-      leads = JSON.parse(raw);
-    } catch {
-      // File doesn't exist yet — that's fine
+      await sql`
+        INSERT INTO contact_leads (id, name, email, company, phone, industry, message, source)
+        VALUES (${id}, ${data.fullName}, ${data.email}, ${data.company}, ${""}, ${data.serviceInterest}, ${data.message}, ${"contact-page"})
+      `;
+    } catch (err: any) {
+      console.error("contact_leads insert error:", err.message);
+      // Non-fatal — continue with notifications even if DB insert fails
     }
-    leads.push(lead);
-    fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
 
     // Send Telegram notification (non-blocking)
     const lines: string[] = [];

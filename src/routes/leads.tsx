@@ -2,27 +2,39 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
+import { sql } from "~/lib/db";
 
 interface Lead {
-  fullName: string;
-  businessName: string;
-  industry: string;
+  id: string;
+  name: string;
   email: string;
+  company: string;
   phone: string;
-  frustration: string;
-  budget: string;
+  industry: string;
+  message: string;
   source: string;
-  timestamp: string;
+  created_at: string;
 }
 
 const getLeads = createServerFn({ method: "GET" }).handler(async (): Promise<Lead[]> => {
-  const { default: fs } = await import("node:fs");
-  const { default: path } = await import("node:path");
-  const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
-
   try {
-    const raw = fs.readFileSync(LEADS_FILE, "utf-8");
-    return JSON.parse(raw) as Lead[];
+    const rows = await sql`
+      SELECT id, name, email, company, phone, industry, message, source, created_at
+      FROM contact_leads
+      ORDER BY created_at DESC
+      LIMIT 200
+    `;
+    return rows.map((row: any) => ({
+      id: String(row.id),
+      name: String(row.name || ""),
+      email: String(row.email || ""),
+      company: String(row.company || ""),
+      phone: String(row.phone || ""),
+      industry: String(row.industry || ""),
+      message: String(row.message || ""),
+      source: String(row.source || ""),
+      created_at: row.created_at ? new Date(row.created_at).toISOString() : "",
+    }));
   } catch {
     return [];
   }
@@ -34,6 +46,7 @@ export const Route = createFileRoute("/leads")({
 });
 
 function formatDate(iso: string): string {
+  if (!iso) return "—";
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
     year: "numeric",
@@ -93,38 +106,35 @@ function LeadsPage() {
                 </tr>
               </thead>
               <tbody>
-                {leads
-                  .slice()
-                  .reverse()
-                  .map((lead, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-border-subtle/50 hover:bg-bg-surface transition-colors"
-                    >
-                      <td className="py-3 px-4 text-sm text-text-secondary font-mono whitespace-nowrap">
-                        {formatDate(lead.timestamp)}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-text-primary font-medium">
-                        {lead.fullName}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-text-secondary">
-                        {lead.businessName}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-text-secondary">
-                        <span className="inline-block bg-brand-primary/10 text-brand-primary text-xs font-medium px-2 py-0.5 rounded-full">
-                          {lead.industry}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-text-secondary">
-                        {lead.email}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-text-secondary">
-                        <span className="inline-block bg-bg-root text-text-muted text-xs font-medium px-2 py-0.5 rounded-full border border-border-subtle">
-                          {lead.source}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                {leads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="border-b border-border-subtle/50 hover:bg-bg-surface transition-colors"
+                  >
+                    <td className="py-3 px-4 text-sm text-text-secondary font-mono whitespace-nowrap">
+                      {formatDate(lead.created_at)}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-primary font-medium">
+                      {lead.name}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">
+                      {lead.company}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">
+                      <span className="inline-block bg-brand-primary/10 text-brand-primary text-xs font-medium px-2 py-0.5 rounded-full">
+                        {lead.industry}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">
+                      {lead.email}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">
+                      <span className="inline-block bg-bg-root text-text-muted text-xs font-medium px-2 py-0.5 rounded-full border border-border-subtle">
+                        {lead.source}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

@@ -139,7 +139,7 @@ function Checkout() {
           Thanks!
         </h1>
         <p className="text-lg text-text-secondary max-w-lg">
-          Our team will review your selections and reach out within one business day to finalize pricing and next steps.
+          This is a proposal request — not a purchase. Our team will review your selections and reach out within one business day to discuss pricing, scope, and next steps. No charges have been made.
         </p>
         <Link
           to="/services"
@@ -174,10 +174,10 @@ function Checkout() {
             </div>
 
             <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary mb-2">
-              Review & Submit
+              Request Your Proposal
             </h1>
             <p className="text-text-secondary mb-10">
-              Review your selections below, then fill in your details. Our team will follow up with a tailored proposal.
+              Review your selections below, then fill in your details. Our team will follow up with a tailored proposal — no payment required today.
             </p>
 
             {/* Cart Summary (read-only) */}
@@ -331,7 +331,7 @@ function Checkout() {
                   disabled={submitting}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-200 flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? "Submitting..." : "Submit Your Selections"}
+                  {submitting ? "Submitting..." : "Send to Our Team"}
                 </button>
               </div>
             </form>

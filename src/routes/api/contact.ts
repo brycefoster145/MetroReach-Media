@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
+import { randomBytes } from "node:crypto";
+import { sql } from "~/lib/db";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { sendEmail } from "~/lib/email";
+import { rateLimit, getClientIp } from "~/lib/rate-limit";
 
 function confirmationEmail(name: string): string {
   return `
@@ -56,9 +59,15 @@ export const Route = createFileRoute("/api/contact")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { default: fs } = await import("node:fs");
-        const { default: path } = await import("node:path");
-        const LEADS_FILE = path.join(process.cwd(), "..", "leads.json");
+        // ── Rate limiting ──
+        const ip = getClientIp(request);
+        const rl = rateLimit(`contact:${ip}`, 3, 60_000); // max 3 per minute
+        if (!rl.allowed) {
+          return new Response(
+            JSON.stringify({ error: "Too many requests. Please wait a moment before trying again." }),
+            { status: 429, headers: { "Content-Type": "application/json" } }
+          );
+        }
 
         let body: Record<string, string>;
         try {
@@ -72,31 +81,17 @@ export const Route = createFileRoute("/api/contact")({
           return json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const lead = {
-          fullName: name,
-          businessName: company,
-          industry,
-          email,
-          phone: "",
-          frustration: message,
-          budget: "",
-          source: "homepage-form",
-          timestamp: new Date().toISOString(),
-        };
+        const id = `contact-${randomBytes(8).toString("hex")}`;
 
-        let leads: typeof lead[] = [];
+        // ── Insert into Postgres ──
         try {
-          const raw = fs.readFileSync(LEADS_FILE, "utf-8");
-          leads = JSON.parse(raw);
-        } catch {
-          // File doesn't exist yet — that's fine
-        }
-
-        leads.push(lead);
-        try {
-          fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
-        } catch {
-          // Read-only filesystem (Vercel) — leads stored via Telegram/email instead
+          await sql`
+            INSERT INTO contact_leads (id, name, email, company, phone, industry, message, source)
+            VALUES (${id}, ${name}, ${email}, ${company}, ${body.phone || ""}, ${industry}, ${message}, ${"homepage-form"})
+          `;
+        } catch (err: any) {
+          console.error("contact_leads insert error:", err.message);
+          // Non-fatal — continue with notifications even if DB insert fails
         }
 
         // Send Telegram notification (non-blocking)
