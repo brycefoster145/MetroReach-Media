@@ -7,7 +7,6 @@ const links = [
   { label: "Services", href: "/services" },
   { label: "Free Audit", href: "/free-audit" },
   { label: "Premium Audit", href: "/premium-audit" },
-  { label: "How It Works", href: "/#how-it-works" },
   { label: "Pricing", href: "/pricing" },
   { label: "Case Studies", href: "/case-studies" },
   { label: "About", href: "/about" },
@@ -102,7 +101,7 @@ export function Navbar() {
               </span>
             )}
           </a>
-          <Button href="/contact">Start getting leads</Button>
+          <Button href="/free-audit">Get a Free Audit</Button>
         </div>
 
         {/* Mobile Hamburger */}
@@ -130,8 +129,8 @@ export function Navbar() {
               </a>
             ))}
             <div className="mt-6">
-              <Button href="/contact" onClick={close} className="w-full justify-center">
-                Start getting leads
+              <Button href="/free-audit" onClick={close} className="w-full justify-center">
+                Get a Free Audit
               </Button>
             </div>
             <div className="mt-6 flex items-center justify-center gap-5">

@@ -6,7 +6,6 @@ import { Container } from "~/components/Container";
 import { ProblemSection } from "~/components/sections/ProblemSection";
 import { SolutionSection } from "~/components/sections/SolutionSection";
 import { ServicesSection } from "~/components/sections/ServicesSection";
-import { HowItWorks } from "~/components/sections/HowItWorks";
 import { SocialProof } from "~/components/sections/SocialProof";
 import { PricingSection } from "~/components/sections/PricingSection";
 import { FAQSection } from "~/components/sections/FAQSection";
@@ -56,7 +55,6 @@ function Home() {
       <ProblemSection />
       <SolutionSection />
       <ServicesSection />
-      <HowItWorks />
       <SocialProof />
       <PricingSection />
       <FAQSection />

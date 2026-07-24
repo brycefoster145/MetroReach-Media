@@ -138,7 +138,7 @@ export function Hero() {
             style={{ transitionDelay: "600ms", transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
           >
             <Button href="/contact">{hero.primaryCta} →</Button>
-            <Button variant="secondary" href="/#how-it-works">
+            <Button variant="secondary" href="/case-studies">
               {hero.secondaryCta}
             </Button>
           </div>
