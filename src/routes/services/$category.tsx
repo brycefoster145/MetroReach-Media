@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShoppingCart, ArrowLeft, Check } from "@phosphor-icons/react";
+import { ShoppingCart, ArrowLeft, Check, CreditCard } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { subServices } from "~/data/pages";
@@ -22,6 +22,8 @@ function ServiceCategory() {
   const { category } = Route.useParams();
   const { addItem, items } = useCart();
   const [addedSlug, setAddedSlug] = useState<string | null>(null);
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const displayName = categoryDisplayNames[category];
   const categoryServices = subServices.filter((s) => s.category === category);
@@ -46,13 +48,44 @@ function ServiceCategory() {
     );
   }
 
-  function handleAdd(item: CartItem) {
+  /** Legacy cart add — kept for cart page compatibility */
+  function handleAddToCart(item: CartItem) {
     const alreadyInCart = items.some((i) => i.slug === item.slug);
     if (!alreadyInCart) {
       addItem(item);
     }
     setAddedSlug(item.slug);
     setTimeout(() => setAddedSlug(null), 2000);
+  }
+
+  /** Direct Stripe checkout */
+  async function handleBuyNow(slug: string) {
+    setCheckoutError(null);
+    setCheckingOut(slug);
+
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      setCheckoutError(err.message || "Something went wrong. Please try again.");
+      setCheckingOut(null);
+    }
   }
 
   return (
@@ -78,11 +111,28 @@ function ServiceCategory() {
               {displayName}
             </h1>
             <p className="text-lg lg:text-xl text-text-secondary">
-              Select the services your business needs. Add them to your cart and our team will reach out with a tailored proposal.
+              Purchase any service below with secure Stripe checkout. Your pipeline auto-executes on payment — no waiting, no manual handoff.
             </p>
           </div>
         </Container>
       </section>
+
+      {/* Checkout error banner */}
+      {checkoutError && (
+        <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-4">
+          <Container>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm text-red-400">{checkoutError}</p>
+              <button
+                onClick={() => setCheckoutError(null)}
+                className="text-red-400 hover:text-red-300 text-sm font-medium flex-shrink-0"
+              >
+                Dismiss
+              </button>
+            </div>
+          </Container>
+        </div>
+      )}
 
       {/* Sub-Services Grid */}
       <section className="py-20 bg-bg-surface">
@@ -92,6 +142,7 @@ function ServiceCategory() {
               const isCartReady = ["verified", "production-proven", "optimized"].includes(svc.pipelineStatus);
               const isInCart = items.some((i) => i.slug === svc.slug);
               const justAdded = addedSlug === svc.slug;
+              const isCheckingOut = checkingOut === svc.slug;
 
               return (
                 <div
@@ -109,34 +160,52 @@ function ServiceCategory() {
                       {svc.price}
                     </span>
                     {isCartReady ? (
-                      <button
-                        onClick={() =>
-                          handleAdd({
-                            slug: svc.slug,
-                            name: svc.name,
-                            category: svc.category,
-                            price: svc.price,
-                          })
-                        }
-                        disabled={isInCart}
-                        className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
-                          isInCart || justAdded
-                            ? "bg-brand-accent/20 text-brand-accent cursor-default"
-                            : "bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]"
-                        }`}
-                      >
-                        {isInCart || justAdded ? (
-                          <>
-                            <Check size={16} weight="bold" />
-                            {justAdded ? "Added" : "In Cart"}
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingCart size={16} weight="bold" />
-                            Add to Cart
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* Add to Cart (secondary) */}
+                        <button
+                          onClick={() =>
+                            handleAddToCart({
+                              slug: svc.slug,
+                              name: svc.name,
+                              category: svc.category,
+                              price: svc.price,
+                            })
+                          }
+                          disabled={isInCart}
+                          title={isInCart ? "Already in cart" : "Add to cart"}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                            isInCart || justAdded
+                              ? "bg-brand-accent/20 text-brand-accent cursor-default"
+                              : "border border-border-emphasis text-text-secondary hover:text-brand-primary hover:border-brand-primary"
+                          }`}
+                        >
+                          {isInCart || justAdded ? (
+                            <>
+                              <Check size={14} weight="bold" />
+                              {justAdded ? "Added" : "Cart"}
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart size={14} weight="bold" />
+                              Cart
+                            </>
+                          )}
+                        </button>
+
+                        {/* Buy Now — Primary */}
+                        <button
+                          onClick={() => handleBuyNow(svc.slug)}
+                          disabled={isCheckingOut}
+                          className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
+                            isCheckingOut
+                              ? "bg-brand-primary/70 text-text-primary cursor-wait"
+                              : "bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                          }`}
+                        >
+                          <CreditCard size={16} weight="bold" />
+                          {isCheckingOut ? "Redirecting..." : "Buy Now"}
+                        </button>
+                      </div>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-border-emphasis px-4 py-1.5 text-xs font-medium text-text-muted">
                         Coming Soon

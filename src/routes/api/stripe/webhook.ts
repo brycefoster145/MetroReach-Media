@@ -18,28 +18,7 @@ import {
 } from "~/lib/email-sequences";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
-
-// ── Stripe price ID → MetroReach service mapping ──
-// Update these when Stripe Products/Prices are created in the Stripe dashboard.
-const PRICE_TO_SERVICE: Record<string, { name: string; slug: string }> = {
-  // Organic Content Management
-  "price_organic_starter": { name: "Organic Content — Starter", slug: "organic-content-starter" },
-  "price_organic_pro": { name: "Organic Content — Pro", slug: "organic-content-pro" },
-  "price_organic_enterprise": { name: "Organic Content — Enterprise", slug: "organic-content-enterprise" },
-  // Paid Advertising
-  "price_ads_starter": { name: "Paid Advertising — Starter", slug: "paid-ads-starter" },
-  "price_ads_pro": { name: "Paid Advertising — Pro", slug: "paid-ads-pro" },
-  "price_ads_enterprise": { name: "Paid Advertising — Enterprise", slug: "paid-ads-enterprise" },
-  // Social Strategy
-  "price_strategy_one": { name: "Social Strategy — One-Time", slug: "social-strategy-onetime" },
-  "price_strategy_quarterly": { name: "Social Strategy — Quarterly", slug: "social-strategy-quarterly" },
-  // Analytics & Reporting
-  "price_analytics_monthly": { name: "Analytics & Reporting — Monthly", slug: "analytics-reporting-monthly" },
-  // Community Management
-  "price_community_monthly": { name: "Community Management — Monthly", slug: "community-management-monthly" },
-  // Full Service
-  "price_fullservice_monthly": { name: "Full Service — Monthly", slug: "full-service-monthly" },
-};
+import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
