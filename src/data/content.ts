@@ -291,7 +291,7 @@ export const pricing = {
         "30+ organic posts/month",
         "Unlimited paid campaigns, managed continuously",
         "Advanced A/B testing, funnel optimization",
-        "Short-form video scripts (TikTok, Reels, YouTube Shorts)",
+        "Influencer research reports & partnership strategy",
         "Priority strategy adjustments",
         "Bi-weekly strategy calls",
         "Live dashboard + custom reporting",
