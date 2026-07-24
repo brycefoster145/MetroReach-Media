@@ -10,8 +10,8 @@ import postgres from "postgres";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.error("DATABASE_URL is not set");
-  process.exit(1);
+  console.log("DATABASE_URL is not set — skipping migration (production will run it)");
+  process.exit(0);
 }
 
 const sql = postgres(url, {
