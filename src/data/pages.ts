@@ -191,7 +191,7 @@ export const pricingPage = {
         "Advanced A/B testing, funnel optimization",
         "Influencer research reports & partnership strategy",
         "Priority strategy adjustments",
-        "Bi-weekly strategy calls",
+        "Bi-weekly strategy memos & priority adjustments",
         "Live dashboard + custom reporting",
       ],
       bestFor: "Multi-location, high-growth real estate teams, regional contractors",
@@ -248,7 +248,7 @@ export const contactPage = {
     {
       step: 2,
       label:
-        "If there's a fit, we'll set up a 30-minute strategy call. If not, we'll tell you honestly and point you toward someone who can help.",
+        "If there's a fit, we'll send you a detailed proposal within one business day. If not, we'll tell you honestly and point you toward someone who can help.",
     },
     {
       step: 3,

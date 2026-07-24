@@ -293,7 +293,7 @@ export const pricing = {
         "Advanced A/B testing, funnel optimization",
         "Influencer research reports & partnership strategy",
         "Priority strategy adjustments",
-        "Bi-weekly strategy calls",
+        "Bi-weekly strategy memos & priority adjustments",
         "Live dashboard + custom reporting",
       ],
       bestFor:
@@ -356,7 +356,7 @@ export const footerCta = {
   headline: "Stop paying for marketing gaps. Start getting leads.",
   subheadline:
     "One conversation. No pressure. Just an honest assessment of what your current marketing is leaving on the table — and what MetroReach Media could do about it.",
-  primaryCta: "Book a strategy call",
+  primaryCta: "Request a proposal",
   secondaryLabel: "Or if you're not ready to talk:",
   secondaryCta: "See an example monthly report",
 };
