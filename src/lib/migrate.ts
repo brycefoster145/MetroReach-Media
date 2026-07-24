@@ -9,8 +9,8 @@
 import postgres from "postgres";
 
 const url = process.env.DATABASE_URL;
-if (!url) {
-  console.log("DATABASE_URL is not set — skipping migration (production will run it)");
+if (!url || !url.startsWith("postgres")) {
+  console.log("DATABASE_URL is not set or invalid — skipping migration (production will run it)");
   process.exit(0);
 }
 
@@ -143,6 +143,37 @@ async function migrate() {
   // Add onboarding_data column to clients if it doesn't exist
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_data JSONB`;
   console.log("✓ clients.onboarding_data column ready");
+
+  // ── client_messages table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS client_messages (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES clients(id),
+      direction TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_messages_client ON client_messages(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_messages_created ON client_messages(created_at DESC)`;
+  console.log("✓ client_messages table ready");
+
+  // ── deliverables table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS deliverables (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES clients(id),
+      title TEXT NOT NULL,
+      type TEXT NOT NULL,
+      status TEXT DEFAULT 'draft',
+      file_url TEXT,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_deliverables_client ON deliverables(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_deliverables_status ON deliverables(client_id, status)`;
+  console.log("✓ deliverables table ready");
 
   await sql.end();
   console.log("Migration complete.");
