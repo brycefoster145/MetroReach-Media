@@ -378,6 +378,13 @@ export const footer = {
     { label: "Terms of Service", href: "/terms" },
     { label: "Cookie Policy", href: "/cookie-policy" },
   ],
+  social: [
+    { label: "Facebook", href: "https://facebook.com/metroreachmedia", icon: "FacebookLogo" },
+    { label: "Instagram", href: "https://instagram.com/metroreachmedia", icon: "InstagramLogo" },
+    { label: "LinkedIn", href: "https://linkedin.com/company/metroreachmedia", icon: "LinkedinLogo" },
+    { label: "TikTok", href: "https://tiktok.com/@metroreachmedia", icon: "TiktokLogo" },
+    { label: "X (Twitter)", href: "https://x.com/metroreachmedia", icon: "XLogo" },
+  ],
   copyright: `© ${new Date().getFullYear()} MetroReach Media. All rights reserved.`,
 };
 

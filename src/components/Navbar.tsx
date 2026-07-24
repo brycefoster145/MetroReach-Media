@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { List, X, ShoppingCart } from "@phosphor-icons/react";
+import { List, X, ShoppingCart, FacebookLogo, InstagramLogo, LinkedinLogo, TiktokLogo, XLogo } from "@phosphor-icons/react";
 import { Button } from "./Button";
 import { useCart } from "~/context/CartContext";
 
@@ -11,6 +11,14 @@ const links = [
   { label: "Pricing", href: "/pricing" },
   { label: "Case Studies", href: "/case-studies" },
   { label: "About", href: "/about" },
+];
+
+const socialLinks = [
+  { label: "Facebook", href: "https://facebook.com/metroreachmedia", Icon: FacebookLogo },
+  { label: "Instagram", href: "https://instagram.com/metroreachmedia", Icon: InstagramLogo },
+  { label: "LinkedIn", href: "https://linkedin.com/company/metroreachmedia", Icon: LinkedinLogo },
+  { label: "TikTok", href: "https://tiktok.com/@metroreachmedia", Icon: TiktokLogo },
+  { label: "X (Twitter)", href: "https://x.com/metroreachmedia", Icon: XLogo },
 ];
 
 export function Navbar() {
@@ -69,6 +77,19 @@ export function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-4">
+          {socialLinks.map((s) => (
+            <a
+              key={s.label}
+              href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.label}
+              className="text-text-muted hover:text-brand-primary transition-colors"
+            >
+              <s.Icon size={18} weight="fill" />
+            </a>
+          ))}
+          <span className="w-px h-5 bg-border-subtle" />
           <a
             href="/cart"
             className="relative p-2 text-text-secondary hover:text-brand-primary transition-colors"
@@ -112,6 +133,20 @@ export function Navbar() {
               <Button href="/contact" onClick={close} className="w-full justify-center">
                 Start getting leads
               </Button>
+            </div>
+            <div className="mt-6 flex items-center justify-center gap-5">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  className="text-text-muted hover:text-brand-primary transition-colors"
+                >
+                  <s.Icon size={22} weight="fill" />
+                </a>
+              ))}
             </div>
           </div>
         </div>

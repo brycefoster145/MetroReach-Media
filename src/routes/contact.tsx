@@ -221,10 +221,12 @@ function Contact() {
                     {contactPage.contactInfo.email}
                   </a>
                 </div>
-                <div className="flex items-center gap-3 text-text-secondary">
-                  <Phone size={20} weight="duotone" className="text-brand-primary flex-shrink-0" />
-                  <span className="text-sm">{contactPage.contactInfo.phone}</span>
-                </div>
+                {contactPage.contactInfo.phone && (
+                  <div className="flex items-center gap-3 text-text-secondary">
+                    <Phone size={20} weight="duotone" className="text-brand-primary flex-shrink-0" />
+                    <span className="text-sm">{contactPage.contactInfo.phone}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-3 text-text-secondary">
                   <MapPin size={20} weight="duotone" className="text-brand-primary flex-shrink-0" />
                   <span className="text-sm">{contactPage.contactInfo.location}</span>

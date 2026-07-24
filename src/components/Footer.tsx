@@ -1,4 +1,19 @@
 import { footer } from "~/data/content";
+import {
+  FacebookLogo,
+  InstagramLogo,
+  LinkedinLogo,
+  TiktokLogo,
+  XLogo,
+} from "@phosphor-icons/react";
+
+const socialIconMap: Record<string, React.ComponentType<{ size?: number; weight?: "fill" | "bold" | "duotone"; className?: string }>> = {
+  FacebookLogo,
+  InstagramLogo,
+  LinkedinLogo,
+  TiktokLogo,
+  XLogo,
+};
 
 export function Footer() {
   return (
@@ -16,6 +31,30 @@ export function Footer() {
             <p className="mt-2 text-sm text-text-muted max-w-xs">
               {footer.tagline}
             </p>
+            {/* Social Media Links */}
+            {footer.social && (
+              <div className="flex items-center gap-4 mt-4">
+                {footer.social.map((s) => {
+                  const Icon = socialIconMap[s.icon];
+                  return (
+                    <a
+                      key={s.label}
+                      href={s.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={s.label}
+                      className="text-text-muted hover:text-brand-primary transition-colors"
+                    >
+                      {Icon ? (
+                        <Icon size={20} weight="fill" />
+                      ) : (
+                        <span className="text-xs font-medium">{s.label}</span>
+                      )}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Services */}

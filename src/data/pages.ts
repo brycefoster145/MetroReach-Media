@@ -211,7 +211,7 @@ export const contactPage = {
     "Tell us about your business and what you need. We'll tell you honestly whether we can help — and exactly how.",
   contactInfo: {
     email: "hello@metroreachagency.com",
-    phone: "(555) 555-5555",
+    phone: "",
     location: "Austin, TX — serving clients nationwide",
   },
   serviceOptions: [
@@ -573,11 +573,11 @@ export const dashboardPage = {
 
 export const subServices = [
   // Organic Content Management
-  { slug: "social-media-audit", category: "organic-content", name: "Social Media Audit", description: "A comprehensive review of your social presence, content performance, and competitive positioning. Delivered as an actionable report with clear recommendations.", price: "$500", pipelineStatus: "verified" },
+  { slug: "social-media-audit", category: "organic-content", name: "Social Media Audit", description: "A comprehensive review of your social presence, content performance, and competitive positioning. Delivered as an actionable report with clear recommendations.", price: "$500 one-time", pipelineStatus: "verified" },
   { slug: "monthly-content-calendar", category: "organic-content", name: "Monthly Content Calendar", description: "A fully planned content calendar aligned with your business goals, seasonality, and audience insights — ready for execution.", price: "From $1,000/month", pipelineStatus: "verified" },
   { slug: "caption-writing", category: "organic-content", name: "Caption Writing", description: "Platform-native captions that capture your brand voice, drive engagement, and convert scrollers into leads.", price: "From $750/month", pipelineStatus: "verified" },
-  { slug: "hashtag-research", category: "organic-content", name: "Hashtag Research", description: "Data-driven hashtag strategy built from competitor analysis, industry trends, and audience behavior.", price: "$300", pipelineStatus: "verified" },
-  { slug: "brand-voice-development", category: "organic-content", name: "Brand Voice Development", description: "Define the personality, tone, and language that sets your brand apart across every platform.", price: "From $500", pipelineStatus: "building" },
+  { slug: "hashtag-research", category: "organic-content", name: "Hashtag Research", description: "Data-driven hashtag strategy built from competitor analysis, industry trends, and audience behavior.", price: "$300 one-time", pipelineStatus: "verified" },
+  { slug: "brand-voice-development", category: "organic-content", name: "Brand Voice Development", description: "Define the personality, tone, and language that sets your brand apart across every platform.", price: "From $500 one-time", pipelineStatus: "building" },
   { slug: "posting-schedule-optimization", category: "organic-content", name: "Posting Schedule Optimization", description: "Determine the optimal posting cadence and timing for each platform based on your audience's behavior.", price: "From $400/month", pipelineStatus: "building" },
   { slug: "trend-research", category: "organic-content", name: "Trend Research", description: "Stay ahead of platform trends, format shifts, and audience behaviors that impact your content performance.", price: "From $350/month", pipelineStatus: "building" },
   { slug: "daily-engagement", category: "organic-content", name: "Daily Engagement", description: "Active daily interaction with your audience — likes, replies, and authentic engagement that builds community.", price: "From $600/month", pipelineStatus: "building" },
@@ -585,31 +585,31 @@ export const subServices = [
   { slug: "social-listening", category: "organic-content", name: "Social Listening", description: "Monitor brand mentions, industry conversations, and competitor activity to surface opportunities and risks.", price: "From $500/month", pipelineStatus: "building" },
   { slug: "single-platform-management", category: "organic-content", name: "Single-Platform Management", description: "End-to-end management of one social platform — content creation, posting, engagement, and optimization.", price: "From $800/month", pipelineStatus: "building" },
   { slug: "multi-platform-management", category: "organic-content", name: "Multi-Platform Management — 5 Platforms", description: "Full management across five platforms with coordinated content, consistent brand voice, and cross-platform strategy.", price: "From $2,000/month", pipelineStatus: "building" },
-  { slug: "platform-setup-optimization", category: "organic-content", name: "Platform Setup & Optimization", description: "Professional setup and optimization of business profiles — bios, highlights, links, and settings configured for maximum discoverability.", price: "From $750", pipelineStatus: "building" },
-  { slug: "profile-bio-optimization", category: "organic-content", name: "Profile/Bio Optimization", description: "Conversion-focused profile and bio copy that tells your story, communicates value, and drives action.", price: "$400", pipelineStatus: "building" },
+  { slug: "platform-setup-optimization", category: "organic-content", name: "Platform Setup & Optimization", description: "Professional setup and optimization of business profiles — bios, highlights, links, and settings configured for maximum discoverability.", price: "From $750 one-time", pipelineStatus: "building" },
+  { slug: "profile-bio-optimization", category: "organic-content", name: "Profile/Bio Optimization", description: "Conversion-focused profile and bio copy that tells your story, communicates value, and drives action.", price: "$400 one-time", pipelineStatus: "building" },
 
   // Paid Advertising
   { slug: "meta-ads-management", category: "paid-advertising", name: "Meta Ads Management", description: "Full campaign management across Facebook and Instagram — audience targeting, creative, bidding, and continuous optimization.", price: "From $1,000/month + 10% ad spend", pipelineStatus: "building" },
-  { slug: "ad-account-setup", category: "paid-advertising", name: "Ad Account Setup", description: "Professional configuration of your ad accounts, pixels, conversion tracking, and audience foundations.", price: "$500", pipelineStatus: "verified" },
+  { slug: "ad-account-setup", category: "paid-advertising", name: "Ad Account Setup", description: "Professional configuration of your ad accounts, pixels, conversion tracking, and audience foundations.", price: "$500 one-time", pipelineStatus: "verified" },
   { slug: "ad-creative-package", category: "paid-advertising", name: "Ad Creative Package", description: "High-converting ad creative — static, carousel, and video concepts — designed and tested for performance.", price: "From $750/month", pipelineStatus: "building" },
   { slug: "ab-testing-optimization", category: "paid-advertising", name: "A/B Testing & Optimization", description: "Systematic testing of creative, audiences, landing pages, and bids to continuously improve campaign performance.", price: "From $500/month", pipelineStatus: "building" },
-  { slug: "pixel-conversion-tracking", category: "paid-advertising", name: "Pixel & Conversion Tracking", description: "Accurate tracking setup so you know exactly which ads are driving leads and revenue.", price: "$400", pipelineStatus: "building" },
-  { slug: "landing-page-review", category: "paid-advertising", name: "Landing Page Review", description: "Expert review of your landing pages with actionable recommendations to improve conversion rates.", price: "$350", pipelineStatus: "building" },
+  { slug: "pixel-conversion-tracking", category: "paid-advertising", name: "Pixel & Conversion Tracking", description: "Accurate tracking setup so you know exactly which ads are driving leads and revenue.", price: "$400 one-time", pipelineStatus: "building" },
+  { slug: "landing-page-review", category: "paid-advertising", name: "Landing Page Review", description: "Expert review of your landing pages with actionable recommendations to improve conversion rates.", price: "$350 one-time", pipelineStatus: "building" },
 
   // Social Strategy
-  { slug: "social-media-audit-strategy", category: "social-strategy", name: "Social Media Audit", description: "A comprehensive review of your social presence, content performance, and competitive positioning. Delivered as an actionable report with clear recommendations.", price: "$500", pipelineStatus: "building" },
-  { slug: "competitor-analysis", category: "social-strategy", name: "Competitor Analysis", description: "Deep competitive research — what's working for your competitors, where they're vulnerable, and how you can differentiate.", price: "$750", pipelineStatus: "verified" },
-  { slug: "social-media-strategy", category: "social-strategy", name: "Social Media Strategy", description: "A complete social media strategy — platform selection, content pillars, audience targeting, and growth roadmap.", price: "From $1,200", pipelineStatus: "building" },
-  { slug: "content-strategy", category: "social-strategy", name: "Content Strategy", description: "Strategic content architecture — pillars, formats, cadence, and distribution plan aligned with business objectives.", price: "From $1,000", pipelineStatus: "verified" },
-  { slug: "campaign-strategy", category: "social-strategy", name: "Campaign Strategy", description: "End-to-end campaign planning — objectives, creative direction, audience segmentation, and measurement framework.", price: "From $800", pipelineStatus: "verified" },
-  { slug: "audience-research", category: "social-strategy", name: "Audience Research", description: "Deep audience analysis — demographics, behaviors, content preferences, and platform usage patterns.", price: "From $600", pipelineStatus: "verified" },
+  { slug: "social-media-audit-strategy", category: "social-strategy", name: "Social Media Audit", description: "A comprehensive review of your social presence, content performance, and competitive positioning. Delivered as an actionable report with clear recommendations.", price: "$500 one-time", pipelineStatus: "building" },
+  { slug: "competitor-analysis", category: "social-strategy", name: "Competitor Analysis", description: "Deep competitive research — what's working for your competitors, where they're vulnerable, and how you can differentiate.", price: "$750 one-time", pipelineStatus: "verified" },
+  { slug: "social-media-strategy", category: "social-strategy", name: "Social Media Strategy", description: "A complete social media strategy — platform selection, content pillars, audience targeting, and growth roadmap.", price: "From $1,200 one-time", pipelineStatus: "building" },
+  { slug: "content-strategy", category: "social-strategy", name: "Content Strategy", description: "Strategic content architecture — pillars, formats, cadence, and distribution plan aligned with business objectives.", price: "From $1,000 one-time", pipelineStatus: "verified" },
+  { slug: "campaign-strategy", category: "social-strategy", name: "Campaign Strategy", description: "End-to-end campaign planning — objectives, creative direction, audience segmentation, and measurement framework.", price: "From $800 one-time", pipelineStatus: "verified" },
+  { slug: "audience-research", category: "social-strategy", name: "Audience Research", description: "Deep audience analysis — demographics, behaviors, content preferences, and platform usage patterns.", price: "From $600 one-time", pipelineStatus: "verified" },
   { slug: "organic-growth-strategy", category: "social-strategy", name: "Organic Growth Strategy", description: "A sustainable organic growth plan focused on content quality, community building, and platform-native tactics.", price: "From $700/month", pipelineStatus: "verified" },
   { slug: "monthly-strategy-reviews", category: "social-strategy", name: "Monthly Strategy Reviews", description: "Monthly deep-dive reviews of strategy performance with data-driven adjustments and forward planning.", price: "From $500/month", pipelineStatus: "building" },
 
   // Analytics & Reporting
   { slug: "monthly-performance-reports", category: "analytics-reporting", name: "Monthly Performance Reports", description: "Comprehensive monthly reports covering all key metrics — CPL, ROAS, engagement, reach, and attribution.", price: "From $500/month", pipelineStatus: "verified" },
   { slug: "weekly-performance-summaries", category: "analytics-reporting", name: "Weekly Performance Summaries", description: "Concise weekly summaries highlighting what's working, what's shifting, and what needs attention.", price: "From $350/month", pipelineStatus: "verified" },
-  { slug: "kpi-dashboard-setup", category: "analytics-reporting", name: "KPI Dashboard Setup", description: "Live dashboard configured with your key metrics — visible anytime, no waiting for monthly reports.", price: "$750", pipelineStatus: "verified" },
+  { slug: "kpi-dashboard-setup", category: "analytics-reporting", name: "KPI Dashboard Setup", description: "Live dashboard configured with your key metrics — visible anytime, no waiting for monthly reports.", price: "$750 one-time", pipelineStatus: "verified" },
   { slug: "executive-reports", category: "analytics-reporting", name: "Executive Reports", description: "High-level reports designed for leadership — clear insights, trends, and ROI analysis without the noise.", price: "From $600/month", pipelineStatus: "verified" },
   { slug: "competitor-benchmarking", category: "analytics-reporting", name: "Competitor Benchmarking", description: "See how your performance stacks up against competitors with clear benchmarking across key metrics.", price: "From $500/month", pipelineStatus: "verified" },
 
@@ -620,8 +620,8 @@ export const subServices = [
   { slug: "review-management", category: "community-management", name: "Review Management", description: "Monitor and respond to reviews across platforms — turn feedback into trust signals for potential customers.", price: "From $350/month", pipelineStatus: "verified" },
   { slug: "social-listening-community", category: "community-management", name: "Social Listening", description: "Monitor brand mentions, industry conversations, and competitor activity to surface opportunities and risks.", price: "From $500/month", pipelineStatus: "verified" },
   { slug: "influencer-research", category: "community-management", name: "Influencer Research", description: "Identify and evaluate potential influencer partners aligned with your brand, audience, and campaign goals.", price: "From $750/month", pipelineStatus: "verified" },
-  { slug: "community-engagement-templates", category: "community-management", name: "Community Engagement Templates", description: "Ready-to-use response templates for common interactions — maintaining brand voice while saving time.", price: "$300", pipelineStatus: "verified" },
-  { slug: "platform-setup-community", category: "community-management", name: "Platform Setup & Optimization", description: "Professional setup and optimization of business profiles — bios, highlights, links, and settings configured for maximum discoverability.", price: "From $750", pipelineStatus: "verified" },
+  { slug: "community-engagement-templates", category: "community-management", name: "Community Engagement Templates", description: "Ready-to-use response templates for common interactions — maintaining brand voice while saving time.", price: "$300 one-time", pipelineStatus: "verified" },
+  { slug: "platform-setup-community", category: "community-management", name: "Platform Setup & Optimization", description: "Professional setup and optimization of business profiles — bios, highlights, links, and settings configured for maximum discoverability.", price: "From $750 one-time", pipelineStatus: "verified" },
 ];
 
 export const cookiePolicyPage = {
