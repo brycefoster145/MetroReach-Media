@@ -1,7 +1,11 @@
-const TELEGRAM_TOKEN = "8855576613:AAHJIBjBxEQ7r2O7uteEYG6c7NjyptXNpDs";
-const CHAT_ID = "7977291523";
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 export async function sendTelegramMessage(text: string) {
+  if (!TELEGRAM_TOKEN || !CHAT_ID) {
+    console.warn("Telegram not configured — skipping notification");
+    return;
+  }
   const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
   await fetch(url, {
     method: "POST",
