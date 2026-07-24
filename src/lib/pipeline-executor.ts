@@ -40,6 +40,8 @@ export interface PipelineProgress {
 // ── Service Slug → Pipeline Mapping ──
 
 export const PIPELINE_MAP: Record<string, PipelineDefinition[]> = {
+  // ── Package-level mappings (retained for legacy / bundled purchases) ──
+
   // Organic Content Management packages
   "organic-content-starter": [
     { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Content Calendar", recurring: true, intervalHours: 720 },
@@ -147,6 +149,147 @@ export const PIPELINE_MAP: Record<string, PipelineDefinition[]> = {
     { file: "landing-page-review.md", steps: ["research", "create", "review", "deliver"], label: "Landing Page Review", recurring: true, intervalHours: 2160 },
     { file: "trend-research.md", steps: ["research", "create", "review", "deliver"], label: "Trend Research", recurring: true, intervalHours: 720 },
     { file: "hashtag-research.md", steps: ["research", "create", "review", "deliver"], label: "Hashtag Research", recurring: true, intervalHours: 720 },
+  ],
+
+  // ── Individual service slug mappings (43 services from stripe-product-map.ts) ──
+
+  // Organic Content Management (14 individual services)
+  "social-media-audit": [
+    { file: "social-media-audit.md", steps: ["research", "create", "review", "deliver"], label: "Social Media Audit", recurring: false },
+  ],
+  "monthly-content-calendar": [
+    { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Content Calendar", recurring: true, intervalHours: 720 },
+  ],
+  "caption-writing": [
+    { file: "caption-writing.md", steps: ["research", "create", "review", "deliver"], label: "Caption Writing", recurring: true, intervalHours: 720 },
+  ],
+  "hashtag-research": [
+    { file: "hashtag-research.md", steps: ["research", "create", "review", "deliver"], label: "Hashtag Research", recurring: false },
+  ],
+  "brand-voice-development": [
+    { file: "brand-voice-development.md", steps: ["research", "create", "review", "deliver"], label: "Brand Voice Development", recurring: false },
+  ],
+  "posting-schedule-optimization": [
+    { file: "posting-schedule-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Posting Schedule Optimization", recurring: true, intervalHours: 720 },
+  ],
+  "trend-research": [
+    { file: "trend-research.md", steps: ["research", "create", "review", "deliver"], label: "Trend Research", recurring: true, intervalHours: 720 },
+  ],
+  "daily-engagement": [
+    { file: "daily-engagement.md", steps: ["setup", "monitor", "engage"], label: "Daily Engagement", recurring: true, intervalHours: 24 },
+  ],
+  "dm-management": [
+    { file: "dm-management.md", steps: ["research", "create", "review", "deliver"], label: "DM Management", recurring: true, intervalHours: 168 },
+  ],
+  "social-listening": [
+    { file: "social-listening.md", steps: ["setup", "monitor", "report"], label: "Social Listening", recurring: true, intervalHours: 24 },
+  ],
+  "single-platform-management": [
+    { file: "single-platform-management.md", steps: ["research", "create", "review", "deliver"], label: "Single-Platform Management", recurring: true, intervalHours: 720 },
+  ],
+  "multi-platform-management": [
+    { file: "multi-platform-management.md", steps: ["research", "create", "review", "deliver"], label: "Multi-Platform Management", recurring: true, intervalHours: 720 },
+  ],
+  "platform-setup-optimization": [
+    { file: "platform-setup-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Platform Setup & Optimization", recurring: false },
+  ],
+  "profile-bio-optimization": [
+    { file: "profile-bio-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Profile/Bio Optimization", recurring: false },
+  ],
+
+  // Paid Advertising (6 individual services)
+  "meta-ads-management": [
+    { file: "meta-ads-management.md", steps: ["research", "create", "monitor", "report"], label: "Meta Ads Management", recurring: true, intervalHours: 168 },
+  ],
+  "ad-account-setup": [
+    { file: "ad-account-setup.md", steps: ["research", "create", "review", "deliver"], label: "Ad Account Setup", recurring: false },
+  ],
+  "ad-creative-package": [
+    { file: "ad-creative-package.md", steps: ["research", "create", "review", "deliver"], label: "Ad Creative Package", recurring: true, intervalHours: 720 },
+  ],
+  "ab-testing-optimization": [
+    { file: "ab-testing-optimization.md", steps: ["research", "monitor", "report"], label: "A/B Testing & Optimization", recurring: true, intervalHours: 336 },
+  ],
+  "pixel-conversion-tracking": [
+    { file: "pixel-conversion-tracking.md", steps: ["setup", "monitor"], label: "Pixel & Conversion Tracking", recurring: false },
+  ],
+  "landing-page-review": [
+    { file: "landing-page-review.md", steps: ["research", "create", "review", "deliver"], label: "Landing Page Review", recurring: false },
+  ],
+
+  // Social Strategy (8 individual services)
+  "social-media-audit-strategy": [
+    { file: "social-media-audit.md", steps: ["research", "create", "review", "deliver"], label: "Social Media Audit", recurring: false },
+  ],
+  "competitor-analysis": [
+    { file: "competitor-analysis.md", steps: ["research", "create", "review", "deliver"], label: "Competitor Analysis", recurring: false },
+  ],
+  "social-media-strategy": [
+    { file: "social-media-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Social Media Strategy", recurring: false },
+  ],
+  "content-strategy": [
+    { file: "content-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Content Strategy", recurring: false },
+  ],
+  "campaign-strategy": [
+    { file: "campaign-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Campaign Strategy", recurring: false },
+  ],
+  "audience-research": [
+    { file: "audience-research.md", steps: ["research", "create", "review", "deliver"], label: "Audience Research", recurring: false },
+  ],
+  "organic-growth-strategy": [
+    { file: "organic-growth-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Organic Growth Strategy", recurring: true, intervalHours: 2160 },
+  ],
+  "monthly-strategy-reviews": [
+    { file: "monthly-strategy-reviews.md", steps: ["research", "review", "report"], label: "Monthly Strategy Reviews", recurring: true, intervalHours: 720 },
+  ],
+
+  // Analytics & Reporting (5 individual services)
+  "monthly-performance-reports": [
+    { file: "analytics-reporting.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Performance Reports", recurring: true, intervalHours: 720 },
+  ],
+  "weekly-performance-summaries": [
+    { file: "weekly-performance-summaries.md", steps: ["research", "create", "review", "deliver"], label: "Weekly Performance Summaries", recurring: true, intervalHours: 168 },
+  ],
+  "kpi-dashboard-setup": [
+    { file: "kpi-dashboard-setup.md", steps: ["research", "create", "review", "deliver"], label: "KPI Dashboard Setup", recurring: false },
+  ],
+  "executive-reports": [
+    { file: "executive-reports.md", steps: ["research", "create", "review", "deliver"], label: "Executive Reports", recurring: true, intervalHours: 720 },
+  ],
+  "competitor-benchmarking": [
+    { file: "competitor-benchmarking.md", steps: ["research", "create", "review", "deliver"], label: "Competitor Benchmarking", recurring: true, intervalHours: 2160 },
+  ],
+
+  // Community Management (10 individual services)
+  "community-management": [
+    { file: "community-management.md", steps: ["setup", "monitor", "engage", "report"], label: "Community Management", recurring: true, intervalHours: 24 },
+  ],
+  "daily-monitoring-engagement": [
+    { file: "daily-monitoring-engagement.md", steps: ["setup", "monitor", "engage"], label: "Daily Monitoring & Engagement", recurring: true, intervalHours: 24 },
+  ],
+  "comment-dm-response": [
+    { file: "comment-dm-response.md", steps: ["research", "create", "review", "deliver"], label: "Comment & DM Response", recurring: true, intervalHours: 168 },
+  ],
+  "review-management": [
+    { file: "review-management.md", steps: ["setup", "monitor", "report"], label: "Review Management", recurring: true, intervalHours: 168 },
+  ],
+  "social-listening-community": [
+    { file: "social-listening.md", steps: ["setup", "monitor", "report"], label: "Social Listening", recurring: true, intervalHours: 24 },
+  ],
+  "influencer-research": [
+    { file: "influencer-research.md", steps: ["research", "create", "review", "deliver"], label: "Influencer Research", recurring: true, intervalHours: 720 },
+  ],
+  "community-engagement-templates": [
+    { file: "community-engagement-templates.md", steps: ["research", "create", "review", "deliver"], label: "Community Engagement Templates", recurring: false },
+  ],
+  "platform-setup-community": [
+    { file: "platform-setup-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Platform Setup & Optimization", recurring: false },
+  ],
+  "social-inbox-management": [
+    { file: "social-inbox-management.md", steps: ["setup", "monitor", "report"], label: "Social Inbox Management", recurring: true, intervalHours: 24 },
+  ],
+  "social-inbox-design": [
+    { file: "social-inbox-design.md", steps: ["research", "create", "review", "deliver"], label: "Social Inbox Design", recurring: false },
   ],
 };
 
