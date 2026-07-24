@@ -25,6 +25,15 @@ import { sendEmail } from "~/lib/email";
 // Helpers
 // ---------------------------------------------------------------------------
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function isValidUrl(str: string): boolean {
   if (!str || !str.trim()) return true; // empty is OK for optional fields
   try {
@@ -148,7 +157,7 @@ export const Route = createFileRoute("/api/audit/submit")({
               JSON.stringify({
                 id: existing.id,
                 success: true,
-                redirect: `/free-audit/report?id=${existing.id}`,
+                redirect: `/free-audit/report?id=${existing.id}&email=${encodeURIComponent(formData.email)}`,
                 existing: true,
               }),
               { status: 200, headers: { "Content-Type": "application/json" } }
@@ -205,8 +214,16 @@ export const Route = createFileRoute("/api/audit/submit")({
 
           // ── Step 3: Send email notification ──
           try {
-            const reportUrl = `https://www.metroreachagency.com/free-audit/report?id=${lead.id}`;
+            const reportUrl = `https://www.metroreachagency.com/free-audit/report?id=${lead.id}&email=${encodeURIComponent(formData.email)}`;
             const primaryRec = result.serviceRecommendations[0];
+            const safeBusinessName = escapeHtml(result.formData.businessName);
+            const safeWebsiteUrl = escapeHtml(result.formData.websiteUrl || "");
+            const safeExecutiveSummary = escapeHtml(result.executiveSummary);
+            const safeFindingsSummary = escapeHtml(findingsSummary);
+            const safePrimaryRecName = primaryRec ? escapeHtml(primaryRec.name) : "";
+            const safePrimaryRecPrice = primaryRec ? escapeHtml(primaryRec.price) : "";
+            const safePrimaryRecBilling = primaryRec?.billingFrequency ? escapeHtml(primaryRec.billingFrequency) : "";
+            const safePrimaryRecReason = primaryRec ? escapeHtml(primaryRec.reason.slice(0, 200)) : "";
             const emailBody = `
               <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 20px; background: #fafafa;">
                 <div style="background: #ffffff; border-radius: 16px; padding: 40px 32px; border: 1px solid #e5e7eb;">
@@ -214,7 +231,7 @@ export const Route = createFileRoute("/api/audit/submit")({
                     Your Free Social Media Audit is Ready
                   </h1>
                   <p style="font-size: 15px; color: #6b7280; margin: 0 0 32px; line-height: 1.6;">
-                    Metro Reach Media completed a comprehensive analysis of ${result.formData.businessName}'s online presence.
+                    Metro Reach Media completed a comprehensive analysis of ${safeBusinessName}'s online presence.
                     Here's a snapshot of what we found.
                   </p>
 
@@ -230,14 +247,14 @@ export const Route = createFileRoute("/api/audit/submit")({
                         <p style="font-size: 13px; color: #6b7280; margin: 0;">out of 100 — ${result.scores.overall >= 70 ? 'Strong Foundation' : result.scores.overall >= 40 ? 'Growth Opportunity' : 'Needs Attention'}</p>
                       </div>
                     </div>
-                    <p style="font-size: 14px; color: #374151; margin: 0 0 12px; line-height: 1.6;">${result.executiveSummary}</p>
+                    <p style="font-size: 14px; color: #374151; margin: 0 0 12px; line-height: 1.6;">${safeExecutiveSummary}</p>
                   </div>
 
                   ${primaryRec ? `
                   <div style="background: #eff6ff; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #dbeafe;">
                     <p style="font-size: 13px; font-weight: 600; color: #1d4ed8; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em;">Recommended Growth Plan</p>
-                    <p style="font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 8px;">${primaryRec.name} — ${primaryRec.price}${primaryRec.billingFrequency ? '/' + primaryRec.billingFrequency : ''}</p>
-                    <p style="font-size: 14px; color: #374151; margin: 0; line-height: 1.6;">${primaryRec.reason.slice(0, 200)}...</p>
+                    <p style="font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 8px;">${safePrimaryRecName} — ${safePrimaryRecPrice}${safePrimaryRecBilling ? '/' + safePrimaryRecBilling : ''}</p>
+                    <p style="font-size: 14px; color: #374151; margin: 0; line-height: 1.6;">${safePrimaryRecReason}...</p>
                   </div>
                   ` : ''}
 
@@ -246,7 +263,7 @@ export const Route = createFileRoute("/api/audit/submit")({
                   </a>
 
                   <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0; line-height: 1.5;">
-                    Prepared by Metro Reach Media for ${result.formData.businessName}.<br/>
+                    Prepared by Metro Reach Media for ${safeBusinessName}.<br/>
                     Questions? Reply to this email or contact us at bryce@metroreachagency.com.
                   </p>
                 </div>
@@ -275,7 +292,7 @@ export const Route = createFileRoute("/api/audit/submit")({
             JSON.stringify({
               id: lead.id,
               success: true,
-              redirect: `/free-audit/report?id=${lead.id}`,
+              redirect: `/free-audit/report?id=${lead.id}&email=${encodeURIComponent(formData.email)}`,
               result,
             }),
             { status: 200, headers: { "Content-Type": "application/json" } }

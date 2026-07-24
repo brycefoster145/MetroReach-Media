@@ -200,21 +200,9 @@ function FreeAudit() {
       }
 
       setStatus("success");
-      if (data.redirect && data.result) {
-        // ── Priority 0: Encode the full result in the URL hash ──
-        // This works 100% of the time — no database, no sessionStorage,
-        // no serverless issues. The report page reads from window.location.hash.
-        const json = JSON.stringify(data.result);
-        // Safe base64 encoding that handles any Unicode character
-        const encoded = btoa(
-          encodeURIComponent(json).replace(
-            /%([0-9A-F]{2})/g,
-            (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16))
-          )
-        );
-        window.location.href =
-          data.redirect.split("?")[0] + "#data=" + encoded;
-      } else if (data.redirect) {
+      if (data.redirect) {
+        // Simple redirect — report page loads data from sessionStorage or Postgres.
+        // No PII is ever placed in the URL.
         window.location.href = data.redirect;
       }
     } catch (err: any) {

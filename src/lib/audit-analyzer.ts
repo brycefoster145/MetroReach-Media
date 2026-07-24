@@ -8,6 +8,66 @@
  */
 
 import type { LeadFormData } from "~/lib/lead-store";
+import { isIP } from "node:net";
+import { promises as dns } from "node:dns";
+
+// ---------------------------------------------------------------------------
+// SSRF Protection
+// ---------------------------------------------------------------------------
+
+const BLOCKED_IP_PATTERNS = [
+  /^127\./,             // loopback
+  /^10\./,              // Class A private
+  /^172\.(1[6-9]|2\d|3[01])\./, // Class B private (172.16-31)
+  /^192\.168\./,         // Class C private
+  /^169\.254\./,         // link-local
+  /^0\./,               // "this network"
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT 100.64-127
+  /^fc00:/,             // IPv6 unique local (block any fc00::/7)
+  /^fd00:/,             // IPv6 unique local
+  /^fe80:/,             // IPv6 link-local
+  /^::1$/,              // IPv6 loopback
+];
+
+function isBlockedHostname(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (lower === "localhost" || lower === "127.0.0.1" || lower === "::1") return true;
+  if (lower === "0.0.0.0") return true;
+
+  // Check if the hostname itself is a literal IP
+  if (isIP(lower)) {
+    for (const pattern of BLOCKED_IP_PATTERNS) {
+      if (pattern.test(lower)) return true;
+    }
+  }
+
+  return false;
+}
+
+async function isBlockedUrl(url: string): Promise<boolean> {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+
+    // Check hostname directly (handles literal IPs and localhost)
+    if (isBlockedHostname(hostname)) return true;
+
+    // Resolve hostname to IP and check
+    try {
+      const addresses = await dns.lookup(hostname, { family: 4 });
+      const ip = addresses.address;
+      for (const pattern of BLOCKED_IP_PATTERNS) {
+        if (pattern.test(ip)) return true;
+      }
+    } catch {
+      // DNS resolution failed — allow the fetch to proceed (it'll fail naturally)
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,6 +167,13 @@ async function fetchWebsiteMeta(url: string): Promise<{
   }
 
   result.hasHttps = fetchUrl.startsWith("https://");
+
+  // SSRF protection — block requests to private/internal IPs
+  const blocked = await isBlockedUrl(fetchUrl);
+  if (blocked) {
+    // Return result with fetched=false, no error leaked to caller
+    return result;
+  }
 
   try {
     const controller = new AbortController();

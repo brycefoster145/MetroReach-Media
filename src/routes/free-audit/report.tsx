@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { getAuditResult } from "~/lib/lead-store";
+import { getAuditResult, getLead } from "~/lib/lead-store";
 import {
   ArrowRight,
   CheckCircle,
@@ -33,9 +33,27 @@ import type { AuditResult } from "~/lib/audit-analyzer";
 // ---------------------------------------------------------------------------
 
 const loadAudit = createServerFn({ method: "GET" })
-  .validator((id: string) => id)
-  .handler(async ({ data: id }) => {
+  .validator((data: { id: string; email: string }) => data)
+  .handler(async ({ data: { id, email } }) => {
     const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
+    const safeEmail = email.trim().toLowerCase();
+
+    // Email-based authorization — prevents unauthorized report access
+    if (safeEmail) {
+      try {
+        const lead = await getLead(safeId);
+        if (!lead) return { _error: "access_denied" as const };
+        if (lead.contactInfo.email.toLowerCase() !== safeEmail) {
+          return { _error: "access_denied" as const };
+        }
+      } catch {
+        return { _error: "access_denied" as const };
+      }
+    } else {
+      // No email provided — deny access
+      return { _error: "access_denied" as const };
+    }
+
     try {
       const raw = await getAuditResult(safeId);
       if (!raw) return null;
@@ -184,35 +202,9 @@ function FreeAuditReportPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
+    const email = params.get("email") || "";
 
-    // ── Priority 0: URL hash (encodes the full result — cannot fail) ──
-    const hash = window.location.hash.slice(1); // remove leading #
-    if (hash.startsWith("data=")) {
-      try {
-        const base64 = hash.slice(5); // remove "data=" prefix
-        // Safe base64 decoding for Unicode strings
-        const json = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join("")
-        );
-        const parsed = JSON.parse(json) as AuditResult;
-        // Also cache in sessionStorage so page refreshes work
-        // (the hash persists on refresh but it's good to have a backup)
-        try {
-          sessionStorage.setItem("audit-result", JSON.stringify(parsed));
-        } catch {}
-        setAudit(parsed);
-        setLoading(false);
-        return;
-      } catch (e) {
-        // Hash decoding failed — not critical, fall through to next priority
-        console.warn("Failed to decode audit from URL hash, falling back to sessionStorage", e);
-      }
-    }
-
-    // ── Priority 1: sessionStorage (works across Vercel serverless instances) ──
+    // ── Priority 1: sessionStorage (same-tab persistence) ──
     try {
       const cached = sessionStorage.getItem("audit-result");
       if (cached) {
@@ -240,17 +232,19 @@ function FreeAuditReportPage() {
     }
 
     const tryLoad = async () => {
-      let data: AuditResult | null = null;
+      let data: AuditResult | { _error: string } | null = null;
       try {
-        data = await loadAudit({ data: id });
+        data = await loadAudit({ data: { id, email } });
       } catch {
         // Fall through
       }
 
       if (!data) {
         setError("Report not found. It may have expired or the link is incorrect.");
+      } else if ((data as any)._error === "access_denied") {
+        setError("Access denied — please use the link from your email.");
       } else {
-        setAudit(data);
+        setAudit(data as AuditResult);
       }
       setLoading(false);
     };

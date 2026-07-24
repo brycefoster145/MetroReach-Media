@@ -37,11 +37,22 @@ import { getLead, type LeadFormData } from "~/lib/lead-store";
 // ---------------------------------------------------------------------------
 
 const loadPremiumAudit = createServerFn({ method: "GET" })
-  .validator((id: string) => id)
-  .handler(async ({ data: id }) => {
+  .validator((data: { id: string; email: string }) => data)
+  .handler(async ({ data: { id, email } }) => {
     const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
     const lead = await getLead(safeId);
     if (!lead) return null;
+
+    // Email-based authorization — prevents unauthorized report access
+    const safeEmail = email.trim().toLowerCase();
+    if (!safeEmail || lead.contactInfo.email.toLowerCase() !== safeEmail) {
+      return { _error: "access_denied" as const };
+    }
+
+    // Payment check — premium audits require purchase
+    if (lead.purchaseStatus !== "paid") {
+      return { _error: "payment_required" as const };
+    }
 
     const result = await runPremiumAudit(lead.businessInfo, safeId);
     return result;
@@ -168,15 +179,20 @@ function PremiumAuditReportPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("lead");
+    const email = params.get("email") || "";
     if (!id) {
       setError("No report ID provided. Please complete the Premium Audit purchase first.");
       setLoading(false);
       return;
     }
-    loadPremiumAudit({ data: id })
+    loadPremiumAudit({ data: { id, email } })
       .then((data) => {
         if (!data) {
           setError("Report not found. Please complete your purchase or contact us for assistance.");
+        } else if ((data as any)._error === "access_denied") {
+          setError("Access denied — please use the link from your email.");
+        } else if ((data as any)._error === "payment_required") {
+          setError("Payment required — please complete your purchase to access this report.");
         } else {
           setAudit(data);
         }
@@ -199,13 +215,28 @@ function PremiumAuditReportPage() {
   }
 
   if (error || !audit) {
+    const isPaymentRequired = error?.includes("Payment required");
+    const isAccessDenied = error?.includes("Access denied");
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-6 px-6 text-center bg-bg-root">
         <h1 className="text-4xl md:text-5xl font-bold font-heading text-text-primary">Report Not Available</h1>
         <p className="text-lg text-text-secondary max-w-md">{error || "This report doesn't exist."}</p>
-        <a href="/premium-audit" className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200">
-          Purchase Premium Audit →
-        </a>
+        {isAccessDenied ? (
+          <p className="text-sm text-text-muted max-w-md">
+            For security, report links are personalized and sent to your email. Please use the exact link from your email to access your report.
+          </p>
+        ) : isPaymentRequired ? (
+          <a
+            href="https://buy.stripe.com/7sY6oH3iYd1Q69ad891ck0m"
+            className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200"
+          >
+            Complete Your Purchase →
+          </a>
+        ) : (
+          <a href="/premium-audit" className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200">
+            Purchase Premium Audit →
+          </a>
+        )}
       </div>
     );
   }

@@ -8,6 +8,8 @@
  */
 
 import type { LeadFormData } from "~/lib/lead-store";
+import { isIP } from "node:net";
+import { promises as dns } from "node:dns";
 import type {
   WebsiteAnalysis,
   CategoryScore,
@@ -17,6 +19,55 @@ import type {
 import {
   // Reuse the shared utilities by importing what we need
 } from "~/lib/audit-analyzer";
+
+// ---------------------------------------------------------------------------
+// SSRF Protection
+// ---------------------------------------------------------------------------
+
+const BLOCKED_IP_PATTERNS = [
+  /^127\./,             // loopback
+  /^10\./,              // Class A private
+  /^172\.(1[6-9]|2\d|3[01])\./, // Class B private (172.16-31)
+  /^192\.168\./,         // Class C private
+  /^169\.254\./,         // link-local
+  /^0\./,               // "this network"
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT 100.64-127
+  /^fc00:/,             // IPv6 unique local
+  /^fd00:/,             // IPv6 unique local
+  /^fe80:/,             // IPv6 link-local
+  /^::1$/,              // IPv6 loopback
+];
+
+function isBlockedHostname(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (lower === "localhost" || lower === "127.0.0.1" || lower === "::1") return true;
+  if (lower === "0.0.0.0") return true;
+  if (isIP(lower)) {
+    for (const pattern of BLOCKED_IP_PATTERNS) {
+      if (pattern.test(lower)) return true;
+    }
+  }
+  return false;
+}
+
+async function isBlockedUrl(url: string): Promise<boolean> {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+    if (isBlockedHostname(hostname)) return true;
+    try {
+      const addresses = await dns.lookup(hostname, { family: 4 });
+      for (const pattern of BLOCKED_IP_PATTERNS) {
+        if (pattern.test(addresses.address)) return true;
+      }
+    } catch {
+      // DNS resolution failed — allow the fetch to proceed
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 // We duplicate the shared helpers here to avoid circular imports
 // These are identical to the free audit versions
@@ -50,6 +101,12 @@ async function fetchWebsiteMeta(url: string): Promise<{
   }
 
   result.hasHttps = fetchUrl.startsWith("https://");
+
+  // SSRF protection — block requests to private/internal IPs
+  const blocked = await isBlockedUrl(fetchUrl);
+  if (blocked) {
+    return result;
+  }
 
   try {
     const controller = new AbortController();
