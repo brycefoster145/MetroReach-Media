@@ -26,7 +26,7 @@ function getStripe(): Stripe {
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
-  return new Stripe(key, { apiVersion: "2025-06-30.acacia" as any });
+  return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {

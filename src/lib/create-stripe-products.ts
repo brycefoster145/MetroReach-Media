@@ -66,7 +66,7 @@ export async function createStripeProducts(): Promise<MappingEntry[]> {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
 
-  const stripe = new Stripe(key, { apiVersion: "2025-06-30.acacia" as any });
+  const stripe = new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
   const entries: MappingEntry[] = [];
 
   // Only create products for verified services
