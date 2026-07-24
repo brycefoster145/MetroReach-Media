@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
   CaretDown,
@@ -73,7 +73,7 @@ const initialForm: FormState = {
 
 type FieldName = keyof FormState;
 
-export const Route = createFileRoute("/premium-audit")({
+export const Route = createFileRoute("/premium-audit/")({
   component: PremiumAudit,
 });
 
@@ -581,7 +581,6 @@ function PremiumAudit() {
         </Container>
       </section>
 
-      <Outlet />
     </main>
   );
 }
