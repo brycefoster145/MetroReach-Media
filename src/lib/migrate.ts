@@ -54,6 +54,29 @@ async function migrate() {
   `;
   console.log("✓ audit_results table ready");
 
+  // ── clients table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS clients (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      name TEXT NOT NULL,
+      company TEXT,
+      service TEXT NOT NULL,
+      service_slug TEXT NOT NULL,
+      status TEXT DEFAULT 'onboarding',
+      stripe_customer_id TEXT,
+      stripe_subscription_id TEXT,
+      pipeline_status TEXT DEFAULT 'pending',
+      onboarding_data JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_clients_stripe_customer ON clients(stripe_customer_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status)`;
+  console.log("✓ clients table ready");
+
   // ── contact_leads table ──
   await sql`
     CREATE TABLE IF NOT EXISTS contact_leads (

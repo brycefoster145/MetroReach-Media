@@ -136,17 +136,55 @@ function Checkout() {
           <Check size={28} weight="bold" className="text-brand-accent" />
         </div>
         <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary">
-          Thanks!
+          Thanks, {name || "we've got your request"}!
         </h1>
-        <p className="text-lg text-text-secondary max-w-lg">
-          This is a proposal request — not a purchase. Our team will review your selections and reach out within one business day to discuss pricing, scope, and next steps. No charges have been made.
-        </p>
-        <Link
-          to="/services"
-          className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200 mt-4"
-        >
-          Back to Services →
-        </Link>
+        <div className="max-w-lg space-y-4">
+          <p className="text-lg text-text-secondary">
+            Your proposal request has been submitted. Our team is reviewing your selections and will reach out within one business day with a tailored proposal and timeline.
+          </p>
+          <div className="rounded-2xl bg-bg-surface border border-border-subtle p-6 text-left">
+            <h3 className="text-sm font-semibold text-brand-primary uppercase tracking-wide mb-3">
+              What to expect
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3 text-sm text-text-secondary">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mt-0.5">
+                  <span className="text-xs font-bold text-brand-accent">1</span>
+                </span>
+                <span><strong className="text-text-primary">Today:</strong> Check your email — we've sent a confirmation with your request details.</span>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-text-secondary">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mt-0.5">
+                  <span className="text-xs font-bold text-brand-accent">2</span>
+                </span>
+                <span><strong className="text-text-primary">Within 24 hours:</strong> A strategist reviews your needs and prepares a custom proposal.</span>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-text-secondary">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mt-0.5">
+                  <span className="text-xs font-bold text-brand-accent">3</span>
+                </span>
+                <span><strong className="text-text-primary">After approval:</strong> Your service is set up and our team begins execution within 5–7 business days.</span>
+              </li>
+            </ul>
+          </div>
+          <p className="text-sm text-text-muted">
+            No charges have been made. This is a proposal request — payment happens after you approve the scope.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
+          <Link
+            to="/services"
+            className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200"
+          >
+            Back to Services →
+          </Link>
+          <Link
+            to="/contact"
+            className="inline-flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-colors text-sm font-medium"
+          >
+            Questions? Contact us →
+          </Link>
+        </div>
       </main>
     );
   }

@@ -1,0 +1,254 @@
+/**
+ * Automated email sequences for MetroReach Digital client delivery pipeline.
+ * MetroReach Digital
+ *
+ * Uses the existing sendEmail() from ~/lib/email (SendGrid primary, Graph API fallback).
+ * All templates are premium, human-crafted — no AI/automation language in client-facing copy.
+ */
+
+import { sendEmail } from "~/lib/email";
+
+// ── Types ──
+
+export interface Client {
+  id: string;
+  email: string;
+  name: string;
+  company?: string;
+  service: string;
+  service_slug: string;
+  status: string;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  pipeline_status: string;
+  onboarding_data?: Record<string, unknown>;
+}
+
+export type PipelineStage =
+  | "onboarding"
+  | "strategy"
+  | "content_creation"
+  | "review"
+  | "launch"
+  | "active"
+  | "reporting";
+
+const STAGE_LABELS: Record<PipelineStage, string> = {
+  onboarding: "Account Setup & Onboarding",
+  strategy: "Strategy Development",
+  content_creation: "Content Creation",
+  review: "Review & Approval",
+  launch: "Campaign Launch",
+  active: "Active Management",
+  reporting: "Performance Reporting",
+};
+
+const FROM_ADDRESS = "bryce@metroreachagency.com";
+const SUPPORT_ADDRESS = "support@metroreachagency.com";
+
+// ── Helpers ──
+
+function emailShell(title: string, content: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;background:#fafafa;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
+    <tr>
+      <td style="padding:32px 32px 8px;">
+        <p style="font-size:13px;font-weight:600;color:#7c3aed;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Digital</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 32px 32px;">
+        <h2 style="color:#1a1a1a;font-size:22px;font-weight:700;margin:0 0 16px;line-height:1.3;">${title}</h2>
+        ${content}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:20px 32px;background:#f5f3ff;font-size:13px;color:#6b7280;border-top:1px solid #e5e0f0;">
+        <p style="margin:0 0 4px;">MetroReach Digital — Premium Social Media Marketing</p>
+        <p style="margin:0;">Need help? Reply to this email or reach us at ${SUPPORT_ADDRESS}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+}
+
+// ── Sequence 1: Welcome (sent immediately after payment) ──
+
+export async function sendWelcomeEmail(client: Client): Promise<void> {
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Welcome to MetroReach Digital. Your ${escapeHtml(client.service)} package is now active, and our team is preparing your account for onboarding.
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Here's what happens next:
+</p>
+<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
+  <li>You'll receive an onboarding form within the next hour — this helps us gather access to your platforms and understand your business goals.</li>
+  <li>Once we have your details, our strategy team builds your custom plan within 2 business days.</li>
+  <li>Content creation begins immediately after strategy approval.</li>
+  <li>Your first campaign goes live within 5-7 business days.</li>
+</ol>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  We'll keep you updated at every stage. If you have questions before then, just reply to this email — our team monitors this inbox directly.
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  — The MetroReach Team
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: FROM_ADDRESS,
+    subject: `Welcome to MetroReach — ${client.service}`,
+    body: emailShell(`Welcome to MetroReach`, content),
+  });
+}
+
+// ── Sequence 2: Onboarding Request ──
+
+export async function sendOnboardingRequest(client: Client): Promise<void> {
+  const onboardingUrl = `https://metroreachagency.com/onboarding?id=${client.id}`;
+
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  To get your ${escapeHtml(client.service)} package up and running, we need access to a few things. Please complete the onboarding form below — it takes about 5 minutes.
+</p>
+<div style="text-align:center;margin:24px 0;">
+  <a href="${onboardingUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">Complete Onboarding →</a>
+</div>
+<p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0 0 16px;">
+  You'll need:
+</p>
+<ul style="font-size:14px;line-height:1.8;color:#6b7280;margin:0 0 16px;padding-left:20px;">
+  <li>Social media account logins or admin access (Facebook, Instagram, TikTok, etc.)</li>
+  <li>Your brand guidelines or logo files (if available)</li>
+  <li>Any existing marketing materials or past campaign data</li>
+  <li>A brief overview of your top 3 business goals for this quarter</li>
+</ul>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  Once submitted, our strategy team reviews everything and reaches out within 24 hours with your custom plan.
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: FROM_ADDRESS,
+    subject: `Next step: Complete your onboarding — MetroReach`,
+    body: emailShell(`Let's get you set up`, content),
+  });
+}
+
+// ── Sequence 3: Status Update ──
+
+export async function sendStatusUpdate(
+  client: Client,
+  stage: PipelineStage,
+  detail?: string,
+): Promise<void> {
+  const stageLabel = STAGE_LABELS[stage] || stage;
+  const detailHtml = detail
+    ? `<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">${escapeHtml(detail)}</p>`
+    : "";
+
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Your ${escapeHtml(client.service)} package has moved to the next stage:
+</p>
+<div style="background:#f5f3ff;border-radius:12px;padding:20px;margin:16px 0;text-align:center;">
+  <p style="font-size:14px;font-weight:600;color:#7c3aed;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px;">Current Stage</p>
+  <p style="font-size:20px;font-weight:700;color:#1a1a1a;margin:0;">${escapeHtml(stageLabel)}</p>
+</div>
+${detailHtml}
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  We'll notify you as soon as the next stage begins. No action needed from you right now — our team is handling everything.
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: FROM_ADDRESS,
+    subject: `Update: ${stageLabel} — MetroReach`,
+    body: emailShell(`Your project: ${stageLabel}`, content),
+  });
+}
+
+// ── Sequence 4: Deliverable Ready ──
+
+export async function sendDeliverableReady(
+  client: Client,
+  url: string,
+  description?: string,
+): Promise<void> {
+  const descriptionHtml = description
+    ? `<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">${escapeHtml(description)}</p>`
+    : "";
+
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Your latest deliverable from MetroReach Digital is ready for review.
+</p>
+${descriptionHtml}
+<div style="text-align:center;margin:24px 0;">
+  <a href="${url}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">View Deliverable →</a>
+</div>
+<p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0 0 16px;">
+  Review it at your convenience. If you'd like any revisions, just reply to this email with your feedback. Our typical revision turnaround is 24-48 hours.
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  — The MetroReach Team
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: FROM_ADDRESS,
+    subject: `Your deliverable is ready — MetroReach`,
+    body: emailShell(`Your deliverable is ready`, content),
+  });
+}
+
+// ── Internal notification: new client alert ──
+
+export async function sendInternalNewClientAlert(client: Client): Promise<void> {
+  const content = `
+<div style="background:#fef3c7;border-radius:12px;padding:16px;margin:16px 0;">
+  <p style="font-size:15px;font-weight:600;color:#92400e;margin:0 0 8px;">New Client — ${escapeHtml(client.service)}</p>
+  <table style="font-size:14px;color:#374151;border-collapse:collapse;">
+    <tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Name</td><td>${escapeHtml(client.name)}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Email</td><td>${escapeHtml(client.email)}</td></tr>
+    ${client.company ? `<tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Company</td><td>${escapeHtml(client.company)}</td></tr>` : ""}
+    <tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Service</td><td>${escapeHtml(client.service)}</td></tr>
+    <tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Status</td><td>${escapeHtml(client.status)}</td></tr>
+  </table>
+</div>
+<p style="font-size:14px;color:#6b7280;margin:8px 0 0;">Client ID: ${escapeHtml(client.id)}</p>`;
+
+  await sendEmail({
+    to: "bryce@metroreachagency.com",
+    from: SUPPORT_ADDRESS,
+    subject: `New Client: ${client.name} — ${client.service}`,
+    body: emailShell(`New client onboarded`, content),
+  });
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
