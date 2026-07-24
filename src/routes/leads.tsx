@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
-import { sql } from "~/lib/db";
 
 interface Lead {
   id: string;
@@ -18,6 +17,7 @@ interface Lead {
 
 const getLeads = createServerFn({ method: "GET" }).handler(async (): Promise<Lead[]> => {
   try {
+    const { sql } = await import("~/lib/db");
     const rows = await sql`
       SELECT id, name, email, company, phone, industry, message, source, created_at
       FROM contact_leads

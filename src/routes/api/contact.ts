@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
 import { randomBytes } from "node:crypto";
-import { sql } from "~/lib/db";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { sendEmail } from "~/lib/email";
 import { rateLimit, getClientIp } from "~/lib/rate-limit";
@@ -85,6 +84,7 @@ export const Route = createFileRoute("/api/contact")({
 
         // ── Insert into Postgres ──
         try {
+          const { sql } = await import("~/lib/db");
           await sql`
             INSERT INTO contact_leads (id, name, email, company, phone, industry, message, source)
             VALUES (${id}, ${name}, ${email}, ${company}, ${body.phone || ""}, ${industry}, ${message}, ${"homepage-form"})

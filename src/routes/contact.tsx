@@ -7,7 +7,6 @@ import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
 import { contactPage } from "~/data/pages";
-import { sql } from "~/lib/db";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { sendEmail } from "~/lib/email";
 
@@ -78,6 +77,7 @@ const submitContact = createServerFn({ method: "POST" })
 
     // ── Insert into Postgres ──
     try {
+      const { sql } = await import("~/lib/db");
       await sql`
         INSERT INTO contact_leads (id, name, email, company, phone, industry, message, source)
         VALUES (${id}, ${data.fullName}, ${data.email}, ${data.company}, ${""}, ${data.serviceInterest}, ${data.message}, ${"contact-page"})
