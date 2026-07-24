@@ -97,6 +97,53 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_contact_leads_created_at ON contact_leads(created_at DESC)`;
   console.log("✓ contact_leads table ready");
 
+  // ── pipeline_log table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS pipeline_log (
+      id SERIAL PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      step_key TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      deliverables JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_pipeline_log_client ON pipeline_log(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_pipeline_log_step ON pipeline_log(client_id, step_key)`;
+  // Unique constraint to prevent duplicate step entries
+  await sql`
+    DO $
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'pipeline_log_client_step_unique'
+      ) THEN
+        ALTER TABLE pipeline_log ADD CONSTRAINT pipeline_log_client_step_unique UNIQUE (client_id, step_key);
+      END IF;
+    END
+    $
+  `.catch(() => {});
+  console.log("✓ pipeline_log table ready");
+
+  // ── task_log table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS task_log (
+      id SERIAL PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      pipeline_file TEXT NOT NULL,
+      step TEXT NOT NULL,
+      success BOOLEAN DEFAULT true,
+      executed_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_task_log_client ON task_log(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_task_log_executed ON task_log(executed_at DESC)`;
+  console.log("✓ task_log table ready");
+
+  // Add onboarding_data column to clients if it doesn't exist
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_data JSONB`;
+  console.log("✓ clients.onboarding_data column ready");
+
   await sql.end();
   console.log("Migration complete.");
 }

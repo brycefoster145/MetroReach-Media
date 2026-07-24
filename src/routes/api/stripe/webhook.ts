@@ -16,6 +16,7 @@ import {
   sendOnboardingRequest,
   sendInternalNewClientAlert,
 } from "~/lib/email-sequences";
+import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
 
 // ── Stripe price ID → MetroReach service mapping ──
@@ -165,6 +166,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     `<a href="https://metroreachagency.com/dashboard?client=${clientId}">View Client →</a>`,
   ];
   sendTelegramMessage(tgLines.join("\n")).catch(() => {});
+
+  // 5. Trigger automated pipeline execution (fire-and-forget)
+  executePipeline(client).catch((e) =>
+    console.error("Pipeline execution failed:", e.message),
+  );
 
   console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
 }
