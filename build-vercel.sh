@@ -19,6 +19,12 @@ echo "[1/3] vite build (light — safe under the sandbox memory cap)"
 bun install
 bun run build
 
+# Fix: TanStack Router generates trailing-slash paths for directory-based index
+# routes (e.g. client/index.tsx -> /client/). Normalize them to /client to match
+# how browsers (and Vercel's proxy) actually send URLs.
+sed -i "s|id: '/client/'|id: '/client'|g; s|path: '/client/'|path: '/client'|g; s|fullPath: '/client/'|fullPath: '/client'|g" src/routeTree.gen.ts
+sed -i "s|id: '/free-audit/'|id: '/free-audit'|g; s|path: '/free-audit/'|path: '/free-audit'|g; s|fullPath: '/free-audit/'|fullPath: '/free-audit'|g" src/routeTree.gen.ts
+
 echo "[2/3] assemble .vercel/output (Build Output API v3)"
 rm -rf .vercel/output
 mkdir -p .vercel/output/functions/render.func
