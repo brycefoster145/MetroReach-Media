@@ -219,7 +219,7 @@ function FreeAudit() {
   };
 
   const inputClass =
-    "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
+    "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
   const labelClass = "block text-sm font-medium text-text-secondary mb-2";
   const errorClass = "text-xs text-error mt-1.5";
   const optionalClass = "text-text-muted font-normal";

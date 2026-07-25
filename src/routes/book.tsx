@@ -150,7 +150,7 @@ function Book() {
       errors[field]
         ? "border-error"
         : "border-border-subtle focus:border-brand-primary"
-    } text-text-primary placeholder:text-text-muted outline-none transition-colors`;
+    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`;
 
   const labelCls = "block text-sm font-medium text-text-primary mb-1.5";
 

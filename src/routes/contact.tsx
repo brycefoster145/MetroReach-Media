@@ -301,7 +301,7 @@ function Contact() {
                         errors.fullName
                           ? "border-error"
                           : "border-border-subtle focus:border-brand-primary"
-                      } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                      } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                     />
                     {errors.fullName && (
                       <p className="text-xs text-error mt-1.5">{errors.fullName}</p>
@@ -328,7 +328,7 @@ function Contact() {
                         errors.email
                           ? "border-error"
                           : "border-border-subtle focus:border-brand-primary"
-                      } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                      } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                     />
                     {errors.email && (
                       <p className="text-xs text-error mt-1.5">{errors.email}</p>
@@ -356,7 +356,7 @@ function Contact() {
                       errors.company
                         ? "border-error"
                         : "border-border-subtle focus:border-brand-primary"
-                    } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                   />
                   {errors.company && (
                     <p className="text-xs text-error mt-1.5">{errors.company}</p>
@@ -381,7 +381,7 @@ function Contact() {
                       errors.serviceInterest
                         ? "border-error"
                         : "border-border-subtle focus:border-brand-primary"
-                    } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                   >
                     <option value="">Select a service</option>
                     {contactPage.serviceOptions.map((opt) => (
@@ -415,7 +415,7 @@ function Contact() {
                       errors.message
                         ? "border-error"
                         : "border-border-subtle focus:border-brand-primary"
-                    } text-text-primary placeholder:text-text-muted outline-none transition-colors resize-vertical`}
+                    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors resize-vertical`}
                   />
                   {errors.message && (
                     <p className="text-xs text-error mt-1.5">{errors.message}</p>

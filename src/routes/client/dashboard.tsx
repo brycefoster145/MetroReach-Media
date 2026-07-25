@@ -639,7 +639,7 @@ function ClientDashboard() {
                         onChange={(e) => setApprovalNotes(e.target.value)}
                         placeholder="Add notes or request specific changes..."
                         rows={4}
-                        className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none"
+                        className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none"
                       />
                     </div>
 
@@ -773,7 +773,7 @@ function ClientDashboard() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
                   rows={2}
-                  className="flex-1 px-4 py-2.5 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none"
+                  className="flex-1 px-4 py-2.5 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -846,7 +846,7 @@ function ClientDashboard() {
                 onChange={(e) => setOnboardingPlatforms(e.target.value)}
                 placeholder="Facebook: https://facebook.com/...&#10;Instagram: https://instagram.com/..."
                 rows={4}
-                className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none font-mono"
+                className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none font-mono"
               />
             </div>
 
@@ -861,7 +861,7 @@ function ClientDashboard() {
                 onChange={(e) => setOnboardingGoals(e.target.value)}
                 placeholder="Increase qualified leads by 30%&#10;Build brand awareness in Austin metro&#10;Launch seasonal promotion campaign"
                 rows={4}
-                className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none"
+                className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 resize-none"
               />
             </div>
 

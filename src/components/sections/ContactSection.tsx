@@ -105,7 +105,7 @@ export function ContactSection() {
   }
 
   const inputCls =
-    "w-full bg-bg-surface border border-border-subtle rounded-md px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-colors";
+    "w-full bg-bg-surface border border-border-subtle rounded-md px-4 py-3 text-base text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-colors";
   const errorCls = "text-xs text-error mt-1";
 
   return (
