@@ -65,6 +65,16 @@ const submitBooking = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/book")({
+  head: () => ({
+    meta: [
+      { title: "Book a Strategy Call — MetroReach Media" },
+      { name: "description", content: "Book a 30-minute strategy call with MetroReach Media. No pitch. Just an honest assessment of your marketing." },
+      { property: "og:url", content: "https://www.metroreachagency.com/book" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/book" },
+    ],
+  }),
   component: Book,
 });
 

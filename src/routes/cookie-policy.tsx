@@ -3,6 +3,16 @@ import { Container } from "~/components/Container";
 import { cookiePolicyPage } from "~/data/pages";
 
 export const Route = createFileRoute("/cookie-policy")({
+  head: () => ({
+    meta: [
+      { title: "Cookie Policy — MetroReach Media" },
+      { name: "description", content: "MetroReach Media cookie policy. How we use cookies and how you can control them." },
+      { property: "og:url", content: "https://www.metroreachagency.com/cookie-policy" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/cookie-policy" },
+    ],
+  }),
   component: CookiePolicy,
 });
 

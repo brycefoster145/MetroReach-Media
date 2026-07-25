@@ -132,6 +132,10 @@ export const Route = createFileRoute("/contact")({
     meta: [
       { title: "Contact MetroReach Media — Start Your Growth Plan" },
       { name: "description", content: "Ready to grow? Contact MetroReach Media and start your custom social media marketing plan. No pitch deck — just an honest conversation." },
+      { property: "og:url", content: "https://www.metroreachagency.com/contact" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/contact" },
     ],
   }),
   component: Contact,

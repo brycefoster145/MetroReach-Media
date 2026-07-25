@@ -53,6 +53,8 @@ export const Route = createRootRoute({
         href: "https://fonts.gstatic.com",
         crossOrigin: "anonymous",
       },
+      { rel: "preconnect", href: "https://api.stripe.com" },
+      { rel: "preconnect", href: "https://api.sendgrid.com" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@400;500;600;700&display=swap",

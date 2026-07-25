@@ -11,6 +11,10 @@ export const Route = createFileRoute("/case-studies")({
     meta: [
       { title: "Case Studies — MetroReach Media Client Results" },
       { name: "description", content: "Real results from real clients. See how MetroReach Media drives qualified leads and measurable growth for service businesses." },
+      { property: "og:url", content: "https://www.metroreachagency.com/case-studies" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/case-studies" },
     ],
   }),
   component: CaseStudies,
