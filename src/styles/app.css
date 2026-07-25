@@ -11,7 +11,7 @@
   --color-bg-surface-high: #1B2433;
   --color-text-primary: #F1F5F9;
   --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
+  --color-text-muted: #94A3B8;
   --color-border-subtle: #1E293B;
   --color-border-emphasis: #334155;
   --color-success: #06D6A0;
@@ -136,4 +136,16 @@
   background: rgba(6, 9, 18, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
