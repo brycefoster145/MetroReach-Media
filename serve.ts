@@ -19,6 +19,30 @@ const PORT = 3000;
 const HOST = "0.0.0.0";
 const CLIENT_DIR = `${import.meta.dir}/dist/client`;
 
+// ── Security headers applied to every response ──
+const SECURITY_HEADERS: Record<string, string> = {
+  "content-security-policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://api.buffer.com https://api.sendgrid.com;",
+  "strict-transport-security":
+    "max-age=31536000; includeSubDomains",
+  "x-frame-options": "DENY",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+};
+
+function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    headers.set(key, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 // Free PORT regardless of which user owns the current listener. lsof runs under
 // sudo so it can see (and the kill can signal) a process owned by another user;
 // the loop waits for the socket to actually release before we bind.
@@ -44,11 +68,11 @@ for (let attempt = 1; ; attempt++) {
 
         if (pathname !== "/") {
           const file = Bun.file(CLIENT_DIR + pathname);
-          if (await file.exists()) return new Response(file);
+          if (await file.exists()) return withSecurityHeaders(new Response(file));
         }
-        return (
-          handler as { fetch: (r: Request) => Response | Promise<Response> }
-        ).fetch(req);
+        return withSecurityHeaders(
+          (handler as { fetch: (r: Request) => Response | Promise<Response> }).fetch(req),
+        );
       },
     });
     break;
