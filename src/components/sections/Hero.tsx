@@ -60,7 +60,7 @@ export function Hero() {
       {/* Background texture */}
       <img
         src="/images/hero-bg-texture.webp"
-        alt=""
+        alt="Blue gradient background texture with abstract geometric patterns"
         className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-screen pointer-events-none"
         loading="eager"
       />
