@@ -41,24 +41,10 @@ interface PostTask {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE = "http://localhost:3000";
-const OUTPUT_DIR = join(import.meta.dirname, "..", "public", "social");
-const CALENDAR_PATH = join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "shared",
-  "social",
-  "content-calendar-week-1.md",
-);
-const POSTS_PATH = join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "shared",
-  "social",
-  "posts-week-1.md",
-);
+const API_BASE = "https://www.metroreachagency.com";
+const OUTPUT_DIR = "/home/team/shared/site/public/social";
+const CALENDAR_PATH = "/home/team/shared/social/content-calendar-week-1.md";
+const POSTS_PATH = "/home/team/shared/social/posts-week-1.md";
 
 const SIZE_FB: "1792x1024" = "1792x1024";
 const SIZE_IG: "1024x1024" = "1024x1024";

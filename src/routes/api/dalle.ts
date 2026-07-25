@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/dalle")({
         try {
           const openai = new OpenAI({ apiKey });
           const response = await openai.images.generate({
-            model: "dall-e-3",
+            model: "gpt-image-2",
             prompt: prompt.trim(),
             size: resolvedSize,
             quality: resolvedQuality,
