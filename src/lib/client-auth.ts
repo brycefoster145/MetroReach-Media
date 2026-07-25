@@ -16,8 +16,8 @@ const TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 const COOKIE_NAME = "metroreach_client_token";
 
 function getJwtSecret(): string {
-  // Derive from env — MS_API_KEY is always set in production
-  const base = process.env.MS_API_KEY || process.env.DATABASE_URL || "metroreach-dev-secret";
+  // Use dedicated CLIENT_AUTH_SECRET env var for production-grade secret
+  const base = process.env.CLIENT_AUTH_SECRET || process.env.MS_API_KEY || process.env.DATABASE_URL || "metroreach-dev-secret";
   return `client-portal:v1:${base.slice(0, 64)}`;
 }
 
