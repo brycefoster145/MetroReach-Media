@@ -703,7 +703,7 @@ function calculatePremiumScores(
 
   let waObs: string;
   if (!website.fetched && formData.websiteUrl?.trim()) {
-    waObs = `Metro Reach Media attempted to analyze ${formData.websiteUrl} but was unable to reach the site. This is the most critical issue — if customers experience the same, every marketing dollar is wasted.`;
+    waObs = `MetroReach Media attempted to analyze ${formData.websiteUrl} but was unable to reach the site. This is the most critical issue — if customers experience the same, every marketing dollar is wasted.`;
   } else if (!website.fetched) {
     waObs = "No website URL was provided. A website is your 24/7 salesperson — without one, the digital marketing funnel has a missing foundation.";
   } else if (websiteScore >= 70) {
@@ -1202,7 +1202,7 @@ function generatePremiumExecutiveSummary(
     .filter((c) => c.name !== "overallMarketing" && c.name !== "businessHealth")
     .sort((a, b) => a.score - b.score)[0];
 
-  let summary = `Metro Reach Media completed a comprehensive Premium Growth Audit of ${formData.businessName}, analyzing ${categories.filter(c => c.name !== "overallMarketing" && c.name !== "businessHealth").length} marketing dimensions. `;
+  let summary = `MetroReach Media completed a comprehensive Premium Growth Audit of ${formData.businessName}, analyzing ${categories.filter(c => c.name !== "overallMarketing" && c.name !== "businessHealth").length} marketing dimensions. `;
 
   if (website.fetched) {
     summary += `The website was fully analyzed for technical health, content depth, and conversion readiness. `;
@@ -1266,7 +1266,7 @@ function determinePremiumConfidence(
   if (points >= 5) {
     return {
       level: "High",
-      explanation: `High confidence: ${signals.join("; ")}. Metro Reach Media had sufficient data to perform a thorough, evidence-based assessment.`,
+      explanation: `High confidence: ${signals.join("; ")}. MetroReach Media had sufficient data to perform a thorough, evidence-based assessment.`,
     };
   } else if (points >= 2) {
     return {

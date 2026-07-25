@@ -240,7 +240,7 @@ function FreeAudit() {
               Get Your Free Social Media Audit
             </h1>
             <p className="text-lg lg:text-xl text-text-secondary max-w-2xl mx-auto">
-              Metro Reach Media analyzes your digital presence across your website and social
+              MetroReach Media analyzes your digital presence across your website and social
               platforms — then delivers a detailed report with scores, strengths,
               weaknesses, and a clear growth plan. No templates. No fluff.
             </p>
@@ -519,7 +519,7 @@ function FreeAudit() {
                     onChange={(e) => update("consent", e.target.checked)}
                   />
                   <label htmlFor="consent" className="text-sm text-text-secondary cursor-pointer">
-                    I consent to Metro Reach Media analyzing publicly accessible business information{" "}
+                    I consent to MetroReach Media analyzing publicly accessible business information{" "}
                     <span className="text-error">*</span>
                   </label>
                 </div>
@@ -572,7 +572,7 @@ function FreeAudit() {
                 {
                   step: "02",
                   label: "Our team reviews your presence",
-                  desc: "Metro Reach Media analyzes your website, social profiles, and competitive position using our proven methodology.",
+                  desc: "MetroReach Media analyzes your website, social profiles, and competitive position using our proven methodology.",
                 },
                 {
                   step: "03",
@@ -598,7 +598,7 @@ function FreeAudit() {
         <Container>
           <div className="text-center max-w-xl mx-auto">
             <p className="text-sm text-text-muted">
-              Metro Reach Media — Premium Social Media Marketing. Our team of
+              MetroReach Media — Premium Social Media Marketing. Our team of
               specialists has delivered this audit methodology to businesses across
               contracting, med spas, real estate, auto shops, clinics, and salons.
             </p>

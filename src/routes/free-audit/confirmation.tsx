@@ -58,7 +58,7 @@ function ConfirmationPage() {
       icon: CalendarCheck,
       title: "Team Assignment",
       description:
-        "Your dedicated Metro Reach Media team is being assigned. You'll receive a welcome email within 24 hours introducing your specialist team.",
+        "Your dedicated MetroReach Media team is being assigned. You'll receive a welcome email within 24 hours introducing your specialist team.",
     },
     {
       icon: PhoneCall,
@@ -91,7 +91,7 @@ function ConfirmationPage() {
               <CheckCircle size={32} weight="fill" className="text-success" />
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-heading text-text-primary tracking-tight mb-4">
-              Thank you for choosing Metro Reach Media
+              Thank you for choosing MetroReach Media
             </h1>
             <p className="text-lg text-text-secondary leading-relaxed mb-8">
               Your order has been received. Our team is preparing everything you need
@@ -177,7 +177,7 @@ function ConfirmationPage() {
               <ArrowRight size={18} weight="bold" />
             </a>
             <p className="text-xs text-text-muted mt-8 pt-8 border-t border-border-subtle">
-              Metro Reach Media &bull; Premium Social Media Marketing
+              MetroReach Media &bull; Premium Social Media Marketing
             </p>
           </div>
         </Container>

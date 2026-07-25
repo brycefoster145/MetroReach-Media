@@ -242,7 +242,7 @@ export const Route = createFileRoute("/api/audit/submit")({
                     Your Free Social Media Audit is Ready
                   </h1>
                   <p style="font-size: 15px; color: #6b7280; margin: 0 0 32px; line-height: 1.6;">
-                    Metro Reach Media completed a comprehensive analysis of ${safeBusinessName}'s online presence.
+                    MetroReach Media completed a comprehensive analysis of ${safeBusinessName}'s online presence.
                     Here's a snapshot of what we found.
                   </p>
 
@@ -274,7 +274,7 @@ export const Route = createFileRoute("/api/audit/submit")({
                   </a>
 
                   <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0; line-height: 1.5;">
-                    Prepared by Metro Reach Media for ${safeBusinessName}.<br/>
+                    Prepared by MetroReach Media for ${safeBusinessName}.<br/>
                     Questions? Reply to this email or contact us at bryce@metroreachagency.com.
                   </p>
                 </div>
@@ -284,7 +284,7 @@ export const Route = createFileRoute("/api/audit/submit")({
             const emailResult = await sendEmail({
               to: formData.email,
               from: "reports@metroreachagency.com",
-              subject: "Your Free Social Media Audit is Ready — Metro Reach Media",
+              subject: "Your Free Social Media Audit is Ready — MetroReach Media",
               body: emailBody,
             });
 

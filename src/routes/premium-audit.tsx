@@ -206,7 +206,7 @@ function PremiumAudit() {
               Get Your Complete Growth Blueprint
             </h1>
             <p className="text-lg lg:text-xl text-text-secondary max-w-2xl mx-auto mb-8">
-              Metro Reach Media's most comprehensive business assessment — 12
+              MetroReach Media's most comprehensive business assessment — 12
               categories, evidence-based scoring, priority matrix, and a phased
               growth roadmap built by our team of marketing specialists.
             </p>
@@ -494,7 +494,7 @@ function PremiumAudit() {
                     onChange={(e) => update("consent", e.target.checked)}
                   />
                   <label htmlFor="consent" className="text-sm text-text-secondary cursor-pointer">
-                    I consent to Metro Reach Media analyzing publicly accessible business information{" "}
+                    I consent to MetroReach Media analyzing publicly accessible business information{" "}
                     <span className="text-error">*</span>
                   </label>
                 </div>
@@ -547,7 +547,7 @@ function PremiumAudit() {
                 {
                   step: "02",
                   label: "Secure payment",
-                  desc: "$495 via Stripe — fully creditable toward any qualifying Metro Reach Media service within 30 days.",
+                  desc: "$495 via Stripe — fully creditable toward any qualifying MetroReach Media service within 30 days.",
                 },
                 {
                   step: "03",
@@ -573,7 +573,7 @@ function PremiumAudit() {
         <Container>
           <div className="text-center max-w-xl mx-auto">
             <p className="text-sm text-text-muted">
-              Metro Reach Media — Premium Social Media Marketing. Our team of
+              MetroReach Media — Premium Social Media Marketing. Our team of
               specialists has delivered comprehensive growth audits to businesses across
               contracting, med spas, real estate, auto shops, clinics, and salons.
             </p>
