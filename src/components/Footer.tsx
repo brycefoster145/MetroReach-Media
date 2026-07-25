@@ -22,8 +22,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Logo column */}
           <div className="lg:col-span-2">
-            <a href="/">
-              <img src="/logo-footer.png" alt="MetroReach Media" class="h-10 w-auto" />
+            <a
+              href="/"
+              className="text-lg font-bold font-heading text-text-primary"
+            >
+              {footer.company}
             </a>
             <p className="mt-2 text-sm text-text-muted max-w-xs">
               {footer.tagline}
