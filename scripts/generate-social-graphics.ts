@@ -41,7 +41,7 @@ interface PostTask {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE = "https://www.metroreachagency.com";
+const API_BASE = "http://localhost:3001";
 const OUTPUT_DIR = "/home/team/shared/site/public/social";
 const CALENDAR_PATH = "/home/team/shared/social/content-calendar-week-1.md";
 const POSTS_PATH = "/home/team/shared/social/posts-week-1.md";
