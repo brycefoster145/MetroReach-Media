@@ -73,17 +73,22 @@ export const Route = createFileRoute("/api/dalle")({
             n: 1,
           });
 
-          // gpt-image-2 returns URL by default (no response_format param)
+          // gpt-image-2 may return url or b64_json — handle both
           const imageUrl = response.data[0]?.url;
+          const b64Json = response.data[0]?.b64_json;
 
-          if (!imageUrl) {
-            return json(
-              { error: "No image URL returned from image generation" },
-              { status: 502 },
-            );
+          if (imageUrl) {
+            return json({ url: imageUrl });
           }
 
-          return json({ url: imageUrl });
+          if (b64Json) {
+            return json({ image: b64Json });
+          }
+
+          return json(
+            { error: "No image data returned from image generation" },
+            { status: 502 },
+          );
         } catch (err: any) {
           console.error("Image generation API error:", err.message || err);
 
