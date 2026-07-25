@@ -83,6 +83,11 @@ function Checkout() {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
     setSubmitting(true);
 
     // Build cart summary for the message field
@@ -255,7 +260,7 @@ function Checkout() {
                   onKeyDown={handlePromoKeyDown}
                   placeholder="Enter promo code"
                   aria-label="Promo Code"
-                  className="bg-bg-surface border border-border-subtle rounded-full px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary transition-colors duration-200 w-48"
+                  className="bg-bg-surface border border-border-subtle rounded-full px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200 w-48"
                 />
                 <button
                   type="button"
@@ -298,7 +303,7 @@ function Checkout() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="Your full name"
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary transition-colors duration-200"
+                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
                 />
               </div>
 
@@ -316,7 +321,7 @@ function Checkout() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@company.com"
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary transition-colors duration-200"
+                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
                 />
               </div>
 
@@ -334,7 +339,7 @@ function Checkout() {
                   onChange={(e) => setCompany(e.target.value)}
                   required
                   placeholder="Your company name"
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary transition-colors duration-200"
+                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
                 />
               </div>
 
@@ -351,7 +356,7 @@ function Checkout() {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
                   placeholder="Tell us about your business, your goals, and what you're looking for in a marketing partner."
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary transition-colors duration-200 resize-none"
+                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200 resize-none"
                 />
               </div>
 

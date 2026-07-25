@@ -360,7 +360,7 @@ function FreeAuditReportPage() {
               Social Media Audit &bull; {auditDate}
             </p>
             <p className="text-sm text-text-secondary mb-2">
-              Prepared by Metro Reach Media for
+              Prepared by MetroReach Media for
             </p>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-heading text-text-primary tracking-tight mb-8">
               {formData.businessName}
@@ -391,7 +391,7 @@ function FreeAuditReportPage() {
               Category Scores
             </h2>
             <p className="text-text-secondary mb-8">
-              Metro Reach Media analyzed {formData.businessName} across 9 marketing dimensions.
+              MetroReach Media analyzed {formData.businessName} across 9 marketing dimensions.
               Each score is based on evidence found during our review.
             </p>
             <div className="space-y-4">
@@ -449,7 +449,7 @@ function FreeAuditReportPage() {
               {website.fetched ? (
                 <>
                   <p className="text-sm text-text-secondary leading-relaxed mb-4">
-                    Metro Reach Media successfully analyzed {formData.websiteUrl || "your website"}.
+                    MetroReach Media successfully analyzed {formData.websiteUrl || "your website"}.
                     We found {website.title ? `a page title ("${website.title.slice(0, 80)}${website.title.length > 80 ? "..." : ""}"), ` : "no page title, "}
                     {website.description ? "a meta description, " : "no meta description, "}
                     and approximately {website.wordCount.toLocaleString()} words of content.
@@ -476,7 +476,7 @@ function FreeAuditReportPage() {
                 <div className="text-center py-4">
                   <WarningCircle size={24} weight="fill" className="text-warning mx-auto mb-3" />
                   <p className="text-sm text-text-secondary leading-relaxed">
-                    Metro Reach Media attempted to analyze {formData.websiteUrl} but was unable to reach the site.
+                    MetroReach Media attempted to analyze {formData.websiteUrl} but was unable to reach the site.
                     This could mean the site is down, the URL is incorrect, or security settings are blocking external review.
                   </p>
                   <p className="text-sm text-text-secondary mt-2">
@@ -620,7 +620,7 @@ function FreeAuditReportPage() {
               Your Recommended Growth Plan
             </h2>
             <p className="text-text-secondary mb-2">
-              Based on Metro Reach Media's analysis of {formData.businessName}'s scores and identified gaps,
+              Based on MetroReach Media's analysis of {formData.businessName}'s scores and identified gaps,
               here is the service we recommend to move the needle fastest.
             </p>
             <div className="mb-8">
@@ -744,7 +744,7 @@ function FreeAuditReportPage() {
               Ready to implement these recommendations?
             </h2>
             <p className="text-text-secondary mb-8">
-              Metro Reach Media can handle this for you. Our team of specialists
+              MetroReach Media can handle this for you. Our team of specialists
               manages every dimension of social media — strategy, creative, posting,
               engagement, and analytics — so you get the results without the overhead.
             </p>
@@ -790,7 +790,7 @@ function FreeAuditReportPage() {
               — 12 categories, priority matrix, growth roadmap, and more.
             </p>
             <p className="text-xs text-text-muted mt-3">
-              Prepared by Metro Reach Media. Questions?{" "}
+              Prepared by MetroReach Media. Questions?{" "}
               <a href="/contact" className="text-brand-primary hover:text-brand-accent transition-colors">
                 Contact us
               </a>
@@ -803,7 +803,7 @@ function FreeAuditReportPage() {
       {/* ── Print-only footer ── */}
       <div className="print-only hidden">
         <p style={{ fontSize: "10px", color: "#6b7280", textAlign: "center", marginTop: "40px", borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
-          Prepared by Metro Reach Media &bull; metroreachagency.com &bull; {auditDate}
+          Prepared by MetroReach Media &bull; metroreachagency.com &bull; {auditDate}
         </p>
       </div>
     </main>

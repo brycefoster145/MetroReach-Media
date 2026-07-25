@@ -297,14 +297,15 @@ function Contact() {
                       value={form.fullName}
                       onChange={handleChange}
                       required
+                      aria-describedby={errors.fullName ? "fullName-error" : undefined}
                       className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
                         errors.fullName
                           ? "border-error"
                           : "border-border-subtle focus:border-brand-primary"
-                      } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                      } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                     />
                     {errors.fullName && (
-                      <p className="text-xs text-error mt-1.5">{errors.fullName}</p>
+                      <p id="fullName-error" role="alert" className="text-xs text-error mt-1.5">{errors.fullName}</p>
                     )}
                   </div>
 
@@ -324,14 +325,15 @@ function Contact() {
                       value={form.email}
                       onChange={handleChange}
                       required
+                      aria-describedby={errors.email ? "email-error" : undefined}
                       className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
                         errors.email
                           ? "border-error"
                           : "border-border-subtle focus:border-brand-primary"
-                      } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                      } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                     />
                     {errors.email && (
-                      <p className="text-xs text-error mt-1.5">{errors.email}</p>
+                      <p id="email-error" role="alert" className="text-xs text-error mt-1.5">{errors.email}</p>
                     )}
                   </div>
                 </div>
@@ -352,14 +354,15 @@ function Contact() {
                     value={form.company}
                     onChange={handleChange}
                     required
+                    aria-describedby={errors.company ? "company-error" : undefined}
                     className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
                       errors.company
                         ? "border-error"
                         : "border-border-subtle focus:border-brand-primary"
-                    } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                   />
                   {errors.company && (
-                    <p className="text-xs text-error mt-1.5">{errors.company}</p>
+                    <p id="company-error" role="alert" className="text-xs text-error mt-1.5">{errors.company}</p>
                   )}
                 </div>
 
@@ -377,11 +380,12 @@ function Contact() {
                     value={form.serviceInterest}
                     onChange={handleChange}
                     required
+                    aria-describedby={errors.serviceInterest ? "serviceInterest-error" : undefined}
                     className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
                       errors.serviceInterest
                         ? "border-error"
                         : "border-border-subtle focus:border-brand-primary"
-                    } text-text-primary placeholder:text-text-muted outline-none transition-colors`}
+                    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors`}
                   >
                     <option value="">Select a service</option>
                     {contactPage.serviceOptions.map((opt) => (
@@ -391,7 +395,7 @@ function Contact() {
                     ))}
                   </select>
                   {errors.serviceInterest && (
-                    <p className="text-xs text-error mt-1.5">{errors.serviceInterest}</p>
+                    <p id="serviceInterest-error" role="alert" className="text-xs text-error mt-1.5">{errors.serviceInterest}</p>
                   )}
                 </div>
 
@@ -411,14 +415,15 @@ function Contact() {
                     onChange={handleChange}
                     required
                     rows={5}
+                    aria-describedby={errors.message ? "message-error" : undefined}
                     className={`w-full rounded-lg px-4 py-3 text-sm bg-bg-root border ${
                       errors.message
                         ? "border-error"
                         : "border-border-subtle focus:border-brand-primary"
-                    } text-text-primary placeholder:text-text-muted outline-none transition-colors resize-vertical`}
+                    } text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 transition-colors resize-vertical`}
                   />
                   {errors.message && (
-                    <p className="text-xs text-error mt-1.5">{errors.message}</p>
+                    <p id="message-error" role="alert" className="text-xs text-error mt-1.5">{errors.message}</p>
                   )}
                 </div>
 
@@ -433,7 +438,7 @@ function Contact() {
                       Sending...
                     </>
                   ) : (
-                    "Send message"
+                    "Get your proposal"
                   )}
                 </Button>
               </form>

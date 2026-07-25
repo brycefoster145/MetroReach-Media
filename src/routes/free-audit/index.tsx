@@ -219,7 +219,7 @@ function FreeAudit() {
   };
 
   const inputClass =
-    "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
+    "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
   const labelClass = "block text-sm font-medium text-text-secondary mb-2";
   const errorClass = "text-xs text-error mt-1.5";
   const optionalClass = "text-text-muted font-normal";
@@ -240,7 +240,7 @@ function FreeAudit() {
               Get Your Free Social Media Audit
             </h1>
             <p className="text-lg lg:text-xl text-text-secondary max-w-2xl mx-auto">
-              Metro Reach Media analyzes your digital presence across your website and social
+              MetroReach Media analyzes your digital presence across your website and social
               platforms — then delivers a detailed report with scores, strengths,
               weaknesses, and a clear growth plan. No templates. No fluff.
             </p>
@@ -519,7 +519,7 @@ function FreeAudit() {
                     onChange={(e) => update("consent", e.target.checked)}
                   />
                   <label htmlFor="consent" className="text-sm text-text-secondary cursor-pointer">
-                    I consent to Metro Reach Media analyzing publicly accessible business information{" "}
+                    I consent to MetroReach Media analyzing publicly accessible business information{" "}
                     <span className="text-error">*</span>
                   </label>
                 </div>
@@ -572,7 +572,7 @@ function FreeAudit() {
                 {
                   step: "02",
                   label: "Our team reviews your presence",
-                  desc: "Metro Reach Media analyzes your website, social profiles, and competitive position using our proven methodology.",
+                  desc: "MetroReach Media analyzes your website, social profiles, and competitive position using our proven methodology.",
                 },
                 {
                   step: "03",
@@ -598,7 +598,7 @@ function FreeAudit() {
         <Container>
           <div className="text-center max-w-xl mx-auto">
             <p className="text-sm text-text-muted">
-              Metro Reach Media — Premium Social Media Marketing. Our team of
+              MetroReach Media — Premium Social Media Marketing. Our team of
               specialists has delivered this audit methodology to businesses across
               contracting, med spas, real estate, auto shops, clinics, and salons.
             </p>

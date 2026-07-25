@@ -1175,7 +1175,7 @@ function generateExecutiveSummary(
     .filter((c) => c.name !== "overallMarketing")
     .sort((a, b) => a.score - b.score)[0];
 
-  let summary = `Metro Reach Media analyzed ${formData.businessName}'s online presence across 10 marketing dimensions. `;
+  let summary = `MetroReach Media analyzed ${formData.businessName}'s online presence across 10 marketing dimensions. `;
 
   if (website.fetched) {
     summary += `The website at ${formData.websiteUrl} was reviewed for technical configuration and content quality. `;

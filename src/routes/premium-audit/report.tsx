@@ -208,7 +208,7 @@ function PremiumAuditReportPage() {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-4 px-6 text-center bg-bg-root">
         <Spinner size={32} weight="bold" className="animate-spin text-brand-primary" />
-        <p className="text-text-secondary">Metro Reach Media is analyzing your business...</p>
+        <p className="text-text-secondary">MetroReach Media is analyzing your business...</p>
         <p className="text-sm text-text-muted">Generating your complete premium growth blueprint</p>
       </div>
     );
@@ -295,7 +295,7 @@ function PremiumAuditReportPage() {
             <p className="text-xs font-medium text-text-muted uppercase tracking-widest mb-4">
               Premium Growth Audit &bull; {auditDate}
             </p>
-            <p className="text-sm text-text-secondary mb-2">Prepared by Metro Reach Media for</p>
+            <p className="text-sm text-text-secondary mb-2">Prepared by MetroReach Media for</p>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-heading text-text-primary tracking-tight mb-8">
               {formData.businessName}
             </h1>
@@ -335,7 +335,7 @@ function PremiumAuditReportPage() {
               Category Scores
             </h2>
             <p className="text-text-secondary mb-8">
-              Metro Reach Media analyzed {formData.businessName} across {scores.categories.length} marketing dimensions. Each score is based on evidence found during our comprehensive review.
+              MetroReach Media analyzed {formData.businessName} across {scores.categories.length} marketing dimensions. Each score is based on evidence found during our comprehensive review.
             </p>
             <div className="space-y-4">
               {scores.categories.map((cat) => {
@@ -599,7 +599,7 @@ function PremiumAuditReportPage() {
               Recommended Growth Plan
             </h2>
             <p className="text-text-secondary mb-2">
-              Based on Metro Reach Media's comprehensive premium analysis of {formData.businessName}, here are the services we recommend.
+              Based on MetroReach Media's comprehensive premium analysis of {formData.businessName}, here are the services we recommend.
             </p>
             <div className="mb-8">
               <ConfidenceBadge confidence={recommendationConfidence} />
@@ -692,7 +692,7 @@ function PremiumAuditReportPage() {
               Ready to implement these recommendations?
             </h2>
             <p className="text-text-secondary mb-8">
-              Metro Reach Media can execute this entire growth roadmap — strategy, creative, posting,
+              MetroReach Media can execute this entire growth roadmap — strategy, creative, posting,
               engagement, and analytics — so you get the results without the overhead.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -721,7 +721,7 @@ function PremiumAuditReportPage() {
               </a>
             </div>
             <p className="text-xs text-text-muted mt-8 pt-8 border-t border-border-subtle">
-              Prepared by Metro Reach Media. Questions?{" "}
+              Prepared by MetroReach Media. Questions?{" "}
               <a href="/contact" className="text-brand-primary hover:text-brand-accent transition-colors">Contact us</a>.
             </p>
           </div>
@@ -731,7 +731,7 @@ function PremiumAuditReportPage() {
       {/* Print-only footer */}
       <div className="print-only hidden">
         <p style={{ fontSize: "10px", color: "#6b7280", textAlign: "center", marginTop: "40px", borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
-          Premium Growth Audit prepared by Metro Reach Media &bull; metroreachagency.com &bull; {auditDate}
+          Premium Growth Audit prepared by MetroReach Media &bull; metroreachagency.com &bull; {auditDate}
         </p>
       </div>
     </main>
