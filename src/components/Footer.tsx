@@ -23,7 +23,7 @@ export function Footer() {
           {/* Logo column */}
           <div className="lg:col-span-2">
             <a href="/" className="inline-flex items-center">
-              <img src="/logo-footer.svg" alt="MetroReach Media" className="h-10 w-auto" />
+              <img src="/logo-footer.png" alt="MetroReach Media" className="h-10 w-auto" />
             </a>
             <p className="mt-2 text-sm text-text-muted max-w-xs">
               {footer.tagline}
