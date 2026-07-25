@@ -8,6 +8,9 @@ const ALLOWED_QUALITIES = ["low", "medium", "high", "auto"] as const;
 type DalleSize = (typeof ALLOWED_SIZES)[number];
 type DalleQuality = (typeof ALLOWED_QUALITIES)[number];
 
+// Must stay under Vercel Pro's 60s limit; 50s gives a 10s buffer
+const OPENAI_TIMEOUT_MS = 50_000;
+
 export const Route = createFileRoute("/api/dalle")({
   server: {
     handlers: {
@@ -56,40 +59,61 @@ export const Route = createFileRoute("/api/dalle")({
           : "high";
 
         try {
-          const openai = new OpenAI({ apiKey });
+          const openai = new OpenAI({
+            apiKey,
+            timeout: OPENAI_TIMEOUT_MS,
+            maxRetries: 0,
+          });
+
           const response = await openai.images.generate({
             model: "gpt-image-2",
             prompt: prompt.trim(),
             size: resolvedSize,
             quality: resolvedQuality,
             n: 1,
+            response_format: "b64_json",
           });
 
-          const imageUrl = response.data[0]?.url;
+          // gpt-image-2 returns b64_json, NOT url
+          const b64Json = response.data[0]?.b64_json;
 
-          if (!imageUrl) {
+          if (!b64Json) {
             return json(
-              { error: "No image URL returned from DALL-E" },
+              { error: "No image data returned from image generation" },
               { status: 502 },
             );
           }
 
-          return json({ url: imageUrl });
+          return json({ image: b64Json });
         } catch (err: any) {
-          console.error("DALL-E API error:", err.message);
+          console.error("Image generation API error:", err.message || err);
+
+          // Detect timeout/abort errors
+          if (
+            err.name === "AbortError" ||
+            err.name === "TimeoutError" ||
+            (err.message && err.message.includes("timed out"))
+          ) {
+            return json(
+              { error: "Image generation timed out — please try a smaller image size or a shorter prompt" },
+              { status: 504 },
+            );
+          }
 
           // Forward OpenAI's error message when possible
           const message =
             err?.error?.message ||
             err?.message ||
-            "DALL-E image generation failed";
+            "Image generation failed";
 
           const status =
             err?.status === 401 || err?.status === 403
               ? 502
               : err?.status === 429
                 ? 429
-                : 502;
+                : err?.status === 400
+                  ? 400
+                  : 502;
 
           return json({ error: message }, { status });
         }
