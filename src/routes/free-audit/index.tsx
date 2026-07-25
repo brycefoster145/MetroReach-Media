@@ -73,6 +73,12 @@ const initialForm: FormState = {
 type FieldName = keyof FormState;
 
 export const Route = createFileRoute("/free-audit/")({
+  head: () => ({
+    meta: [
+      { title: "Free Social Media Audit — MetroReach Media" },
+      { name: "description", content: "Get a free audit of your digital presence. We'll identify gaps and recommend the right marketing package — no obligation." },
+    ],
+  }),
   component: FreeAudit,
 });
 

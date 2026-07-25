@@ -6,6 +6,12 @@ import { Button } from "~/components/Button";
 import { aboutPage } from "~/data/pages";
 
 export const Route = createFileRoute("/about")({
+  head: () => ({
+    meta: [
+      { title: "About MetroReach Media — Premium Social Media Agency" },
+      { name: "description", content: "MetroReach Media is a premium social media agency built to deliver agency-grade performance without the overhead, delays, or inconsistency of traditional firms." },
+    ],
+  }),
   component: About,
 });
 

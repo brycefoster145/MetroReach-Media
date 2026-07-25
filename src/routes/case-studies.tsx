@@ -7,6 +7,12 @@ import { Badge } from "~/components/Badge";
 import { caseStudiesPage } from "~/data/pages";
 
 export const Route = createFileRoute("/case-studies")({
+  head: () => ({
+    meta: [
+      { title: "Case Studies — MetroReach Media Client Results" },
+      { name: "description", content: "Real results from real clients. See how MetroReach Media drives qualified leads and measurable growth for service businesses." },
+    ],
+  }),
   component: CaseStudies,
 });
 
