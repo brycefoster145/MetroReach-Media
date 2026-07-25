@@ -18,6 +18,10 @@
  *   meta_update_page         — update page fields (name, about, website, username)
  *   meta_update_page_cover   — upload and set a new cover photo for a page
  *   meta_update_page_picture — set a new profile picture for a page
+ *   meta_get_page_comments    — get recent comments on a page's posts
+ *   meta_reply_to_comment     — reply to a specific comment on a post
+ *   meta_get_page_conversations — get recent Messenger DMs for a page
+ *   meta_reply_to_message     — reply to a conversation/message
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -57,9 +61,10 @@ async function graphApiRequest<T = unknown>(
   path: string,
   params?: Record<string, string>,
   body?: Record<string, unknown>,
+  accessTokenOverride?: string,
 ): Promise<T> {
   const url = new URL(`${GRAPH_API_BASE}${path}`);
-  url.searchParams.set("access_token", META_TOKEN);
+  url.searchParams.set("access_token", accessTokenOverride ?? META_TOKEN);
 
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -337,6 +342,89 @@ async function updatePagePicture(args: { page_id: string; picture_url: string })
     },
   );
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Comment & DM management tools
+// ---------------------------------------------------------------------------
+
+async function getPageComments(args: { page_id: string; limit?: number; page_token?: string }) {
+  const limit = args.limit ?? 25;
+  const data = await graphApiRequest<{
+    data?: Array<{
+      id: string;
+      message?: string;
+      created_time: string;
+      comments?: {
+        data?: Array<{
+          id: string;
+          message?: string;
+          from?: { id: string; name: string };
+          created_time: string;
+        }>;
+      };
+    }>;
+  }>(
+    "GET",
+    `/${args.page_id}/feed`,
+    {
+      fields: "id,message,created_time,comments{id,message,from,created_time}",
+      limit: String(limit),
+    },
+    undefined,
+    args.page_token,
+  );
+  return data;
+}
+
+async function replyToComment(args: { comment_id: string; message: string; page_token?: string }) {
+  const data = await graphApiRequest<{ id?: string }>(
+    "POST",
+    `/${args.comment_id}/comments`,
+    { message: args.message },
+    undefined,
+    args.page_token,
+  );
+  return { comment_id: data.id, status: "success" };
+}
+
+async function getPageConversations(args: { page_id: string; limit?: number; page_token?: string }) {
+  const limit = args.limit ?? 25;
+  const data = await graphApiRequest<{
+    data?: Array<{
+      id: string;
+      updated_time: string;
+      messages?: {
+        data?: Array<{
+          id: string;
+          message?: string;
+          from?: { id: string; name: string };
+          created_time: string;
+        }>;
+      };
+    }>;
+  }>(
+    "GET",
+    `/${args.page_id}/conversations`,
+    {
+      fields: "id,updated_time,messages{id,message,from,created_time}",
+      limit: String(limit),
+    },
+    undefined,
+    args.page_token,
+  );
+  return data;
+}
+
+async function replyToMessage(args: { conversation_id: string; message: string; page_token?: string }) {
+  const data = await graphApiRequest<{ message_id?: string }>(
+    "POST",
+    `/${args.conversation_id}/messages`,
+    { message: args.message },
+    undefined,
+    args.page_token,
+  );
+  return { message_id: data.message_id, status: "success" };
 }
 
 // ---------------------------------------------------------------------------
@@ -643,12 +731,120 @@ const tools: ToolDef[] = [
       required: ["page_id", "picture_url"],
     },
     handler: updatePagePicture,
-  },
-];
+    },
+    {
+    name: "meta_get_page_comments",
+    description:
+      "Get recent comments on a Facebook Page's posts. " +
+      "Returns posts with their nested comments, including message text, author info, and timestamps. " +
+      "Requires a page_id. Optionally accepts a page_token for page-specific access; falls back to the stored access token. " +
+      "Use this to monitor and engage with comment activity on the page.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        page_id: {
+          type: "string",
+          description: "Facebook Page ID (numeric string, e.g., 623055204204992).",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of posts to return. Default: 25.",
+        },
+        page_token: {
+          type: "string",
+          description: "Optional page access token for page-specific operations. Falls back to stored META_ACCESS_TOKEN if not provided.",
+        },
+      },
+      required: ["page_id"],
+    },
+    handler: getPageComments,
+    },
+    {
+    name: "meta_reply_to_comment",
+    description:
+      "Reply to a specific comment on a Facebook Page post. " +
+      "Posts a reply from MetroReach Media — professional, helpful, and warm tone. " +
+      "Requires a comment_id and message text. " +
+      "Returns the new comment ID and success status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        comment_id: {
+          type: "string",
+          description: "The Facebook comment ID to reply to (obtain from meta_get_page_comments).",
+        },
+        message: {
+          type: "string",
+          description: "The reply message text. Must be in MetroReach Media brand voice: professional, helpful, warm — never AI-sounding or robotic.",
+        },
+        page_token: {
+          type: "string",
+          description: "Optional page access token. Falls back to stored META_ACCESS_TOKEN.",
+        },
+      },
+      required: ["comment_id", "message"],
+    },
+    handler: replyToComment,
+    },
+    {
+    name: "meta_get_page_conversations",
+    description:
+      "Get recent Messenger conversations/DMs for a Facebook Page. " +
+      "Returns conversations with their nested messages, including message text, sender info, and timestamps. " +
+      "Requires a page_id. Use this to monitor and respond to incoming messages from customers. " +
+      "Requires the page to have Messenger enabled and proper permissions.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        page_id: {
+          type: "string",
+          description: "Facebook Page ID (numeric string, e.g., 623055204204992).",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of conversations to return. Default: 25.",
+        },
+        page_token: {
+          type: "string",
+          description: "Optional page access token. Falls back to stored META_ACCESS_TOKEN.",
+        },
+      },
+      required: ["page_id"],
+    },
+    handler: getPageConversations,
+    },
+    {
+    name: "meta_reply_to_message",
+    description:
+      "Reply to a Messenger conversation/private message on a Facebook Page. " +
+      "Sends a reply from MetroReach Media — professional, helpful, and warm tone. " +
+      "Requires a conversation_id and message text. " +
+      "Returns the new message ID and success status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        conversation_id: {
+          type: "string",
+          description: "The Facebook conversation ID to reply to (obtain from meta_get_page_conversations).",
+        },
+        message: {
+          type: "string",
+          description: "The reply message text. Must be in MetroReach Media brand voice: professional, helpful, warm — never AI-sounding or robotic.",
+        },
+        page_token: {
+          type: "string",
+          description: "Optional page access token. Falls back to stored META_ACCESS_TOKEN.",
+        },
+      },
+      required: ["conversation_id", "message"],
+    },
+    handler: replyToMessage,
+    },
+    ];
 
-// ---------------------------------------------------------------------------
-// JSON-RPC dispatcher
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // JSON-RPC dispatcher
+    // ---------------------------------------------------------------------------
 
 type RpcRequest = {
   jsonrpc: "2.0";
