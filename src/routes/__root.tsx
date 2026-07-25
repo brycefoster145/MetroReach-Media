@@ -89,7 +89,9 @@ function RootComponent() {
     <CartProvider>
       <RootDocument>
         <Navbar />
-        <Outlet />
+        <div id="main-content">
+          <Outlet />
+        </div>
         <Footer />
       </RootDocument>
     </CartProvider>
@@ -103,6 +105,12 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-bg-root text-text-primary antialiased">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:bg-brand-primary focus:text-text-primary focus:px-6 focus:py-3 focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none"
+        >
+          Skip to content
+        </a>
         {children}
         <Scripts />
       </body>
