@@ -6,6 +6,12 @@ import { Button } from "~/components/Button";
 import { pricingPage } from "~/data/pages";
 
 export const Route = createFileRoute("/pricing")({
+  head: () => ({
+    meta: [
+      { title: "Transparent Pricing — MetroReach Media" },
+      { name: "description", content: "Clear, transparent social media marketing pricing. No hidden fees. Choose the package that fits your growth goals." },
+    ],
+  }),
   component: Pricing,
 });
 

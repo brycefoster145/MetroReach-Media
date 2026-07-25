@@ -128,6 +128,12 @@ const submitContact = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/contact")({
+  head: () => ({
+    meta: [
+      { title: "Contact MetroReach Media — Start Your Growth Plan" },
+      { name: "description", content: "Ready to grow? Contact MetroReach Media and start your custom social media marketing plan. No pitch deck — just an honest conversation." },
+    ],
+  }),
   component: Contact,
 });
 

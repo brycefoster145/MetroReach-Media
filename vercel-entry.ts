@@ -16,6 +16,25 @@ const fetchHandler = handler as {
   fetch: (request: Request) => Response | Promise<Response>;
 };
 
+// ── Security headers applied to every response ──
+
+const SECURITY_HEADERS: Record<string, string> = {
+  "content-security-policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://api.buffer.com https://api.sendgrid.com;",
+  "strict-transport-security":
+    "max-age=31536000; includeSubDomains",
+  "x-frame-options": "DENY",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+};
+
+function applySecurityHeaders(res: ServerResponse): void {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    res.setHeader(key, value);
+  }
+}
+
 const toWebRequest = (req: IncomingMessage): Request => {
   const host = req.headers.host ?? "localhost";
   const proto =
@@ -45,6 +64,7 @@ export default async function vercelHandler(
     const webRes = await fetchHandler.fetch(toWebRequest(req));
     res.statusCode = webRes.status;
     webRes.headers.forEach((value, key) => res.setHeader(key, value));
+    applySecurityHeaders(res);
     if (webRes.body) {
       const reader = webRes.body.getReader();
       for (;;) {
@@ -60,6 +80,7 @@ export default async function vercelHandler(
     console.error("[team-site] SSR request failed", error);
     res.statusCode = 500;
     res.setHeader("content-type", "text/plain");
+    applySecurityHeaders(res);
     res.end("Internal Server Error");
   }
 }

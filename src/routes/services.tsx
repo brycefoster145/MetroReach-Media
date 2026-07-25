@@ -46,6 +46,12 @@ const platformIcons = [
 ];
 
 export const Route = createFileRoute("/services")({
+  head: () => ({
+    meta: [
+      { title: "Social Media Marketing Services — MetroReach Media" },
+      { name: "description", content: "Premium social media marketing services for service businesses. Organic content, paid ads, and strategy across 7 platforms — delivered by a specialist team." },
+    ],
+  }),
   component: Services,
 });
 
