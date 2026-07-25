@@ -3,7 +3,7 @@ import { json } from "@tanstack/react-start";
 import OpenAI from "openai";
 
 const ALLOWED_SIZES = ["1024x1024", "1792x1024", "1024x1792"] as const;
-const ALLOWED_QUALITIES = ["standard", "hd"] as const;
+const ALLOWED_QUALITIES = ["low", "medium", "high", "auto"] as const;
 
 type DalleSize = (typeof ALLOWED_SIZES)[number];
 type DalleQuality = (typeof ALLOWED_QUALITIES)[number];
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/dalle")({
           quality as DalleQuality,
         )
           ? (quality as DalleQuality)
-          : "standard";
+          : "high";
 
         try {
           const openai = new OpenAI({ apiKey });

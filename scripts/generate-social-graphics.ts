@@ -48,7 +48,7 @@ const POSTS_PATH = "/home/team/shared/social/posts-week-1.md";
 
 const SIZE_FB: "1792x1024" = "1792x1024";
 const SIZE_IG: "1024x1024" = "1024x1024";
-const QUALITY = "hd";
+const QUALITY = "high";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
