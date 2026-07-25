@@ -181,9 +181,10 @@ export function ContactSection() {
                     className={inputCls}
                     placeholder="Your name"
                     value={name}
+                    aria-describedby={errors.name ? "contact-name-error" : undefined}
                     onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: undefined })); }}
                   />
-                  {errors.name && <p className={errorCls}>{errors.name}</p>}
+                  {errors.name && <p id="contact-name-error" role="alert" className={errorCls}>{errors.name}</p>}
                 </div>
 
                 {/* Email */}
@@ -197,9 +198,10 @@ export function ContactSection() {
                     className={inputCls}
                     placeholder="you@company.com"
                     value={email}
+                    aria-describedby={errors.email ? "contact-email-error" : undefined}
                     onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: undefined })); }}
                   />
-                  {errors.email && <p className={errorCls}>{errors.email}</p>}
+                  {errors.email && <p id="contact-email-error" role="alert" className={errorCls}>{errors.email}</p>}
                 </div>
 
                 {/* Company */}
@@ -213,9 +215,10 @@ export function ContactSection() {
                     className={inputCls}
                     placeholder="Your business name"
                     value={company}
+                    aria-describedby={errors.company ? "contact-company-error" : undefined}
                     onChange={(e) => { setCompany(e.target.value); if (errors.company) setErrors((p) => ({ ...p, company: undefined })); }}
                   />
-                  {errors.company && <p className={errorCls}>{errors.company}</p>}
+                  {errors.company && <p id="contact-company-error" role="alert" className={errorCls}>{errors.company}</p>}
                 </div>
 
                 {/* Industry */}
@@ -227,6 +230,7 @@ export function ContactSection() {
                     id="contact-industry"
                     className={inputCls}
                     value={industry}
+                    aria-describedby={errors.industry ? "contact-industry-error" : undefined}
                     onChange={(e) => { setIndustry(e.target.value); if (errors.industry) setErrors((p) => ({ ...p, industry: undefined })); }}
                   >
                     <option value="" disabled>
@@ -238,7 +242,7 @@ export function ContactSection() {
                       </option>
                     ))}
                   </select>
-                  {errors.industry && <p className={errorCls}>{errors.industry}</p>}
+                  {errors.industry && <p id="contact-industry-error" role="alert" className={errorCls}>{errors.industry}</p>}
                 </div>
 
                 {/* Message */}
@@ -252,9 +256,10 @@ export function ContactSection() {
                     className={inputCls}
                     placeholder="Tell us about your business, current marketing, and what you're looking for..."
                     value={message}
+                    aria-describedby={errors.message ? "contact-message-error" : undefined}
                     onChange={(e) => { setMessage(e.target.value); if (errors.message) setErrors((p) => ({ ...p, message: undefined })); }}
                   />
-                  {errors.message && <p className={errorCls}>{errors.message}</p>}
+                  {errors.message && <p id="contact-message-error" role="alert" className={errorCls}>{errors.message}</p>}
                 </div>
 
                 {/* Error banner */}
@@ -267,7 +272,7 @@ export function ContactSection() {
                   type="submit"
                   className="w-full justify-center"
                 >
-                  {status === "submitting" ? "Sending..." : "Send message"}
+                  {status === "submitting" ? "Sending..." : "Get your proposal"}
                 </Button>
               </form>
             )}

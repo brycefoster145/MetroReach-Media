@@ -83,6 +83,11 @@ function Checkout() {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
     setSubmitting(true);
 
     // Build cart summary for the message field

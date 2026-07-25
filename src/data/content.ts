@@ -8,8 +8,8 @@ export const siteMeta = {
 };
 
 export const hero = {
-  tagline: "PREMIUM MARKETING. REAL RESULTS.",
-  headline: "Marketing that actually gets results. No excuses.",
+  tagline: "YOUR PHONE SHOULD BE RINGING.",
+  headline: "We run your entire social media operation — strategy, creative, ads, analytics — so you stop losing leads to competitors who show up when you don't.",
   subheadline:
     "Premium social media management — organic and paid, across every major platform — for less than a traditional agency retainer. No gaps. No excuses. More leads.",
   primaryCta: "Start getting leads",
@@ -135,7 +135,7 @@ export const services = {
 };
 
 export const socialProof = {
-  headline: "Don't take our word for it.",
+  headline: "These businesses stopped guessing. Then their phones started ringing.",
   subheadline: "Here's what happens when businesses like yours get the full team behind them.",
   stats: [
     { value: "340+", label: "Active leads delivered/month" },
@@ -191,7 +191,7 @@ export const pricing = {
         "Live dashboard access",
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
-      cta: "Get started",
+      cta: "Start generating leads",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
@@ -209,7 +209,7 @@ export const pricing = {
       ],
       bestFor:
         "Med spas, mid-size contractors, real estate teams, clinics.",
-      cta: "Get started",
+      cta: "Build your pipeline",
       paymentLink: "https://buy.stripe.com/7sY6oH3iYd1Q69ad891ck0m",
     },
     {
@@ -228,7 +228,7 @@ export const pricing = {
       ],
       bestFor:
         "Multi-location businesses, high-growth real estate teams, regional contractors.",
-      cta: "Get started",
+      cta: "Dominate your market",
       paymentLink: "https://buy.stripe.com/fZufZh2eU0f41SUfgh1ck0n",
     },
   ],
