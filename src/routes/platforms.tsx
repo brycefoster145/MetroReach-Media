@@ -6,6 +6,16 @@ import { Button } from "~/components/Button";
 import { platformsPage } from "~/data/pages";
 
 export const Route = createFileRoute("/platforms")({
+  head: () => ({
+    meta: [
+      { title: "Platforms — MetroReach Media" },
+      { name: "description", content: "Seven platforms. One team. Zero gaps. Facebook, Instagram, TikTok, Google, YouTube, LinkedIn, X — we manage them all." },
+      { property: "og:url", content: "https://www.metroreachagency.com/platforms" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/platforms" },
+    ],
+  }),
   component: Platforms,
 });
 

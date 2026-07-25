@@ -10,6 +10,10 @@ export const Route = createFileRoute("/pricing")({
     meta: [
       { title: "Transparent Pricing — MetroReach Media" },
       { name: "description", content: "Clear, transparent social media marketing pricing. No hidden fees. Choose the package that fits your growth goals." },
+      { property: "og:url", content: "https://www.metroreachagency.com/pricing" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/pricing" },
     ],
   }),
   component: Pricing,

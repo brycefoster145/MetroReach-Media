@@ -3,6 +3,16 @@ import { Container } from "~/components/Container";
 import { termsPage } from "~/data/pages";
 
 export const Route = createFileRoute("/terms")({
+  head: () => ({
+    meta: [
+      { title: "Terms of Service — MetroReach Media" },
+      { name: "description", content: "MetroReach Media terms of service. Service agreements, payment terms, cancellation policies, and intellectual property." },
+      { property: "og:url", content: "https://www.metroreachagency.com/terms" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/terms" },
+    ],
+  }),
   component: Terms,
 });
 

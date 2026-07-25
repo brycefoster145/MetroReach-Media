@@ -46,11 +46,8 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <a
-          href="/"
-          className="text-lg font-bold font-heading text-text-primary hover:text-brand-primary transition-colors"
-        >
-          MetroReach<span className="text-brand-accent"> Media</span>
+        <a href="/" className="inline-flex items-center">
+          <img src="/logo-nav.png" alt="MetroReach Media" className="h-8 w-auto" />
         </a>
 
         {/* Desktop Links */}
@@ -88,6 +85,7 @@ export function Navbar() {
           className="lg:hidden p-2 text-text-secondary hover:text-text-primary"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
+          aria-expanded={open}
         >
           {open ? <X size={24} /> : <List size={24} />}
         </button>

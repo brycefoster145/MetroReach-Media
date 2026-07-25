@@ -3,6 +3,16 @@ import { Container } from "~/components/Container";
 import { privacyPage } from "~/data/pages";
 
 export const Route = createFileRoute("/privacy")({
+  head: () => ({
+    meta: [
+      { title: "Privacy Policy — MetroReach Media" },
+      { name: "description", content: "MetroReach Media privacy policy. How we collect, use, and protect your information." },
+      { property: "og:url", content: "https://www.metroreachagency.com/privacy" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/privacy" },
+    ],
+  }),
   component: Privacy,
 });
 

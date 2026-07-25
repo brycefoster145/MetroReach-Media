@@ -45,7 +45,20 @@ function FAQItem({
         transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
-      <summary className="flex items-center justify-between py-5 cursor-pointer hover:text-text-primary list-none">
+      <summary
+        className="flex items-center justify-between py-5 cursor-pointer hover:text-text-primary list-none"
+        role="button"
+        aria-expanded={open}
+        aria-controls={`faq-${delay}`}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            const el = detailsRef.current;
+            if (el) el.open = !el.open;
+          }
+        }}
+      >
         <span className="text-lg font-medium text-text-primary pr-4">
           {question}
         </span>
@@ -57,7 +70,7 @@ function FAQItem({
           }`}
         />
       </summary>
-      <div className={`faq-answer ${open ? "open" : ""}`}>
+      <div id={`faq-${delay}`} className={`faq-answer ${open ? "open" : ""}`}>
         <div>
           <p className="text-base text-text-secondary leading-relaxed pb-6">
             {renderAnswer(answer)}

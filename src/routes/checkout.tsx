@@ -13,6 +13,16 @@ const categoryLabels: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/checkout")({
+  head: () => ({
+    meta: [
+      { title: "Checkout — MetroReach Media" },
+      { name: "description", content: "Complete your MetroReach Media service purchase securely." },
+      { property: "og:url", content: "https://www.metroreachagency.com/checkout" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/checkout" },
+    ],
+  }),
   component: Checkout,
 });
 

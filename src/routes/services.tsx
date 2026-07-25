@@ -50,6 +50,10 @@ export const Route = createFileRoute("/services")({
     meta: [
       { title: "Social Media Marketing Services — MetroReach Media" },
       { name: "description", content: "Premium social media marketing services for service businesses. Organic content, paid ads, and strategy across 7 platforms — delivered by a specialist team." },
+      { property: "og:url", content: "https://www.metroreachagency.com/services" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/services" },
     ],
   }),
   component: Services,

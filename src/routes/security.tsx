@@ -6,6 +6,16 @@ import { Button } from "~/components/Button";
 import { securityPage } from "~/data/pages";
 
 export const Route = createFileRoute("/security")({
+  head: () => ({
+    meta: [
+      { title: "Security — MetroReach Media" },
+      { name: "description", content: "How MetroReach Media protects your business. Marketing compliance, data handling, and platform policy adherence — built into how we operate." },
+      { property: "og:url", content: "https://www.metroreachagency.com/security" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/security" },
+    ],
+  }),
   component: Security,
 });
 

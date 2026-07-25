@@ -151,6 +151,10 @@ export const Route = createFileRoute("/client/dashboard")({
     meta: [
       { title: "Dashboard — MetroReach Digital Client Portal" },
       { name: "description", content: "Your MetroReach Digital marketing dashboard." },
+      { property: "og:url", content: "https://www.metroreachagency.com/client/dashboard" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/client/dashboard" },
     ],
   }),
   component: ClientDashboard,

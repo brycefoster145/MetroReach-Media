@@ -77,6 +77,10 @@ export const Route = createFileRoute("/free-audit/")({
     meta: [
       { title: "Free Social Media Audit — MetroReach Media" },
       { name: "description", content: "Get a free audit of your digital presence. We'll identify gaps and recommend the right marketing package — no obligation." },
+      { property: "og:url", content: "https://www.metroreachagency.com/free-audit" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/free-audit" },
     ],
   }),
   component: FreeAudit,
@@ -169,7 +173,6 @@ function FreeAudit() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    console.log("handleSubmit called", form);
     if (!validate()) return;
 
     setStatus("submitting");

@@ -21,6 +21,10 @@ export const Route = createFileRoute("/client/")({
     meta: [
       { title: "Client Portal — MetroReach Digital" },
       { name: "description", content: "Secure client portal for MetroReach Digital clients." },
+      { property: "og:url", content: "https://www.metroreachagency.com/client" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.metroreachagency.com/client" },
     ],
   }),
   component: ClientLogin,
