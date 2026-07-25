@@ -38,13 +38,14 @@ export const Route = createRootRoute({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: siteMeta.title },
       { name: "twitter:description", content: siteMeta.description },
-      { property: "og:image", content: "https://metroreachagency.com/images/og-image.webp" },
+      { property: "og:image", content: "https://metroreachagency.com/logo-og.png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
-      { name: "twitter:image", content: "https://metroreachagency.com/images/og-image.webp" },
+      { name: "twitter:image", content: "https://metroreachagency.com/logo-og.png" },
     ],
     links: [
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
