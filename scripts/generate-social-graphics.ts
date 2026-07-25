@@ -13,7 +13,7 @@
  *   - OPENAI_API_KEY set in .env.local
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -218,14 +218,21 @@ function buildDallePrompt(opts: {
 
 // ── Step 4: Call /api/dalle endpoint ─────────────────────────────────────────
 
-async function generateImage(prompt: string, size: string): Promise<string> {
+interface DalleApiResponse {
+  url?: string;
+  filename?: string;
+  saved?: boolean;
+  error?: string;
+}
+
+async function generateImage(prompt: string, size: string): Promise<DalleApiResponse> {
   const res = await fetch(`${API_BASE}/api/dalle`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, size, quality: QUALITY }),
   });
 
-  const data = (await res.json()) as { url?: string; error?: string };
+  const data = (await res.json()) as DalleApiResponse;
 
   if (!res.ok || data.error) {
     throw new Error(`DALL-E API error (${res.status}): ${data.error || "Unknown"}`);
@@ -235,15 +242,33 @@ async function generateImage(prompt: string, size: string): Promise<string> {
     throw new Error("No URL returned from DALL-E API");
   }
 
-  return data.url;
+  return data;
 }
 
 // ── Step 5: Download and save image ──────────────────────────────────────────
 
-async function downloadImage(url: string, filepath: string): Promise<void> {
-  const res = await fetch(url);
+async function downloadImage(
+  url: string,
+  filepath: string,
+  savedFilename: string | undefined,
+): Promise<void> {
+  // If the API already saved the image locally (gpt-image-2 b64_json path),
+  // the file is at public/social/<savedFilename> — move/copy to desired path.
+  if (savedFilename) {
+    const apiSavedPath = join(OUTPUT_DIR, savedFilename);
+    if (existsSync(apiSavedPath)) {
+      copyFileSync(apiSavedPath, filepath);
+      console.log(`  💾 Copied from API-saved: ${apiSavedPath} → ${filepath}`);
+      return;
+    }
+    console.log(`  ⚠️  API saved file not found at ${apiSavedPath}, downloading...`);
+  }
+
+  // For remote URLs (dalle-3 url path), download normally
+  const fetchUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
+  const res = await fetch(fetchUrl);
   if (!res.ok) {
-    throw new Error(`Failed to download image: ${res.status}`);
+    throw new Error(`Failed to download image: ${res.status} from ${fetchUrl}`);
   }
   const buffer = Buffer.from(await res.arrayBuffer());
   writeFileSync(filepath, buffer);
@@ -309,8 +334,8 @@ async function main() {
     console.log(`    Size: ${task.size}, File: ${task.filename}`);
 
     try {
-      const imageUrl = await generateImage(task.prompt, task.size);
-      await downloadImage(imageUrl, outputPath);
+      const result = await generateImage(task.prompt, task.size);
+      await downloadImage(result.url!, outputPath, result.filename);
       success++;
 
       // Rate-limit: DALL-E 3 has rate limits, be gentle
