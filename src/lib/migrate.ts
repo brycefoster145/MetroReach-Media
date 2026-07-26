@@ -144,6 +144,10 @@ async function migrate() {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_data JSONB`;
   console.log("✓ clients.onboarding_data column ready");
 
+  // Add landing_url column to clients
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS landing_url TEXT DEFAULT ''`;
+  console.log("✓ clients.landing_url column ready");
+
   // ── client_messages table ──
   await sql`
     CREATE TABLE IF NOT EXISTS client_messages (
@@ -204,6 +208,44 @@ async function migrate() {
     $
   `.catch(() => {});
   console.log("✓ buffer_channels table ready");
+
+  // ── client_leads table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS client_leads (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      source TEXT DEFAULT '',
+      lead_name TEXT DEFAULT '',
+      lead_email TEXT DEFAULT '',
+      lead_phone TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      converted BOOLEAN DEFAULT FALSE,
+      conversion_value_cents INTEGER DEFAULT 0,
+      commission_cents INTEGER DEFAULT 0,
+      notes TEXT DEFAULT ''
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_leads_client ON client_leads(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_leads_converted ON client_leads(client_id, converted)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_leads_created ON client_leads(created_at DESC)`;
+  console.log("✓ client_leads table ready");
+
+  // ── click_tracking table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS click_tracking (
+      id SERIAL PRIMARY KEY,
+      client_slug TEXT NOT NULL,
+      post_slug TEXT NOT NULL,
+      ref TEXT DEFAULT '',
+      ip TEXT DEFAULT '',
+      user_agent TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_click_tracking_client ON click_tracking(client_slug)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_click_tracking_post ON click_tracking(client_slug, post_slug)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_click_tracking_created ON click_tracking(created_at DESC)`;
+  console.log("✓ click_tracking table ready");
 
   await sql.end();
   console.log("Migration complete.");
