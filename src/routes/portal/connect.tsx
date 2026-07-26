@@ -16,6 +16,8 @@ import {
   LinkedinLogo,
   TiktokLogo,
   TwitterLogo,
+  GoogleLogo,
+  YoutubeLogo,
   Link,
   CheckCircle,
   WarningCircle,
@@ -39,6 +41,13 @@ const TIKTOK_OAUTH_URL = `https://www.tiktok.com/v2/auth/authorize/?client_key=$
 const X_CLIENT_ID = "placeholder_x_client_id";
 const X_REDIRECT_URI = "https://metroreachagency.com/api/portal/x-oauth-callback";
 const X_SCOPE = "tweet.read%20tweet.write%20users.read%20offline.access";
+
+const GOOGLE_CLIENT_ID = "placeholder_google_client_id";
+const GOOGLE_REDIRECT_URI = "https://metroreachagency.com/api/portal/google-oauth-callback";
+const GOOGLE_SCOPES = encodeURIComponent(
+  "https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/youtube.upload"
+);
+const GOOGLE_OAUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${GOOGLE_SCOPES}&access_type=offline&prompt=consent&state=metroreach`;
 
 /**
  * Generate a cryptographically random PKCE code_verifier.
@@ -191,11 +200,19 @@ function PortalConnect() {
     await redirectToXAuth();
   }
 
+  function handleGoogleConnect() {
+    setConnecting(true);
+    setError("");
+    window.location.href = GOOGLE_OAUTH_URL;
+  }
+
   const hasFacebook = accounts.some((a) => a.platform === "facebook");
   const hasInstagram = accounts.some((a) => a.platform === "instagram");
   const hasLinkedIn = accounts.some((a) => a.platform === "linkedin");
   const hasTikTok = accounts.some((a) => a.platform === "tiktok");
   const hasX = accounts.some((a) => a.platform === "x");
+  const hasGMB = accounts.some((a) => a.platform === "google_gmb");
+  const hasYouTube = accounts.some((a) => a.platform === "google_youtube");
 
   return (
     <main className="min-h-dvh bg-bg-root">
@@ -543,6 +560,89 @@ function PortalConnect() {
               </div>
             )}
           </div>
+
+          {/* ── Google Connect Card (GMB + YouTube) ── */}
+          <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#4285F4]/10 border border-[#4285F4]/20 flex items-center justify-center">
+                <GoogleLogo size={20} className="text-[#4285F4]" weight="fill" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-heading text-text-primary">Google</h3>
+                <p className="text-xs text-text-muted">Connect GMB &amp; YouTube</p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner size={24} className="text-brand-primary animate-spin" />
+              </div>
+            ) : hasGMB || hasYouTube ? (
+              <div className="space-y-3">
+                {accounts
+                  .filter((a) => a.platform === "google_gmb")
+                  .map((a) => (
+                    <div
+                      key={a.page_id}
+                      className="flex items-center gap-3 p-3 bg-bg-surface-raised border border-border-subtle rounded-xl"
+                    >
+                      <CheckCircle size={18} className="text-brand-accent flex-shrink-0" weight="fill" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{a.account_name}</p>
+                        <p className="text-xs text-text-muted">
+                          GMB · Connected {new Date(a.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  ))}
+                {accounts
+                  .filter((a) => a.platform === "google_youtube")
+                  .map((a) => (
+                    <div
+                      key={a.page_id}
+                      className="flex items-center gap-3 p-3 bg-bg-surface-raised border border-border-subtle rounded-xl"
+                    >
+                      <YoutubeLogo size={18} className="text-[#FF0000] flex-shrink-0" weight="fill" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{a.account_name}</p>
+                        <p className="text-xs text-text-muted">
+                          YouTube · Connected {new Date(a.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  ))}
+                <button
+                  onClick={handleGoogleConnect}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-bg-surface-raised border border-border-subtle text-text-secondary text-sm font-medium hover:border-border-emphasis hover:text-text-primary transition-colors mt-2"
+                >
+                  <Link size={14} /> Reconnect / Add Accounts
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-text-secondary mb-4">
+                  Connect your Google account to let us manage your Google My Business listing and publish YouTube videos.
+                </p>
+                <button
+                  onClick={handleGoogleConnect}
+                  disabled={connecting}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#4285F4] text-white text-sm font-semibold hover:bg-[#3367D6] transition-colors disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <><Spinner size={16} className="animate-spin" /> Connecting...</>
+                  ) : (
+                    <><GoogleLogo size={16} weight="fill" /> Connect Google</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Info ── */}
@@ -607,9 +707,23 @@ function PortalConnect() {
                 <p className="text-xs text-text-muted">Publish tweets and manage your X presence</p>
               </div>
             </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle size={16} className="text-text-muted flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">Google My Business</p>
+                <p className="text-xs text-text-muted">Publish posts and updates to your GMB listing</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle size={16} className="text-text-muted flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">YouTube publishing</p>
+                <p className="text-xs text-text-muted">Upload videos to your connected YouTube channel</p>
+              </div>
+            </div>
           </div>
           <p className="text-xs text-text-muted mt-4 pt-4 border-t border-border-subtle">
-            You can revoke access at any time from your Facebook Business Settings, LinkedIn app permissions, TikTok app settings, or X app permissions.
+            You can revoke access at any time from your Facebook Business Settings, LinkedIn app permissions, TikTok app settings, X app permissions, or Google account security settings.
             Your data is encrypted and stored securely.
           </p>
         </div>
