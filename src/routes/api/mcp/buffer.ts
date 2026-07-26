@@ -157,7 +157,9 @@ async function createPost(args: {
   return graphqlRequest(`
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
-        post { id text scheduledAt }
+        ... on PostActionSuccess {
+          post { id text scheduledAt }
+        }
       }
     }
   `, { input });
