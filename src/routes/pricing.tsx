@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, LockOpen } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
-import { Button } from "~/components/Button";
 import { pricingPage } from "~/data/pages";
 
 export const Route = createFileRoute("/pricing")({
@@ -105,17 +104,19 @@ function Pricing() {
 
                   {/* CTA */}
                   {isFeatured ? (
-                    <Button href={tier.paymentLink} className="w-full justify-center">
-                      Get started
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      href={tier.paymentLink}
-                      className="w-full justify-center"
+                    <button
+                      disabled
+                      className="w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle"
                     >
-                      Get started
-                    </Button>
+                      Coming Soon
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle"
+                    >
+                      Coming Soon
+                    </button>
                   )}
                 </div>
               </div>

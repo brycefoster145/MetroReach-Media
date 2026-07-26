@@ -207,9 +207,9 @@ function ServiceCategory() {
                         </button>
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-border-emphasis px-4 py-1.5 text-xs font-medium text-text-muted">
+                        <button disabled className="inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle">
                         Coming Soon
-                      </span>
+                        </button>
                     )}
                   </div>
                 </div>

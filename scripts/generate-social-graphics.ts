@@ -41,14 +41,14 @@ interface PostTask {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE = "http://localhost:3001";
+const API_BASE = "https://www.metroreachagency.com";
 const OUTPUT_DIR = "/home/team/shared/site/public/social";
 const CALENDAR_PATH = "/home/team/shared/social/content-calendar-week-1.md";
 const POSTS_PATH = "/home/team/shared/social/posts-week-1.md";
 
 const SIZE_FB: "1792x1024" = "1792x1024";
 const SIZE_IG: "1024x1024" = "1024x1024";
-const QUALITY = "high";
+const QUALITY = "low";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -218,36 +218,63 @@ function buildDallePrompt(opts: {
 
 // ── Step 4: Call /api/dalle endpoint ─────────────────────────────────────────
 
-async function generateImage(prompt: string, size: string): Promise<string> {
+interface DalleResponse {
+  url?: string;
+  image?: string; // base64
+  error?: string;
+}
+
+async function generateImage(
+  prompt: string,
+  size: string,
+): Promise<{ type: "url" | "base64"; data: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000); // 120s timeout
   const res = await fetch(`${API_BASE}/api/dalle`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, size, quality: QUALITY }),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeout));
 
-  const data = (await res.json()) as { url?: string; error?: string };
+  const data = (await res.json()) as DalleResponse;
 
   if (!res.ok || data.error) {
     throw new Error(`DALL-E API error (${res.status}): ${data.error || "Unknown"}`);
   }
 
-  if (!data.url) {
-    throw new Error("No URL returned from DALL-E API");
+  if (data.url) {
+    return { type: "url", data: data.url };
   }
 
-  return data.url;
+  if (data.image) {
+    return { type: "base64", data: data.image };
+  }
+
+  throw new Error("No image data (url or base64) returned from DALL-E API");
 }
 
 // ── Step 5: Download and save image ──────────────────────────────────────────
 
-async function downloadImage(url: string, filepath: string): Promise<void> {
-  const res = await fetch(url);
+async function saveImage(
+  source: { type: "url" | "base64"; data: string },
+  filepath: string,
+): Promise<void> {
+  if (source.type === "base64") {
+    const buffer = Buffer.from(source.data, "base64");
+    writeFileSync(filepath, buffer);
+    console.log(`  💾 Saved (base64): ${filepath}`);
+    return;
+  }
+
+  // URL type
+  const res = await fetch(source.data);
   if (!res.ok) {
     throw new Error(`Failed to download image: ${res.status}`);
   }
   const buffer = Buffer.from(await res.arrayBuffer());
   writeFileSync(filepath, buffer);
-  console.log(`  💾 Saved: ${filepath}`);
+  console.log(`  💾 Saved (url): ${filepath}`);
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -309,8 +336,8 @@ async function main() {
     console.log(`    Size: ${task.size}, File: ${task.filename}`);
 
     try {
-      const imageUrl = await generateImage(task.prompt, task.size);
-      await downloadImage(imageUrl, outputPath);
+      const imageSource = await generateImage(task.prompt, task.size);
+      await saveImage(imageSource, outputPath);
       success++;
 
       // Rate-limit: DALL-E 3 has rate limits, be gentle
