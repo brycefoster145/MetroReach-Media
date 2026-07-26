@@ -1,5 +1,11 @@
 {
   "buildCommand": "bash build-vercel.sh",
   "installCommand": "bun install",
-  "framework": null
+  "framework": null,
+  "crons": [
+    {
+      "path": "/api/cron/post-scheduler",
+      "schedule": "* * * * *"
+    }
+  ]
 }

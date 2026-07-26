@@ -310,6 +310,28 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_lookup ON client_platform_tokens(client_id, platform)`;
   console.log("✓ client_platform_tokens table ready");
 
+  // ── scheduled_posts table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS scheduled_posts (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL DEFAULT 'metroreach',
+      platform TEXT NOT NULL CHECK (platform IN ('facebook', 'instagram', 'linkedin', 'tiktok', 'x', 'google')),
+      page_id TEXT NOT NULL,
+      ig_user_id TEXT,
+      content TEXT NOT NULL,
+      media_urls JSONB DEFAULT '[]',
+      hashtags TEXT DEFAULT '#MetroReachMedia',
+      due_at TIMESTAMPTZ NOT NULL,
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed')),
+      meta_post_id TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      posted_at TIMESTAMPTZ
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_due ON scheduled_posts(status, due_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
+  console.log("✓ scheduled_posts table ready");
+
   await sql.end();
   console.log("Migration complete.");
 }
