@@ -48,6 +48,21 @@ async function processDuePosts(): Promise<Response> {
       const platform = post.platform as string;
 
       try {
+        // LinkedIn: OAuth credentials pending from owner.
+        // Posts are scheduled but actual publishing will be enabled once
+        // LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET are available.
+        if (platform === "linkedin") {
+          console.log(
+            `[post-scheduler] LinkedIn post ${postId} — OAuth not yet configured, skipping publish`,
+          );
+          results.push({
+            id: postId,
+            platform,
+            status: "scheduled_linkedin",
+          });
+          continue;
+        }
+
         // Only Facebook and Instagram are supported for now
         if (platform !== "facebook" && platform !== "instagram") {
           console.log(
