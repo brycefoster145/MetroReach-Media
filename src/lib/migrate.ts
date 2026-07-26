@@ -304,10 +304,14 @@ async function migrate() {
       page_id TEXT,
       account_name TEXT,
       expires_at TIMESTAMPTZ,
+      token_status TEXT DEFAULT 'active',
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_lookup ON client_platform_tokens(client_id, platform)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_expires ON client_platform_tokens(token_status, expires_at)`;
+  // Add token_status column if missing on existing tables
+  await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS token_status TEXT DEFAULT 'active'`;
   console.log("✓ client_platform_tokens table ready");
 
   // ── scheduled_posts table ──

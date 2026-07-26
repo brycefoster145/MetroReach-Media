@@ -180,8 +180,8 @@ export const Route = createFileRoute("/api/portal/meta-oauth-callback")({
           for (const page of pages) {
             // Store the Facebook page token
             await sql`
-              INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at)
-              VALUES (${client.sub}, 'meta', ${page.access_token}, ${page.id}, ${page.name}, ${expiresAt.toISOString()})
+              INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at, token_status)
+              VALUES (${client.sub}, 'meta', ${page.access_token}, ${page.id}, ${page.name}, ${expiresAt.toISOString()}, 'active')
               ON CONFLICT DO NOTHING
             `.catch(() => {});
 
@@ -190,7 +190,8 @@ export const Route = createFileRoute("/api/portal/meta-oauth-callback")({
               UPDATE client_platform_tokens
               SET access_token = ${page.access_token},
                   account_name = ${page.name},
-                  expires_at = ${expiresAt.toISOString()}
+                  expires_at = ${expiresAt.toISOString()},
+                  token_status = 'active'
               WHERE client_id = ${client.sub}
                 AND platform = 'meta'
                 AND page_id = ${page.id}
@@ -202,8 +203,8 @@ export const Route = createFileRoute("/api/portal/meta-oauth-callback")({
               const igName = page.instagram_business_account.name || `${page.name} (Instagram)`;
 
               await sql`
-                INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at)
-                VALUES (${client.sub}, 'meta', ${page.access_token}, ${igId}, ${igName}, ${expiresAt.toISOString()})
+                INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at, token_status)
+                VALUES (${client.sub}, 'meta', ${page.access_token}, ${igId}, ${igName}, ${expiresAt.toISOString()}, 'active')
                 ON CONFLICT DO NOTHING
               `.catch(() => {});
 
@@ -211,7 +212,8 @@ export const Route = createFileRoute("/api/portal/meta-oauth-callback")({
                 UPDATE client_platform_tokens
                 SET access_token = ${page.access_token},
                     account_name = ${igName},
-                    expires_at = ${expiresAt.toISOString()}
+                    expires_at = ${expiresAt.toISOString()},
+                    token_status = 'active'
                 WHERE client_id = ${client.sub}
                   AND platform = 'meta'
                   AND page_id = ${igId}
