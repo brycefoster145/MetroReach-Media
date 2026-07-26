@@ -25,6 +25,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -32,6 +33,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
 const META_TOKEN = process.env.META_ACCESS_TOKEN ?? "";
+const META_APP_ID = "1210460348820936";
+const META_APP_SECRET = process.env.META_APP_SECRET ?? "";
 // The token is a PAGE token; /me endpoints resolve to the page.
 // For ad account access we must query the user's ad accounts explicitly.
 const META_USER_ID = process.env.META_USER_ID ?? "27853154407634636";
@@ -425,6 +428,131 @@ async function replyToMessage(args: { conversation_id: string; message: string; 
     args.page_token,
   );
   return { message_id: data.message_id, status: "success" };
+}
+
+// ---------------------------------------------------------------------------
+// Direct posting tools (Phase 1: Meta direct posting)
+// ---------------------------------------------------------------------------
+
+async function createPost(args: {
+  client_id: string;
+  page_id: string;
+  text: string;
+  media_urls?: string[];
+  scheduled_at?: string;
+}) {
+  if (!args.client_id || !args.page_id || !args.text) {
+    throw new Error("client_id, page_id, and text are required");
+  }
+
+  // Look up the client's stored page token
+  const rows = await sql`
+    SELECT access_token, page_id, account_name
+    FROM client_platform_tokens
+    WHERE client_id = ${args.client_id}
+      AND platform = 'meta'
+      AND page_id = ${args.page_id}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+
+  if (rows.length === 0) {
+    throw new Error(
+      `No Meta token found for client ${args.client_id} page ${args.page_id}. ` +
+      `Have they connected via /portal/connect?`
+    );
+  }
+
+  const pageToken = rows[0].access_token as string;
+
+  // Determine if this is a Facebook page or Instagram account
+  // Instagram user IDs are typically longer and the page ID format differs
+  const isInstagram = args.page_id.length > 20;
+
+  if (isInstagram) {
+    // Instagram media publish (two-step)
+    // Step 1: Create media container
+    const mediaBody: Record<string, unknown> = {
+      caption: args.text,
+    };
+
+    if (args.media_urls && args.media_urls.length > 0) {
+      mediaBody.image_url = args.media_urls[0];
+    }
+
+    const container = await graphApiRequest<{ id: string }>(
+      "POST",
+      `/${args.page_id}/media`,
+      undefined,
+      mediaBody,
+      pageToken,
+    );
+
+    // Step 2: Publish the container
+    const publishResult = await graphApiRequest<{ id: string }>(
+      "POST",
+      `/${args.page_id}/media_publish`,
+      undefined,
+      { creation_id: container.id },
+      pageToken,
+    );
+
+    return {
+      post_id: publishResult.id,
+      platform: "instagram",
+      status: "published",
+      page_name: rows[0].account_name,
+    };
+  }
+
+  // Facebook page post
+  const postBody: Record<string, unknown> = {
+    message: args.text,
+  };
+
+  if (args.media_urls && args.media_urls.length > 0) {
+    // For multiple media, use attached_media
+    if (args.media_urls.length === 1) {
+      postBody.link = args.media_urls[0];
+    } else {
+      // Upload each as unpublished, then attach
+      const mediaIds: string[] = [];
+      for (const url of args.media_urls) {
+        const photo = await graphApiRequest<{ id: string }>(
+          "POST",
+          `/${args.page_id}/photos`,
+          undefined,
+          { url, published: false },
+          pageToken,
+        );
+        mediaIds.push(photo.id);
+      }
+      postBody.attached_media = mediaIds.map((id) => ({ media_fbid: id }));
+    }
+  }
+
+  if (args.scheduled_at) {
+    // Convert ISO string to Unix timestamp
+    postBody.scheduled_publish_time = Math.floor(
+      new Date(args.scheduled_at).getTime() / 1000,
+    );
+    postBody.published = false;
+  }
+
+  const result = await graphApiRequest<{ id: string; post_id?: string }>(
+    "POST",
+    `/${args.page_id}/feed`,
+    undefined,
+    postBody,
+    pageToken,
+  );
+
+  return {
+    post_id: result.id || result.post_id,
+    platform: "facebook",
+    status: args.scheduled_at ? "scheduled" : "published",
+    page_name: rows[0].account_name,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -839,6 +967,43 @@ const tools: ToolDef[] = [
       required: ["conversation_id", "message"],
     },
     handler: replyToMessage,
+    },
+    {
+    name: "meta_create_post",
+    description:
+      "Create and publish a post directly to a connected Facebook Page or Instagram account. " +
+      "Uses the client's stored page access token (connected via /portal/connect). " +
+      "Requires client_id, page_id, and text. Optionally accepts media_urls (array of public image URLs) " +
+      "and scheduled_at (ISO 8601 timestamp for scheduled posts). " +
+      "Returns the post ID, platform, and status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        client_id: {
+          type: "string",
+          description: "The MetroReach client ID (from clients table).",
+        },
+        page_id: {
+          type: "string",
+          description: "The Facebook Page ID or Instagram account ID to post to.",
+        },
+        text: {
+          type: "string",
+          description: "The post text/caption. Must be in MetroReach brand voice.",
+        },
+        media_urls: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional array of publicly accessible image URLs to attach.",
+        },
+        scheduled_at: {
+          type: "string",
+          description: "Optional ISO 8601 timestamp for scheduling. If omitted, post goes live immediately.",
+        },
+      },
+      required: ["client_id", "page_id", "text"],
+    },
+    handler: createPost,
     },
     ];
 

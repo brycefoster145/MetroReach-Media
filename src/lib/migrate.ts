@@ -294,6 +294,22 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_content_approvals_status ON content_approvals(client_id, status)`;
   console.log("✓ content_approvals table ready");
 
+  // ── client_platform_tokens table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS client_platform_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      access_token TEXT NOT NULL,
+      page_id TEXT,
+      account_name TEXT,
+      expires_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_lookup ON client_platform_tokens(client_id, platform)`;
+  console.log("✓ client_platform_tokens table ready");
+
   await sql.end();
   console.log("Migration complete.");
 }
