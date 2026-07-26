@@ -137,71 +137,46 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  // Build AssetInput entries from media_urls.
-  // Each URL becomes a link asset. Image/video URLs use the appropriate type.
-  const assets: Array<Record<string, unknown>> = [];
-  if (args.media_urls?.length) {
-    for (const url of args.media_urls) {
-      // Detect image URLs by extension
-      const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-      const videoExts = [".mp4", ".mov", ".webm", ".avi"];
-      const lower = url.toLowerCase();
-
-      if (imageExts.some((ext) => lower.includes(ext))) {
-        assets.push({
-          image: { url, thumbnailUrl: null },
-        });
-      } else if (videoExts.some((ext) => lower.includes(ext))) {
-        assets.push({
-          video: { url, thumbnailUrl: null },
-        });
-      } else {
-        // Default to link asset
-        assets.push({
-          link: { url, title: null, description: null, thumbnailUrl: null },
-        });
-      }
-    }
-  }
-
-  // Build CreatePostInput matching Buffer's current schema
-  const input: Record<string, unknown> = {
-    channelId: args.channelId,
-    text: args.text,
-    assets,
-  };
+  // Use the Buffer REST API (more reliable than GraphQL for mutations)
+  const params = new URLSearchParams();
+  params.append("access_token", BUFFER_TOKEN);
+  params.append("profile_ids[]", args.channelId);
+  params.append("text", args.text);
 
   if (args.scheduled_at) {
-    input.mode = "customScheduled";
-    input.dueAt = args.scheduled_at;
-    input.schedulingType = "notification";
+    params.append("scheduled_at", args.scheduled_at);
   } else {
-    input.mode = "shareNow";
-    input.schedulingType = "automatic";
+    params.append("now", "true");
   }
 
-  const data = await graphqlRequest<{
-    createPost?: {
-      post?: {
-        id: string;
-        status: string;
-        text: string;
-        dueAt: string | null;
-      };
-    };
-  }>(`
-    mutation CreatePost($input: CreatePostInput!) {
-      createPost(input: $input) {
-        post {
-          id
-          status
-          text
-          dueAt
-        }
+  // Handle media URLs via REST API
+  if (args.media_urls?.length) {
+    for (const url of args.media_urls) {
+      const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+      const lower = url.toLowerCase();
+      if (imageExts.some((ext) => lower.includes(ext))) {
+        params.append("media[photo]", url);
+      } else {
+        params.append("media[link]", url);
       }
     }
-  `, { input });
-  return data;
+  }
+
+  const res = await fetch("https://api.bufferapp.com/1/updates/create.json", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    throw new Error(
+      `Buffer REST API error (${res.status}): ${JSON.stringify(json)}`,
+    );
+  }
+
+  return json;
 }
 
 async function getPost(args: { post_id: string }) {
