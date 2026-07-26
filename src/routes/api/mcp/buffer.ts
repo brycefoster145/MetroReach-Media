@@ -311,12 +311,12 @@ async function listPendingPosts(args: { profile_id: string }) {
 async function deletePost(args: { post_id: string }) {
   const data = await graphqlRequest<{
     deletePost?: {
-      success?: boolean;
+      __typename?: string;
     };
   }>(`
     mutation DeletePost($postId: PostId!) {
       deletePost(input: { id: $postId }) {
-        success
+        __typename
       }
     }
   `, { postId: args.post_id });
