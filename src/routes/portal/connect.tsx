@@ -14,6 +14,7 @@ import {
   FacebookLogo,
   InstagramLogo,
   LinkedinLogo,
+  TiktokLogo,
   Link,
   CheckCircle,
   WarningCircle,
@@ -29,6 +30,10 @@ const META_OAUTH_URL = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${
 const LINKEDIN_CLIENT_ID = "replace_with_linkedin_client_id";
 const LINKEDIN_REDIRECT_URI = "https://metroreachagency.com/api/portal/linkedin-oauth-callback";
 const LINKEDIN_OAUTH_URL = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}&scope=w_member_social%20r_organization_social&state=metroreach`;
+
+const TIKTOK_CLIENT_KEY = "placeholder_tiktok_client_id";
+const TIKTOK_REDIRECT_URI = "https://metroreachagency.com/api/portal/tiktok-oauth-callback";
+const TIKTOK_OAUTH_URL = `https://www.tiktok.com/v2/auth/authorize/?client_key=${TIKTOK_CLIENT_KEY}&redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&response_type=code&scope=user.info.basic,video.publish,video.upload&state=metroreach`;
 
 interface ConnectedAccount {
   platform: string;
@@ -108,9 +113,17 @@ function PortalConnect() {
     window.location.href = LINKEDIN_OAUTH_URL;
   }
 
+  function handleTikTokConnect() {
+    setConnecting(true);
+    setError("");
+    // Redirect to TikTok OAuth
+    window.location.href = TIKTOK_OAUTH_URL;
+  }
+
   const hasFacebook = accounts.some((a) => a.platform === "facebook");
   const hasInstagram = accounts.some((a) => a.platform === "instagram");
   const hasLinkedIn = accounts.some((a) => a.platform === "linkedin");
+  const hasTikTok = accounts.some((a) => a.platform === "tiktok");
 
   return (
     <main className="min-h-dvh bg-bg-root">
@@ -162,7 +175,7 @@ function PortalConnect() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-4">
           {/* ── Facebook Connect Card ── */}
           <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -334,6 +347,68 @@ function PortalConnect() {
               </div>
             )}
           </div>
+
+          {/* ── TikTok Connect Card ── */}
+          <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#FE2C55]/10 border border-[#FE2C55]/20 flex items-center justify-center">
+                <TiktokLogo size={20} className="text-[#FE2C55]" weight="fill" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-heading text-text-primary">TikTok</h3>
+                <p className="text-xs text-text-muted">Connect your TikTok account</p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner size={24} className="text-brand-primary animate-spin" />
+              </div>
+            ) : hasTikTok ? (
+              <div className="space-y-3">
+                {accounts
+                  .filter((a) => a.platform === "tiktok")
+                  .map((a) => (
+                    <div
+                      key={a.page_id}
+                      className="flex items-center gap-3 p-3 bg-bg-surface-raised border border-border-subtle rounded-xl"
+                    >
+                      <CheckCircle size={18} className="text-brand-accent flex-shrink-0" weight="fill" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{a.account_name}</p>
+                        <p className="text-xs text-text-muted">Connected {new Date(a.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <span className="text-xs font-semibold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  ))}
+                <button
+                  onClick={handleTikTokConnect}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-bg-surface-raised border border-border-subtle text-text-secondary text-sm font-medium hover:border-border-emphasis hover:text-text-primary transition-colors mt-2"
+                >
+                  <Link size={14} /> Reconnect
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-text-secondary mb-4">
+                  Connect your TikTok account to let us publish video content for you.
+                </p>
+                <button
+                  onClick={handleTikTokConnect}
+                  disabled={connecting}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#000000] text-white text-sm font-semibold hover:bg-[#FE2C55] transition-colors disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <><Spinner size={16} className="animate-spin" /> Connecting...</>
+                  ) : (
+                    <><TiktokLogo size={16} weight="fill" /> Connect TikTok</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Info ── */}
@@ -384,9 +459,16 @@ function PortalConnect() {
                 <p className="text-xs text-text-muted">Manage content on admin Company Pages</p>
               </div>
             </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle size={16} className="text-text-muted flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">TikTok video publishing</p>
+                <p className="text-xs text-text-muted">Upload and publish videos to your TikTok profile</p>
+              </div>
+            </div>
           </div>
           <p className="text-xs text-text-muted mt-4 pt-4 border-t border-border-subtle">
-            You can revoke access at any time from your Facebook Business Settings or LinkedIn app permissions.
+            You can revoke access at any time from your Facebook Business Settings, LinkedIn app permissions, or TikTok app settings.
             Your data is encrypted and stored securely.
           </p>
         </div>

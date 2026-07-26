@@ -1,221 +1,211 @@
 /**
- * MCP (Model Context Protocol) route for the TikTok Business API v1.3.
+ * MCP (Model Context Protocol) route for the TikTok API.
  *
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/tiktok.
- * Wraps the TikTok Business API (https://business-api.tiktok.com/open_api/v1.3).
+ * Wraps the TikTok Content Posting API for direct video publishing.
  *
- * Integrated into the MetroReach Media TanStack Start site.
+ * MetroReach Digital — Premium Social Media Marketing Agency
  *
  * Tools exposed:
- *   tiktok_list_advertisers      — list accessible advertiser accounts
- *   tiktok_list_campaigns         — list campaigns for an advertiser
- *   tiktok_get_campaign_reports   — get integrated campaign reports
- *   tiktok_list_ad_groups         — list ad groups for an advertiser
+ *   tiktok_list_accounts  — list connected TikTok accounts
+ *   tiktok_create_post     — create/publish a video post on TikTok
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const TIKTOK_API_BASE = "https://business-api.tiktok.com/open_api/v1.3";
-const ACCESS_TOKEN = process.env.TIKTOK_ACCESS_TOKEN ?? "";
+const TIKTOK_API_BASE = "https://open.tiktokapis.com";
 const SERVER_NAME = "mcp-tiktok";
 const SERVER_VERSION = "1.0.0";
 
 // ---------------------------------------------------------------------------
-// TikTok Business API request helper
+// TikTok API request helper
 // ---------------------------------------------------------------------------
 
-interface TikTokApiError {
-  code: number;
-  message: string;
-  request_id?: string;
-}
-
-interface TikTokApiResponse<T = unknown> {
-  code: number;
-  message: string;
-  request_id?: string;
-  data?: T;
-}
-
 /**
- * Send a REST request to the TikTok Business API v1.3.
- * Sets the Access-Token header on every request (TikTok auth pattern).
- * Returns the data field on success, throws on API-level errors.
+ * Make a request to the TikTok Open API.
  */
 async function tiktokApiRequest<T = unknown>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PUT",
   path: string,
-  queryParams?: Record<string, string>,
-  body?: unknown,
+  accessToken: string,
+  body?: Record<string, unknown> | Buffer,
+  contentType?: string,
 ): Promise<T> {
-  if (!ACCESS_TOKEN) {
-    throw new Error("TIKTOK_ACCESS_TOKEN environment variable is not set");
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+    Accept: "application/json",
+  };
+
+  if (body && (method === "POST" || method === "PUT")) {
+    headers["Content-Type"] = contentType ?? "application/json";
   }
 
-  const url = new URL(`${TIKTOK_API_BASE}${path}`);
+  const fetchOpts: RequestInit = {
+    method,
+    headers,
+  };
 
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      url.searchParams.set(key, value);
+  if (body) {
+    if (contentType === "application/octet-stream" || contentType?.includes("video")) {
+      fetchOpts.body = body as Buffer;
+    } else {
+      fetchOpts.body = JSON.stringify(body);
     }
   }
 
-  const headers: Record<string, string> = {
-    "Access-Token": ACCESS_TOKEN,
-    "Accept": "application/json",
-  };
-
-  const fetchOpts: RequestInit = { method, headers };
-
-  if (body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    fetchOpts.body = JSON.stringify(body);
-  }
-
-  const res = await fetch(url.toString(), fetchOpts);
-
-  // TikTok often returns non-JSON on auth failures
+  const res = await fetch(`${TIKTOK_API_BASE}${path}`, fetchOpts);
   const text = await res.text();
-  let json: TikTokApiResponse<T>;
+
+  let json: any;
   try {
-    json = text ? JSON.parse(text) : ({} as TikTokApiResponse<T>);
+    json = JSON.parse(text);
   } catch {
     throw new Error(
-      `TikTok Business API returned non-JSON response (HTTP ${res.status}): ${text.slice(0, 200)}`,
+      `TikTok API returned non-JSON response (status ${res.status}): ${text.slice(0, 500)}`
     );
   }
 
-  // TikTok API uses a code field: 0 = success, anything else is an error
-  if (json.code !== 0) {
-    throw new Error(
-      `TikTok Business API error (code ${json.code}): ${json.message}` +
-        (json.request_id ? ` [request_id: ${json.request_id}]` : ""),
-    );
+  // TikTok wraps responses in { data: {...}, error: {...} }
+  if (json.error && json.error.code !== "ok") {
+    const errMsg =
+      json.error.message ||
+      json.error.description ||
+      `TikTok API error code: ${json.error.code}`;
+    throw new Error(`TikTok API error: ${errMsg}`);
   }
 
-  return (json.data ?? {}) as T;
+  return (json.data ?? json) as T;
 }
 
 // ---------------------------------------------------------------------------
 // Tool implementations
 // ---------------------------------------------------------------------------
 
-interface TikTokAdvertiser {
-  advertiser_id: string;
-  advertiser_name: string;
-  status: string;
-  currency: string;
-  timezone: string;
-  industry: string;
-}
-
-async function listAdvertisers(): Promise<{ advertisers: TikTokAdvertiser[] }> {
-  const data = await tiktokApiRequest<{
-    list?: TikTokAdvertiser[];
-  }>("GET", "/advertiser/info/");
-  return { advertisers: data.list ?? [] };
-}
-
-interface TikTokCampaign {
-  campaign_id: string;
-  campaign_name: string;
-  status: string;
-  objective_type: string;
-  budget: number;
-  budget_mode: string;
-  create_time: string;
-}
-
-async function listCampaigns(args: {
-  advertiser_id: string;
-}): Promise<{ campaigns: TikTokCampaign[] }> {
-  const data = await tiktokApiRequest<{
-    list?: TikTokCampaign[];
-  }>("GET", "/campaign/get/", { advertiser_id: args.advertiser_id });
-  return { campaigns: data.list ?? [] };
-}
-
-interface TikTokCampaignReport {
-  campaign_id: string;
-  campaign_name: string;
-  impressions: number;
-  clicks: number;
-  spend: number;
-  cpm: number;
-  ctr: number;
-  cpc: number;
-  conversions: number;
-  cost_per_conversion: number;
-}
-
-async function getCampaignReports(args: {
-  advertiser_id: string;
-  dimensions?: string[];
-  metrics?: string[];
-  start_date?: string;
-  end_date?: string;
-}): Promise<{ reports: TikTokCampaignReport[] }> {
-  const dimensions = args.dimensions ?? ["campaign_id"];
-  const metrics = args.metrics ?? [
-    "impressions",
-    "clicks",
-    "spend",
-    "cpm",
-    "ctr",
-    "cpc",
-    "conversions",
-    "cost_per_conversion",
-  ];
-
-  // TikTok report/integrated/get uses query params for all report config
-  const params: Record<string, string> = {
-    advertiser_id: args.advertiser_id,
-    report_type: "BASIC",
-    data_level: "AUCTION_CAMPAIGN",
-    dimensions: JSON.stringify(dimensions),
-    metrics: JSON.stringify(metrics),
-    start_date: args.start_date ?? "30",
-    end_date: args.end_date ?? "1",
-  };
-
-  const data = await tiktokApiRequest<{
-    list?: TikTokCampaignReport[];
-  }>("GET", "/report/integrated/get/", params);
-  return { reports: data.list ?? [] };
-}
-
-interface TikTokAdGroup {
-  adgroup_id: string;
-  adgroup_name: string;
-  campaign_id: string;
-  status: string;
-  optimization_goal: string;
-  budget: number;
-  budget_mode: string;
-  schedule_start_time: string;
-  schedule_end_time: string;
-}
-
-async function listAdGroups(args: {
-  advertiser_id: string;
-  campaign_id?: string;
-}): Promise<{ ad_groups: TikTokAdGroup[] }> {
-  const params: Record<string, string> = {
-    advertiser_id: args.advertiser_id,
-  };
-
-  if (args.campaign_id) {
-    params.campaign_id = args.campaign_id;
+async function listAccounts(args: { client_id: string }) {
+  if (!args.client_id) {
+    throw new Error("client_id is required");
   }
 
-  const data = await tiktokApiRequest<{
-    list?: TikTokAdGroup[];
-  }>("GET", "/adgroup/get/", params);
-  return { ad_groups: data.list ?? [] };
+  const rows = await sql`
+    SELECT page_id, account_name, created_at
+    FROM client_platform_tokens
+    WHERE client_id = ${args.client_id}
+      AND platform = 'tiktok'
+    ORDER BY created_at DESC
+  `;
+
+  return {
+    accounts: rows.map((r: any) => ({
+      open_id: r.page_id,
+      display_name: r.account_name,
+      connected_at: String(r.created_at),
+    })),
+  };
+}
+
+/**
+ * Download a file from a URL into a Buffer.
+ */
+async function downloadMedia(url: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to download media from ${url}: HTTP ${res.status}`);
+  }
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+  return { buffer, contentType };
+}
+
+async function createPost(args: {
+  client_id: string;
+  text: string;
+  media_urls?: string[];
+  privacy_level?: string;
+  disable_comment?: boolean;
+}) {
+  if (!args.client_id || !args.text) {
+    throw new Error("client_id and text are required");
+  }
+
+  if (!args.media_urls || args.media_urls.length === 0) {
+    throw new Error("At least one media_url (video) is required for TikTok posts");
+  }
+
+  // Look up the client's stored TikTok token
+  const rows = await sql`
+    SELECT access_token, page_id, account_name
+    FROM client_platform_tokens
+    WHERE client_id = ${args.client_id}
+      AND platform = 'tiktok'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+
+  if (rows.length === 0) {
+    throw new Error(
+      `No TikTok token found for client ${args.client_id}. ` +
+      `Have they connected via /portal/connect?`
+    );
+  }
+
+  const accessToken = rows[0].access_token as string;
+  const openId = rows[0].page_id as string;
+
+  // Step 1: Download the video
+  const videoUrl = args.media_urls[0];
+  const { buffer: videoBuffer, contentType } = await downloadMedia(videoUrl);
+
+  // Step 2: Initialize the content post
+  const initBody: Record<string, unknown> = {
+    post_info: {
+      title: args.text.slice(0, 2200), // TikTok title/caption limit
+      privacy_level: args.privacy_level ?? "PUBLIC_TO_EVERYONE",
+      disable_comment: args.disable_comment ?? false,
+      auto_add_music: false,
+    },
+    source_info: {
+      source: "PULL_FROM_URL",
+      video_url: videoUrl,
+    },
+    post_mode: "DIRECT_POST",
+  };
+
+  const initResult = await tiktokApiRequest<{
+    publish_id: string;
+    upload_url?: string;
+  }>(
+    "POST",
+    "/v2/post/publish/content/init/",
+    accessToken,
+    initBody,
+  );
+
+  const publishId = initResult.publish_id;
+
+  // Step 3: If upload_url is provided, upload the video directly
+  if (initResult.upload_url) {
+    await fetch(initResult.upload_url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType,
+        "Content-Length": String(videoBuffer.length),
+      },
+      body: videoBuffer,
+    });
+  }
+
+  return {
+    post_id: publishId,
+    platform: "tiktok",
+    status: "published",
+    account_name: rows[0].account_name,
+    open_id: openId,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -235,104 +225,60 @@ interface ToolDef {
 
 const tools: ToolDef[] = [
   {
-    name: "tiktok_list_advertisers",
+    name: "tiktok_list_accounts",
     description:
-      "List all TikTok advertiser accounts accessible with the configured access token. " +
-      "Returns advertiser IDs, names, statuses, currencies, timezones, and industries. " +
-      "Use this to discover available advertiser accounts before querying campaigns.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    handler: listAdvertisers,
-  },
-  {
-    name: "tiktok_list_campaigns",
-    description:
-      "List all campaigns for a given TikTok advertiser account. " +
-      "Returns campaign IDs, names, statuses, objective types, budgets, and creation times. " +
-      "Requires an advertiser_id (obtained from tiktok_list_advertisers).",
+      "List all TikTok accounts connected by a client. " +
+      "Returns open IDs, display names, and connection dates. " +
+      "Requires a client_id.",
     inputSchema: {
       type: "object",
       properties: {
-        advertiser_id: {
+        client_id: {
           type: "string",
-          description:
-            "The TikTok advertiser ID. Obtain from tiktok_list_advertisers.",
+          description: "The MetroReach client ID (from clients table).",
         },
       },
-      required: ["advertiser_id"],
+      required: ["client_id"],
     },
-    handler: listCampaigns,
+    handler: listAccounts,
   },
   {
-    name: "tiktok_get_campaign_reports",
+    name: "tiktok_create_post",
     description:
-      "Get integrated campaign performance reports from TikTok Ads. " +
-      "Requires advertiser_id. Accepts optional dimensions, metrics, start_date, " +
-      "and end_date. Defaults to last 30 days with campaign-level metrics including " +
-      "impressions, clicks, spend, CPM, CTR, CPC, conversions, and cost_per_conversion. " +
-      "Dates are relative days (e.g., start_date: '30', end_date: '1' for last 30 days).",
+      "Create and publish a video post directly to a connected TikTok account. " +
+      "Uses the client's stored access token (connected via /portal/connect). " +
+      "Requires client_id, text (caption), and media_urls (at least one video URL). " +
+      "Optionally accepts privacy_level (PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, " +
+      "SELF_ONLY) and disable_comment (boolean). " +
+      "Returns the publish_id, platform, and status.",
     inputSchema: {
       type: "object",
       properties: {
-        advertiser_id: {
+        client_id: {
           type: "string",
-          description:
-            "The TikTok advertiser ID. Obtain from tiktok_list_advertisers.",
+          description: "The MetroReach client ID (from clients table).",
         },
-        dimensions: {
+        text: {
+          type: "string",
+          description: "The post caption/title. Must be in MetroReach brand voice. Max ~2200 chars.",
+        },
+        media_urls: {
           type: "array",
           items: { type: "string" },
-          description:
-            "Array of dimension names (e.g., ['campaign_id', 'adgroup_id']). Defaults to ['campaign_id'].",
+          description: "Array of publicly accessible video URLs. At least one required for TikTok.",
         },
-        metrics: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            "Array of metric names (e.g., ['impressions', 'clicks', 'spend', 'cpm', 'ctr', 'cpc', 'conversions', 'cost_per_conversion']). Defaults to all standard metrics.",
-        },
-        start_date: {
+        privacy_level: {
           type: "string",
-          description:
-            "Start date as relative days (e.g., '30' for 30 days ago). Defaults to '30'.",
+          description: "Privacy setting. Default: PUBLIC_TO_EVERYONE. Options: MUTUAL_FOLLOW_FRIENDS, SELF_ONLY.",
         },
-        end_date: {
-          type: "string",
-          description:
-            "End date as relative days (e.g., '1' for 1 day ago). Defaults to '1'.",
+        disable_comment: {
+          type: "boolean",
+          description: "Whether to disable comments on the post. Default: false.",
         },
       },
-      required: ["advertiser_id"],
+      required: ["client_id", "text", "media_urls"],
     },
-    handler: getCampaignReports,
-  },
-  {
-    name: "tiktok_list_ad_groups",
-    description:
-      "List ad groups for a TikTok advertiser account. " +
-      "Optionally filter by campaign_id to get ad groups for a specific campaign. " +
-      "Returns ad group IDs, names, statuses, optimization goals, budgets, " +
-      "and schedule info. Requires advertiser_id.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        advertiser_id: {
-          type: "string",
-          description:
-            "The TikTok advertiser ID. Obtain from tiktok_list_advertisers.",
-        },
-        campaign_id: {
-          type: "string",
-          description:
-            "Optional. Filter ad groups to only those belonging to this campaign ID.",
-        },
-      },
-      required: ["advertiser_id"],
-    },
-    handler: listAdGroups,
+    handler: createPost,
   },
 ];
 
@@ -381,7 +327,6 @@ async function dispatch(req: RpcRequest): Promise<unknown> {
     }
 
     case "notifications/initialized": {
-      // No response required per MCP spec
       return null;
     }
 
@@ -449,7 +394,6 @@ export const Route = createFileRoute("/api/mcp/tiktok")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Validate Content-Type
         const ct = request.headers.get("content-type") ?? "";
         if (!ct.includes("application/json")) {
           return new Response(
@@ -463,7 +407,6 @@ export const Route = createFileRoute("/api/mcp/tiktok")({
           );
         }
 
-        // Parse body
         let body: RpcRequest;
         try {
           body = await request.json();
@@ -479,7 +422,6 @@ export const Route = createFileRoute("/api/mcp/tiktok")({
 
         const result = await dispatch(body);
 
-        // null result means no response (e.g., notifications/initialized)
         if (result === null) {
           return new Response(null, { status: 204 });
         }
