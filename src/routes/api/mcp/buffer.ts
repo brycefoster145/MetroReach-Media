@@ -137,46 +137,30 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  // Use the Buffer REST API (more reliable than GraphQL for mutations)
-  const params = new URLSearchParams();
-  params.append("access_token", BUFFER_TOKEN);
-  params.append("profile_ids[]", args.channelId);
-  params.append("text", args.text);
-
+  // Use GraphQL mutation (Bearer token auth — same as all other tools)
+  const input: Record<string, unknown> = {
+    channelId: args.channelId,
+    text: args.text,
+    organizationId: BUFFER_ORG_ID,
+  };
   if (args.scheduled_at) {
-    params.append("scheduled_at", args.scheduled_at);
-  } else {
-    params.append("now", "true");
+    input.scheduledAt = args.scheduled_at;
   }
-
-  // Handle media URLs via REST API
   if (args.media_urls?.length) {
-    for (const url of args.media_urls) {
+    input.media = args.media_urls.map((url) => {
       const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-      const lower = url.toLowerCase();
-      if (imageExts.some((ext) => lower.includes(ext))) {
-        params.append("media[photo]", url);
-      } else {
-        params.append("media[link]", url);
+      return imageExts.some((ext) => url.toLowerCase().includes(ext))
+        ? { photoUrl: url }
+        : { linkUrl: url };
+    });
+  }
+  return graphqlRequest(`
+    mutation CreatePost($input: CreatePostInput!) {
+      createPost(input: $input) {
+        post { id text scheduledAt }
       }
     }
-  }
-
-  const res = await fetch("https://api.bufferapp.com/1/updates/create.json", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-
-  const json = await res.json();
-
-  if (!res.ok) {
-    throw new Error(
-      `Buffer REST API error (${res.status}): ${JSON.stringify(json)}`,
-    );
-  }
-
-  return json;
+  `, { input });
 }
 
 async function getPost(args: { post_id: string }) {
