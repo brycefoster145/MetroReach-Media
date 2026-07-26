@@ -138,7 +138,7 @@ export function ContactSection() {
                 <p className="text-sm text-text-muted mb-2">
                   {footerCta.secondaryLabel}
                 </p>
-                <Button variant="secondary" href="/dashboard">
+                <Button variant="secondary" href="/case-studies">
                   {footerCta.secondaryCta}
                 </Button>
               </div>
