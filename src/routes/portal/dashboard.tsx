@@ -309,7 +309,7 @@ function PortalDashboard() {
 
   async function handleSignOut() {
     try {
-      await fetch("/api/portal/logout", { method: "POST", credentials: "include" });
+      await fetch("/api/portal/logout", { method: "POST", credentials: "include", headers: { "x-csrf-protection": "1" } });
     } catch {}
     window.location.href = "/portal";
   }
