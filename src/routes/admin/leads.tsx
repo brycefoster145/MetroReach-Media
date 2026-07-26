@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 import {
   CheckCircle,
   CurrencyDollar,
-  MousePointerClick,
+  CursorClick,
   User,
   Buildings,
   Spinner,
@@ -139,7 +139,7 @@ function AdminLeads() {
                   color="text-text-primary"
                 />
                 <AggStat
-                  icon={<MousePointerClick className="w-5 h-5" />}
+                  icon={<CursorClick className="w-5 h-5" />}
                   label="Total Clicks"
                   value={totals.total_clicks.toLocaleString()}
                   color="text-brand-primary"
