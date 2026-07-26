@@ -9,9 +9,9 @@ export const siteMeta = {
 
 export const hero = {
   tagline: "YOUR PHONE SHOULD BE RINGING.",
-  headline: "Premium social media marketing for businesses that want leads, not reports.",
+  headline: "Social Media Marketing That Builds Brands and Drives Real Growth.",
   subheadline:
-    "A dedicated team of specialists runs your organic content and paid ads across seven platforms. Consistent posting. Continuous optimization. Clear dashboard. One flat monthly retainer.",
+    "High‑quality content, consistent posting, and professional ads — all managed for you to strengthen your brand and drive measurable results.",
   primaryCta: "Get a Free Audit",
   secondaryCta: "See our work",
   trustBar: "HVAC. Med Spa. Real Estate. Auto Repair. Dental. Salon. — 340+ leads delivered monthly across 12+ markets.",
