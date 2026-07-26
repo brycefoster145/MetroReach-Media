@@ -143,10 +143,10 @@ async function createPost(args: {
     channelId: args.channelId,
     text: args.text,
     mode: args.scheduled_at ? "customScheduled" : "shareNow",
+    schedulingType: "automatic",
   };
   if (args.scheduled_at) {
     input.scheduledAt = args.scheduled_at;
-    input.schedulingType = "automatic";
   }
   if (args.media_urls?.length) {
     input.media = args.media_urls.map((url) => {
