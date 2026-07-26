@@ -6,7 +6,7 @@
  *
  * Run with: DATABASE_URL=... bun run src/lib/migrate.ts
  */
-import postgres from "postgres";
+import { neon } from "@neondatabase/serverless";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -14,14 +14,9 @@ if (!url) {
   process.exit(0);
 }
 
-let sql: ReturnType<typeof postgres>;
+let sql: ReturnType<typeof neon>;
 try {
-  sql = postgres(url, {
-    max: 1,
-    idle_timeout: 5,
-    connect_timeout: 10,
-    ssl: "require",
-  });
+  sql = neon(url);
 } catch (err: any) {
   console.error("Could not create database connection (non-fatal):", err.message);
   console.log("Skipping migration — will run in production.");
@@ -336,7 +331,6 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
   console.log("✓ scheduled_posts table ready");
 
-  await sql.end();
   console.log("Migration complete.");
 }
 
