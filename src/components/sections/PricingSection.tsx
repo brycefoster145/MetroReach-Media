@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, LockOpen } from "@phosphor-icons/react";
+import { Check, LockOpen, Star } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
@@ -26,15 +26,18 @@ export function PricingSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-24 bg-bg-root">
-      <Container>
+    <section ref={ref} id="pricing" className="py-28 lg:py-32 bg-bg-root relative overflow-hidden">
+      {/* Subtle dot grid */}
+      <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none" />
+
+      <Container className="relative z-10">
         <SectionHeading
           headline={pricing.headline}
           description={pricing.subheadline}
         />
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
           {pricing.tiers.map((tier, i) => {
             const isFeatured = tier.featured;
 
@@ -43,7 +46,7 @@ export function PricingSection() {
                 key={tier.name}
                 className={`relative rounded-2xl p-8 flex flex-col transition-all duration-500 ${
                   isFeatured
-                    ? "bg-bg-surface border border-brand-primary/30 ring-1 ring-brand-primary/10 featured-card-hover"
+                    ? "bg-bg-surface border border-brand-gold/40 ring-1 ring-brand-gold/10 glow-gold scale-[1.02] md:scale-105 z-10"
                     : "bg-bg-surface border border-border-subtle card-hover"
                 } ${
                   visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -53,16 +56,16 @@ export function PricingSection() {
                   transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
               >
-                {/* Featured glow pseudo-element area */}
+                {/* Featured gradient background */}
                 {isFeatured && (
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-primary/5 to-brand-accent/5 pointer-events-none" />
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-gold/5 to-brand-primary/5 pointer-events-none" />
                 )}
 
                 {/* Most Popular badge */}
                 {isFeatured && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="inline-block bg-brand-primary text-text-primary text-xs font-semibold rounded-full px-4 py-1">
-                      Most Popular
+                    <span className="badge-gold inline-flex items-center gap-1 text-xs rounded-full px-4 py-1 shadow-lg">
+                      <Star size={12} weight="fill" /> Most Popular
                     </span>
                   </div>
                 )}
@@ -78,7 +81,7 @@ export function PricingSection() {
                     <span className="text-5xl font-bold font-heading text-text-primary">
                       {tier.price}
                     </span>
-                    <span className="text-base text-text-muted">/month</span>
+                    <span className="text-base text-text-muted">{tier.period}</span>
                   </div>
 
                   {/* Feature list */}
@@ -88,7 +91,9 @@ export function PricingSection() {
                         <Check
                           size={16}
                           weight="bold"
-                          className="text-brand-accent flex-shrink-0 mt-0.5"
+                          className={`flex-shrink-0 mt-0.5 ${
+                            isFeatured ? "text-brand-gold" : "text-brand-teal"
+                          }`}
                         />
                         {f}
                       </li>
@@ -105,13 +110,16 @@ export function PricingSection() {
 
                   {/* CTA */}
                   {isFeatured ? (
-                    <Button href={tier.paymentLink} className="w-full justify-center">
-                      {tier.cta}
-                    </Button>
+                    <a
+                      href="/contact"
+                      className="inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow transition-all duration-200 w-full"
+                    >
+                      {tier.cta} →
+                    </a>
                   ) : (
                     <Button
                       variant="ghost"
-                      href={tier.paymentLink}
+                      href="/contact"
                       className="w-full justify-center"
                     >
                       {tier.cta}
@@ -123,9 +131,9 @@ export function PricingSection() {
           })}
         </div>
 
-        {/* Add-on note */}
-        <p
-          className={`text-sm text-text-secondary text-center mt-10 max-w-xl mx-auto transition-all duration-500 ${
+        {/* No-lock pledge */}
+        <div
+          className={`flex items-center justify-center gap-2 mt-10 transition-all duration-500 ${
             visible ? "opacity-100" : "opacity-0"
           }`}
           style={{
@@ -133,20 +141,7 @@ export function PricingSection() {
             transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
-          {pricing.addonNote}
-        </p>
-
-        {/* No-lock pledge */}
-        <div
-          className={`flex items-center justify-center gap-2 mt-6 transition-all duration-500 ${
-            visible ? "opacity-100" : "opacity-0"
-          }`}
-          style={{
-            transitionDelay: "700ms",
-            transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        >
-          <LockOpen size={18} weight="regular" className="text-brand-accent" />
+          <LockOpen size={18} weight="regular" className="text-brand-teal" />
           <p className="text-base text-text-secondary">{pricing.noLockPledge}</p>
         </div>
       </Container>

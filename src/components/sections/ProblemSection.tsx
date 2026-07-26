@@ -24,9 +24,9 @@ export function ProblemSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-24 bg-bg-surface relative overflow-hidden">
+    <section ref={ref} className="py-28 lg:py-32 bg-bg-surface relative overflow-hidden">
       {/* Subtle diagonal line */}
-      <div className="absolute inset-0 pointer-events-none opacity-30">
+      <div className="absolute inset-0 pointer-events-none opacity-20">
         <div className="absolute top-0 left-1/2 w-px h-full bg-border-subtle rotate-[15deg] -translate-x-1/2" />
       </div>
 
@@ -37,27 +37,13 @@ export function ProblemSection() {
             headline={problem.headline}
           />
 
-          <div
-            className={`space-y-6 text-lg text-text-secondary leading-relaxed mb-10 transition-all duration-500 ${
-              visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-            }`}
-            style={{
-              transitionDelay: "100ms",
-              transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-          >
-            {problem.body.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-
           {/* Pivot sentence */}
           <p
-            className={`text-xl font-medium text-text-primary text-center py-6 transition-all duration-500 ${
+            className={`text-xl font-semibold text-text-primary text-center py-6 border-y border-border-subtle my-8 transition-all duration-500 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
             style={{
-              transitionDelay: "300ms",
+              transitionDelay: "150ms",
               transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
@@ -66,17 +52,17 @@ export function ProblemSection() {
 
           {/* Problem bullets - 2 column grid */}
           <div
-            className={`grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mt-10 transition-all duration-500 ${
+            className={`grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mt-8 transition-all duration-500 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
             style={{
-              transitionDelay: "450ms",
+              transitionDelay: "300ms",
               transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             {problem.bullets.map((b, i) => (
               <div key={i} className="flex items-start gap-3">
-                <span className="mt-[0.65em] w-1 h-1 rounded-full bg-brand-accent flex-shrink-0" />
+                <span className="mt-[0.55em] w-2 h-2 rounded-full bg-brand-primary flex-shrink-0" />
                 <p className="text-base text-text-secondary">
                   <strong className="text-text-primary font-semibold">
                     {b.lead}

@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { List, X, ShoppingCart } from "@phosphor-icons/react";
-import { Button } from "./Button";
 import { useCart } from "~/context/CartContext";
 
 const links = [
   { label: "Services", href: "/services" },
-  { label: "Premium Audit", href: "/premium-audit" },
-  { label: "Packages", href: "/pricing" },
   { label: "Case Studies", href: "/case-studies" },
+  { label: "Packages", href: "/pricing" },
   { label: "About", href: "/about" },
   { label: "Client Portal", href: "/portal" },
 ];
@@ -56,7 +54,7 @@ export function Navbar() {
             <a
               key={l.href}
               href={l.href}
-              className="text-lg font-semibold text-text-secondary hover:text-text-primary transition-colors"
+              className="text-sm font-semibold text-text-secondary hover:text-text-primary transition-colors"
             >
               {l.label}
             </a>
@@ -72,12 +70,17 @@ export function Navbar() {
           >
             <ShoppingCart size={22} weight="regular" />
             {itemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-bold text-text-primary bg-brand-accent rounded-full">
+              <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-bold text-text-primary bg-brand-primary rounded-full">
                 {itemCount}
               </span>
             )}
           </a>
-          <Button href="/free-audit">Get a Free Audit</Button>
+          <a
+            href="/contact"
+            className="inline-flex items-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-6 py-2.5 text-sm cta-glow transition-all duration-200"
+          >
+            Book a Strategy Call
+          </a>
         </div>
 
         {/* Mobile Hamburger */}
@@ -106,9 +109,13 @@ export function Navbar() {
               </a>
             ))}
             <div className="mt-6">
-              <Button href="/free-audit" onClick={close} className="w-full justify-center">
-                Get a Free Audit
-              </Button>
+              <a
+                href="/contact"
+                onClick={close}
+                className="inline-flex items-center justify-center gap-2 w-full font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow"
+              >
+                Book a Strategy Call
+              </a>
             </div>
           </div>
         </div>

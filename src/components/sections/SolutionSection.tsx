@@ -18,6 +18,7 @@ const colorClasses: Record<string, string> = {
   "brand-primary": "text-brand-primary",
   "brand-accent": "text-brand-accent",
   "brand-primary-glow": "text-brand-primary-glow",
+  "brand-teal": "text-brand-teal",
 };
 
 export function SolutionSection() {

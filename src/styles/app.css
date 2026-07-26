@@ -5,16 +5,19 @@
   --color-brand-primary-glow: #33a8ff;
   --color-brand-accent: #008fff;
   --color-brand-accent-glow: #33a8ff;
+  --color-brand-teal: #00d4aa;
+  --color-brand-gold: #f59e0b;
   --color-bg-root: #0a0f16;
   --color-bg-surface: #12171d;
   --color-bg-surface-raised: #181e26;
   --color-bg-surface-high: #1e2530;
   --color-text-primary: #F1F5F9;
   --color-text-secondary: #94A3B8;
+  --color-text-primary-light: #CBD5E1;
   --color-text-muted: #94A3B8;
   --color-border-subtle: #1E293B;
   --color-border-emphasis: #334155;
-  --color-success: #008fff;
+  --color-success: #00d4aa;
   --color-warning: #F59E0B;
   --color-error: #EF4444;
   --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
@@ -37,7 +40,75 @@
   }
 }
 
-/* Scroll animations */
+/* =============================================
+   Background Patterns & Textures
+   ============================================= */
+
+/* Dot-grid background pattern */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Noise texture overlay */
+.bg-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* =============================================
+   Gradient Presets
+   ============================================= */
+
+.gradient-blue-teal {
+  background: linear-gradient(135deg, #008fff, #00d4aa);
+}
+
+.gradient-blue-gold {
+  background: linear-gradient(135deg, #008fff, #f59e0b);
+}
+
+.gradient-text-blue-teal {
+  background: linear-gradient(135deg, #33a8ff, #00d4aa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-blue-gold {
+  background: linear-gradient(135deg, #33a8ff, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =============================================
+   Section Dividers
+   ============================================= */
+
+.section-divider {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #008fff, #00d4aa, transparent);
+  opacity: 0.4;
+}
+
+.section-divider-teal {
+  background: linear-gradient(90deg, transparent, #00d4aa, transparent);
+  opacity: 0.3;
+}
+
+/* =============================================
+   Scroll Animations
+   ============================================= */
+
 .animate-hidden {
   opacity: 0;
   transform: translateY(24px);
@@ -58,7 +129,11 @@
   transform: translateY(0);
 }
 
-/* Card hover */
+/* =============================================
+   Card Systems
+   ============================================= */
+
+/* Standard card hover */
 .card-hover {
   transition: all 200ms ease-out;
 }
@@ -68,6 +143,7 @@
   transform: translateY(-2px);
 }
 
+/* Featured card */
 .featured-card-hover {
   transition: all 200ms ease-out;
 }
@@ -75,7 +151,70 @@
   border-color: rgba(0, 143, 255, 0.5);
 }
 
-/* Platform icon sequence */
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(18, 23, 29, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.6);
+  border-radius: 1rem;
+}
+
+.glass-card-accent {
+  background: rgba(0, 143, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 143, 255, 0.2);
+  border-radius: 1rem;
+}
+
+/* =============================================
+   Badge System
+   ============================================= */
+
+.badge-gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #0a0f16;
+  font-weight: 700;
+}
+
+.badge-teal {
+  background: rgba(0, 212, 170, 0.15);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  color: #00d4aa;
+}
+
+.badge-blue {
+  background: rgba(0, 143, 255, 0.15);
+  border: 1px solid rgba(0, 143, 255, 0.3);
+  color: #008fff;
+}
+
+/* =============================================
+   Process Timeline
+   ============================================= */
+
+.process-line-gradient {
+  background: linear-gradient(90deg, #008fff, #008fff 40%, #00d4aa 60%, #00d4aa);
+}
+
+/* Process circle states */
+.process-circle-active {
+  border-color: #008fff;
+  color: #008fff;
+  background: rgba(0, 143, 255, 0.12);
+}
+
+.process-circle-complete {
+  border-color: #00d4aa;
+  color: #00d4aa;
+  background: rgba(0, 212, 170, 0.12);
+}
+
+/* =============================================
+   Platform Icon Animations
+   ============================================= */
+
 @keyframes platform-illuminate {
   0%, 100% { color: #64748B; }
   40% { color: #008fff; }
@@ -110,7 +249,10 @@
   animation: live-pulse-ring 2s ease-out infinite;
 }
 
-/* Gradient text */
+/* =============================================
+   Legacy Gradient Text (keep for compat)
+   ============================================= */
+
 .gradient-text {
   background: linear-gradient(135deg, #33a8ff, #008fff, #0066cc);
   -webkit-background-clip: text;
@@ -118,7 +260,83 @@
   background-clip: text;
 }
 
-/* FAQ accordion */
+/* =============================================
+   Glow Effects
+   ============================================= */
+
+.glow-blue {
+  box-shadow: 0 0 30px rgba(0, 143, 255, 0.15), 0 0 60px rgba(0, 143, 255, 0.05);
+}
+
+.glow-teal {
+  box-shadow: 0 0 30px rgba(0, 212, 170, 0.15), 0 0 60px rgba(0, 212, 170, 0.05);
+}
+
+.glow-gold {
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05);
+}
+
+/* =============================================
+   Portfolio / Masonry hover
+   ============================================= */
+
+.portfolio-card:hover .portfolio-overlay {
+  opacity: 1;
+}
+
+.portfolio-overlay {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+  background: linear-gradient(0deg, rgba(10, 15, 22, 0.95) 0%, rgba(10, 15, 22, 0.2) 100%);
+}
+
+/* =============================================
+   CTA Button glow enhancement
+   ============================================= */
+
+.cta-glow {
+  box-shadow: 0 0 20px rgba(0, 143, 255, 0.15), 0 0 40px rgba(0, 143, 255, 0.05);
+  transition: box-shadow 300ms ease-out, transform 200ms ease-out;
+}
+
+.cta-glow:hover {
+  box-shadow: 0 0 30px rgba(0, 143, 255, 0.3), 0 0 60px rgba(0, 143, 255, 0.1);
+  transform: scale(1.03);
+}
+
+/* =============================================
+   Feature Pills
+   ============================================= */
+
+.feature-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid #1E293B;
+  color: #CBD5E1;
+}
+
+/* =============================================
+   Star Ratings
+   ============================================= */
+
+.star-rating {
+  color: #f59e0b;
+}
+
+.star-rating-empty {
+  color: #334155;
+}
+
+/* =============================================
+   FAQ Accordion
+   ============================================= */
+
 .faq-answer {
   display: grid;
   grid-template-rows: 0fr;
@@ -131,14 +349,20 @@
   overflow: hidden;
 }
 
-/* Mobile nav backdrop */
+/* =============================================
+   Mobile Nav backdrop
+   ============================================= */
+
 .nav-backdrop {
   background: rgba(10, 15, 22, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Respect user motion preferences */
+/* =============================================
+   Reduced Motion
+   ============================================= */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -150,7 +374,10 @@
   }
 }
 
-/* Portal tab scrollbar styling */
+/* =============================================
+   Portal tab scrollbar styling
+   ============================================= */
+
 .portal-tabs::-webkit-scrollbar {
   height: 4px;
 }
@@ -165,7 +392,10 @@
   background: #334155;
 }
 
-/* Tab switching animation */
+/* =============================================
+   Tab switching animation
+   ============================================= */
+
 @keyframes tab-fade-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }

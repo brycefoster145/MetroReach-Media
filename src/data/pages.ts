@@ -1,8 +1,8 @@
 // Page copy for standalone routes
-// Source: /home/team/shared/content/pages/*.md
+// Premium rewrite — 2026-07-26
 
 export const aboutPage = {
-  headline: "We got tired of watching agencies fail business owners.",
+  headline: "We built MetroReach Media because the agency model is broken.",
   body: [
     "Most agencies are built wrong.",
     "They hire talented people, load them with too many accounts, and hope nothing breaks. When someone quits — and someone always quits — the client pays the price. Posts get skipped. Ad performance drifts. The monthly report still shows up, but the leads don't.",
@@ -35,7 +35,7 @@ export const aboutPage = {
 };
 
 export const servicesPage = {
-  headline: "Premium Social Media Marketing",
+  headline: "Seven platforms. Five services. One team dedicated to your account.",
   subheadline:
     "A full team of specialists managing every dimension of your social presence — organic, paid, strategy, analytics, and community. No gaps. No excuses.",
   services: [
@@ -141,9 +141,9 @@ export const servicesPage = {
 };
 
 export const pricingPage = {
-  headline: "Simple pricing. Serious results.",
+  headline: "One retainer. Full team. Clear results.",
   subheadline:
-    "Every package includes strategy, creative, posting, optimization, and reporting. The only variable is scope.",
+    "Every package includes strategy, creative, posting, optimization, and reporting.",
   tiers: [
     {
       name: "Starter",
@@ -151,14 +151,14 @@ export const pricingPage = {
       period: "/month",
       description: "For businesses ready to establish their social presence and start generating leads.",
       features: [
-        "Facebook + Instagram",
-        "12 organic posts/month",
-        "Custom graphics & copywriting",
-        "Monthly strategy & performance report",
-        "Live dashboard access",
+        "Facebook + Instagram (organic + paid on one)",
+        "12 original posts per month",
+        "1 paid campaign, managed continuously",
+        "Monthly strategy report + performance review",
+        "Live dashboard access on day one",
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
-      featured: true,
+      featured: false,
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
@@ -168,16 +168,15 @@ export const pricingPage = {
       description: "For businesses that need multi-platform presence and aggressive lead generation.",
       features: [
         "Up to 4 platforms (organic on all, paid on 2)",
-        "20 organic posts/month",
-        "3 paid campaigns, managed continuously",
+        "20 original posts per month",
+        "3 paid campaigns",
         "A/B testing on creative and audiences",
-        "Weekly performance summaries + monthly deep-dive",
+        "Weekly performance snapshots + monthly deep-dive",
         "Community engagement included",
-        "Live dashboard access",
       ],
       bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
-      featured: false,
-      comingSoon: true,
+      featured: true,
+      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
       name: "Scale",
@@ -186,27 +185,25 @@ export const pricingPage = {
       description: "For businesses that want to dominate their market across all relevant channels.",
       features: [
         "Up to 7 platforms (organic on all, paid on up to 4)",
-        "30+ organic posts/month",
-        "Unlimited paid campaigns, managed continuously",
-        "Advanced A/B testing, funnel optimization",
-        "Influencer research reports & partnership strategy",
+        "30+ original posts per month",
+        "Unlimited paid campaigns",
+        "Advanced A/B testing and funnel optimization",
+        "Short-form video scripts",
+        "Influencer research and partnership strategy",
         "Priority strategy adjustments",
-        "Bi-weekly strategy memos & priority adjustments",
-        "Live dashboard + custom reporting",
+        "Bi-weekly strategy calls + custom reporting",
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
       featured: false,
-      comingSoon: true,
+      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
   ],
-  addonNote:
-    "Paid ad management coming soon. Premium Growth Audit available now — $495, fully creditable toward any package.",
   noLockPledge:
-    "Month-to-month. Cancel anytime. We earn your business every month.",
+    "Every package is month-to-month. Cancel with 30 days notice. No penalty. No annual commitment.",
 };
 
 export const contactPage = {
-  headline: "Let's Build Your Pipeline",
+  headline: "Let's talk about your pipeline.",
   subheadline:
     "Tell us about your business and what you need. We'll tell you honestly whether we can help — and exactly how.",
   contactInfo: {
@@ -259,7 +256,7 @@ export const contactPage = {
 };
 
 export const demoPage = {
-  headline: "30 minutes. No pitch. Just clarity on what your marketing should be doing.",
+  headline: "30 minutes. Straight answers. No pitch.",
   subheadline:
     "Book a call with our strategy team. We'll look at what you're doing now, what's missing, and whether MetroReach Media makes sense for your business. If it doesn't, we'll tell you.",
   takeaways: [
@@ -279,7 +276,7 @@ export const demoPage = {
 };
 
 export const caseStudiesPage = {
-  headline: "Results That Speak for Themselves",
+  headline: "Three businesses. Three industries. One common result: more leads.",
   subheadline:
     "Three businesses. Three industries. One thing in common: they trusted MetroReach Media with their pipeline — and it paid off.",
   studies: [
@@ -401,20 +398,20 @@ export const platformsPage = {
 };
 
 export const faqPage = {
-  headline: "Questions smart business owners ask before signing up.",
+  headline: "What business owners ask before they trust us with their pipeline.",
   items: [
     {
-      question: "How do you handle multiple platforms without spreading too thin?",
+      question: "How does one team manage seven platforms without dropping the ball?",
       answer:
         "Most agencies assign one person to handle 4–5 accounts across multiple platforms. That's how things slip. We run a dedicated team structure — each specialist focuses on their function across your accounts. No single point of failure. No 'sorry, your account manager is on vacation.'",
     },
     {
-      question: "What if I don't like the content? Can I approve posts before they go live?",
+      question: "What if the content doesn't feel like us?",
       answer:
         "During onboarding, we build your brand voice model and content guidelines. Once you sign off on the direction, we execute. Most clients prefer to review the monthly content calendar — but we can build in pre-approval workflows if your industry requires it.",
     },
     {
-      question: "How long until I see results?",
+      question: "When will I actually see leads?",
       answer:
         "Paid ads: 2–4 weeks to dial in targeting and creative. By month two, you should see your CPL approaching target. Organic: 60–90 days to build meaningful momentum. No agency can guarantee overnight results. But we can guarantee we won't waste time.",
     },
@@ -424,12 +421,12 @@ export const faqPage = {
         "Service-based businesses that depend on local leads: contractors, med spas and aesthetic clinics, auto repair shops, real estate teams, dental and medical clinics, salons and personal services.",
     },
     {
-      question: "What if I want to change my package or cancel?",
+      question: "What if I need to scale up, scale down, or cancel?",
       answer:
         "Switch packages or cancel with 30 days notice. No penalty. No \"annual commitment.\" We designed this for business owners who've been burned by agency contracts.",
     },
     {
-      question: "What makes your content better than what I'd get from a freelancer?",
+      question: "Why shouldn't I just hire a freelancer?",
       answer:
         "Freelancers are one person trying to do everything — strategy, writing, design, posting, optimization. We run a full team of specialists. Your strategy is built by someone who studies your market. Your copy is written by a dedicated writer. Your performance is tracked by an analyst who flags what's working and what's not. You get the output of an entire agency, not one person's best effort.",
     },

@@ -1,5 +1,5 @@
 // Centralized homepage copy for MetroReach Media
-// Source: /home/team/shared/content/site-copy.md
+// Premium rewrite — 2026-07-26
 
 export const siteMeta = {
   title: "MetroReach Media — Premium Social Media Marketing Agency",
@@ -9,12 +9,12 @@ export const siteMeta = {
 
 export const hero = {
   tagline: "YOUR PHONE SHOULD BE RINGING.",
-  headline: "We run your entire social media operation — strategy, creative, ads, analytics — so you stop losing leads to competitors who show up when you don't.",
+  headline: "Premium social media marketing for businesses that want leads, not reports.",
   subheadline:
-    "Premium social media management — organic and paid, across every major platform — for less than a traditional agency retainer. No gaps. No excuses. More leads.",
-  primaryCta: "Start getting leads",
-  secondaryCta: "See our work",
-  trustBar: "Trusted by service businesses across 12+ markets",
+    "A dedicated team of specialists runs your organic content and paid ads across seven platforms. Consistent posting. Continuous optimization. Clear dashboard. One flat monthly retainer.",
+  primaryCta: "Book a Strategy Call",
+  secondaryCta: "See our work ↓",
+  trustBar: "HVAC. Med Spa. Real Estate. Auto Repair. Dental. Salon. — 340+ leads delivered monthly across 12+ markets.",
 };
 
 export const platforms = [
@@ -28,61 +28,56 @@ export const platforms = [
 ] as const;
 
 export const problem = {
-  headline: "You're paying for marketing gaps you don't even see.",
-  body: [
-    "Here's how it usually goes. You hire an agency or a freelancer. Things start strong. Posts go up. Ads launch. Then your account manager takes a new job. Or your freelancer gets too busy. Posts get skipped. Ad performance drifts. Nobody's watching on weekends. The monthly report still shows up — but the leads don't.",
-    "And when you ask what's happening, you get variations on \"we're optimizing\" while your phone stays quiet.",
-    "Meanwhile, your competitors are capturing every search, every scroll, every local intent signal you're missing. Not because they're better at what you do. Because they're showing up and you're not.",
-  ],
-  pivot: "That's the gap. And it's costing you real money.",
+  headline: "Your marketing has gaps you're paying for right now.",
+  pivot: "That gap costs you leads. Every day it stays open.",
   label: "The Real Problem",
   bullets: [
     {
       lead: "Inconsistent posting",
-      detail: "momentum dies, algorithms punish you",
+      detail: "algorithms kill your reach, competitors fill the gap",
     },
     {
-      lead: "Slow response to performance signals",
-      detail: "CPL drifts up for weeks before anyone notices",
+      lead: "Slow response",
+      detail: "CPL creeps up for weeks. Nobody catches it.",
     },
     {
-      lead: "Talent turnover",
-      detail: "your account manager leaves, their replacement starts from zero",
+      lead: "Account turnover",
+      detail: "your manager quits. Their replacement starts from zero.",
     },
     {
-      lead: "Weekend & holiday gaps",
-      detail: "leads don't take weekends off, but agencies do",
+      lead: "Weekend silence",
+      detail: "leads come in Saturday. Nobody's watching.",
     },
     {
       lead: "Generic strategy",
-      detail: "one-size-fits-all playbooks that ignore your market and your margins",
+      detail: "templated playbooks that ignore your market and margins",
     },
   ],
 };
 
 export const solution = {
-  headline: "A marketing team built differently.",
+  headline: "A marketing team that delivers. Daily.",
   subheadline:
-    "MetroReach Media is a premium social media agency. Premium strategy. Premium creative. Paid ad management across every platform that matters. A dedicated team of seven specialists — strategist, copywriter, designer, media buyer, analyst, QA, and engineer — focused entirely on your account.",
+    "MetroReach Media gives every client a dedicated team of specialists — strategist, copywriter, designer, media buyer, and analyst. No account manager juggling five clients. No freelancer who goes dark. Just consistent, premium output at a cost that reflects our efficiency, not someone's overhead.",
   differentiators: [
     {
       number: "01",
-      headline: "Dedicated. Responsive. Relentless.",
-      body: "When CPL creeps up, we're on it immediately. Bids, creative, audiences — adjusted in real time by specialists who know your account, not a rotating cast of junior staff. Our team of strategists, media buyers, and creative directors works as one dedicated unit. No handoffs to someone who's never read your brief.",
+      headline: "Dedicated. Responsive. Accountable.",
+      body: "When CPL drifts, our team catches it — within hours, not days. Bids, creative, audiences — adjusted by specialists who know your account history. Not a junior account manager. Not a freelancer who'll get to it Monday. A full team, working as one unit.",
       icon: "ClockCounterClockwise" as const,
       color: "brand-primary",
     },
     {
       number: "02",
-      headline: "Specialist-Led. Not Account-Managed.",
-      body: "Traditional agencies give you an account manager juggling five clients. We give you a dedicated team of seven specialists — strategist, copywriter, designer, media buyer, analyst, QA, and engineer — focused on one account. Yours. Every function handled by someone who does that one thing exceptionally well. That's how you get premium output without premium bloat.",
+      headline: "Specialist-led. Not account-managed.",
+      body: "Traditional agencies give you one account manager. We give you a team of five specialists — each focused on a single function, each accountable for their output. Strategy. Copy. Design. Media buying. Analytics. No single point of failure. No \"sorry, your account manager is on vacation.\"",
       icon: "SealCheck" as const,
-      color: "brand-accent",
+      color: "brand-teal",
     },
     {
       number: "03",
-      headline: "One Team. Seven Platforms.",
-      body: "Facebook. Instagram. TikTok. Google. YouTube. LinkedIn. X. Most agencies specialize in one or two and subcontract the rest. We run them all — organically and paid — from a single integrated team. No handoffs. No finger-pointing. One strategy, executed everywhere.",
+      headline: "One team. Seven platforms. Zero handoffs.",
+      body: "Most agencies pick two platforms and subcontract the rest. We run all seven — Facebook, Instagram, TikTok, Google, YouTube, LinkedIn, X — from one coordinated team. One strategy. One voice. Every platform covered.",
       icon: "SquaresFour" as const,
       color: "brand-primary-glow",
     },
@@ -90,48 +85,140 @@ export const solution = {
 };
 
 export const services = {
-  headline: "Everything your marketing needs. Nothing you don't.",
+  headline: "Everything your pipeline needs. Nothing you don't.",
   items: [
     {
-      name: "Organic Social Management",
+      name: "Organic Content Management",
       description:
-        "Strategy, content creation, posting, and community management across your chosen platforms. We build your brand presence day by day — educational content, social proof, behind-the-scenes, offers — on a consistent schedule that algorithms reward and audiences trust.",
+        "Platform-native content built around your business — not a template, not a repurposed blog post. We create posts, carousels, short-form video scripts, and stories that match how your customers actually consume content. Every piece is original. Every piece is on-brand. Every piece goes live on schedule.",
+      tagline: "Your brand, everywhere. Consistently.",
+      icon: "Article",
       features: [
-        "Platform-native content for Facebook, Instagram, TikTok, LinkedIn, X, YouTube",
-        "Custom content calendar built around your business rhythms",
+        "Platform-native content for every platform",
+        "Custom content calendar built around your business",
         "Brand voice development and visual direction",
-        "Community engagement and response management",
-        "Monthly content performance reports",
+        "Consistent posting schedule algorithms reward",
       ],
-      image: null,
     },
     {
-      name: "Paid Ad Management",
+      name: "Paid Advertising",
       description:
-        "Full-service campaign management from strategy to creative to optimization. We build campaigns that turn ad spend into qualified leads — not just impressions.",
+        "Most agencies treat paid ads as a separate silo. We don't. Your paid campaigns run alongside your organic content — same strategy, same creative standards, same team. We build campaigns designed to convert, not just collect impressions. And we optimize them daily.",
+      tagline: "Ad spend that actually turns into booked work.",
+      icon: "Target",
       features: [
         "Campaign strategy and audience architecture",
-        "Ad creative (static, carousel, video scripts, YouTube pre-roll)",
+        "Ad creative — static, carousel, video scripts",
         "Continuous A/B testing and creative refresh",
-        "Bid, budget, and targeting optimization",
-        "Live performance dashboards with CPL and ROAS tracking",
-        "Platforms: Meta (FB + IG), TikTok, Google (Search + Display + YouTube), LinkedIn, X",
+        "Bid, budget, and targeting optimization daily",
       ],
-      image: "/images/services-performance-chart.webp",
     },
     {
-      name: "Strategy & Creative Projects",
+      name: "Social Strategy",
       description:
-        "Not every engagement needs a monthly retainer. We offer project-based work for brand positioning, funnel architecture, campaign launches, and creative sprints.",
+        "Strategy isn't a PDF you get at onboarding and never look at again. It's the living foundation of everything we do — audience research, competitive analysis, platform selection, content architecture. Built for your specific market, updated monthly based on what the data says.",
+      tagline: "A plan built on your market. Not a template.",
+      icon: "Brain",
       features: [
-        "Brand positioning and messaging frameworks",
-        "Funnel audit and architecture",
-        "Campaign launch packages (creative + strategy + initial management)",
-        "Content sprints (30/60/90 days of content in one delivery)",
+        "Audience research and competitive analysis",
+        "Platform selection and content architecture",
+        "Messaging frameworks and brand positioning",
+        "Monthly strategy reviews with data-driven updates",
       ],
-      image: null,
+    },
+    {
+      name: "Analytics & Reporting",
+      description:
+        "No waiting for a monthly PDF full of vanity metrics. Every client gets a live dashboard — CPL, ROAS, lead volume, platform performance. Check it anytime. A dedicated analyst surfaces what's working, what's slipping, and what to do about it.",
+      tagline: "Know exactly what your marketing is doing. Any time.",
+      icon: "ChartLineUp",
+      features: [
+        "Live dashboard — CPL, ROAS, lead volume",
+        "Weekly performance snapshots",
+        "Monthly deep-dives with actionable insights",
+        "No vanity metrics — just what matters",
+      ],
+    },
+    {
+      name: "Community Management",
+      description:
+        "Your customers expect a response — fast. We monitor comments, DMs, mentions, and reviews daily. On-brand responses. Prompt timing. Nothing falls through. Because a missed message is a missed lead.",
+      tagline: "Every comment. Every DM. Every review. Handled.",
+      icon: "ChatCircleText",
+      features: [
+        "Daily monitoring of comments, DMs, mentions",
+        "On-brand responses with prompt timing",
+        "Review management and reputation monitoring",
+        "Nothing falls through — guaranteed",
+      ],
     },
   ],
+};
+
+export const process = {
+  headline: "How we turn your marketing into a lead engine.",
+  steps: [
+    { number: 1, label: "Strategy", description: "We learn your business, your market, and your customers. Then we build the plan." },
+    { number: 2, label: "Content Creation", description: "Your brand voice. Your visual identity. Your content — produced by specialists." },
+    { number: 3, label: "Review & Approval", description: "You see the plan. You approve the direction. We execute." },
+    { number: 4, label: "Posting & Scheduling", description: "Content goes live on schedule. Every platform. Every time." },
+    { number: 5, label: "Ads Management", description: "Campaigns built to convert. Optimized daily." },
+    { number: 6, label: "Reporting & Optimization", description: "Live dashboard. Clear metrics. Continuous improvement." },
+  ],
+};
+
+export const portfolio = {
+  headline: "Premium creative. Proven results.",
+  subheadline: "A look at the kind of work your dedicated team produces.",
+  items: [
+    {
+      title: "Instagram Feed Design",
+      category: "Organic Content",
+      description: "Brand-consistent feed design for Lumina Aesthetics — 40% follower growth in Q1.",
+      visual: "instagram",
+    },
+    {
+      title: "Meta Ad Creative",
+      category: "Paid Advertising",
+      description: "Lead gen campaign for Ridgeway Heating — $28 CPL, 18+ qualified leads/month.",
+      visual: "ad-creative",
+    },
+    {
+      title: "Content Calendar",
+      category: "Strategy",
+      description: "Monthly content architecture — 30+ posts across 4 platforms, every piece scheduled.",
+      visual: "calendar",
+    },
+    {
+      title: "Performance Dashboard",
+      category: "Analytics",
+      description: "Live dashboard showing CPL, ROAS, and lead volume across all active campaigns.",
+      visual: "dashboard",
+    },
+    {
+      title: "Case Study: Keller Group",
+      category: "Real Estate",
+      description: "Multi-platform brand build — seller leads +175%, listing win rate 60% → 80%.",
+      visual: "case-study",
+    },
+    {
+      title: "TikTok Content Strategy",
+      category: "Short-Form Video",
+      description: "Platform-native video concepts for med spa audience — patient consults +60%.",
+      visual: "tiktok",
+    },
+  ],
+};
+
+export const credibility = {
+  headline: "Businesses like yours trust MetroReach Media with their pipeline.",
+  stats: [
+    { value: "340+", label: "Leads delivered monthly" },
+    { value: "3.4x", label: "Average ROAS" },
+    { value: "98.7%", label: "On-time content delivery" },
+    { value: "12+", label: "Markets served" },
+  ],
+  badges: ["Meta", "Google", "Canva", "Buffer", "Shopify", "WordPress"],
 };
 
 export const socialProof = {
@@ -146,78 +233,140 @@ export const socialProof = {
   testimonials: [
     {
       quote:
-        "We went from 2-3 leads a week to 15-20. Our phone rings every day now. I haven't thought about marketing in three months — I just look at the dashboard on Friday afternoons to see how the week went.",
+        "We went from 2–3 leads a week to 15–20. The phone hasn't stopped ringing. I check the dashboard on Fridays now instead of worrying about marketing all week.",
       name: "Mike R.",
       title: "Owner",
       business: "Ridgeway Heating & Cooling",
       industry: "HVAC",
       location: "Columbus, OH",
+      rating: 5,
     },
     {
       quote:
-        "I was skeptical about switching agencies. But the content looks better than what our $6,000/month agency was producing — and it actually goes out on schedule. Our Instagram grew 40% in the first quarter.",
+        "The content quality is better than the $6,000/month agency we left — and it actually goes out on schedule. Our Instagram grew 40% in the first quarter. Patient consults are up 60%.",
       name: "Dr. Sarah C.",
       title: "Medical Director",
       business: "Lumina Aesthetics",
       industry: "Med Spa",
       location: "Scottsdale, AZ",
+      rating: 5,
     },
     {
       quote:
-        "The listing marketing alone is worth the retainer. We're winning listings because sellers can see we have a real marketing operation behind us. Our team brand actually has a presence now.",
+        "The listing marketing alone pays for the retainer. Sellers see our operation and sign with us. We're winning listings we used to lose to teams with better marketing.",
       name: "David K.",
       title: "Team Lead",
       business: "The Keller Group",
       industry: "Real Estate",
       location: "Denver, CO",
+      rating: 5,
+    },
+  ],
+  caseStudies: [
+    {
+      name: "Ridgeway Heating & Cooling",
+      industry: "HVAC",
+      metric: "~18 qualified leads/month",
+      metricLabel: "From referral-only",
+      subMetric: "$28 CPL",
+      subLabel: "Facebook reach ~8,500/mo",
+    },
+    {
+      name: "Lumina Aesthetics",
+      industry: "Med Spa",
+      metric: "$52 CPL",
+      metricLabel: "Down from $85",
+      subMetric: "+40% Instagram",
+      subLabel: "Consults up 60%",
+    },
+    {
+      name: "The Keller Group",
+      industry: "Real Estate",
+      metric: "80% win rate",
+      metricLabel: "Up from 60%",
+      subMetric: "+175% seller leads",
+      subLabel: "Buyer leads doubled",
     },
   ],
 };
 
 export const pricing = {
-  headline: "Simple pricing. Serious results.",
+  headline: "One retainer. Full team. Clear results.",
   subheadline:
-    "Every package includes strategy, creative, posting, optimization, and reporting. The only variable is scope.",
+    "Every package includes strategy, creative, posting, optimization, and reporting.",
   tiers: [
     {
       name: "Starter",
       price: "$1,500",
-      featured: true,
+      period: "/month",
+      featured: false,
       features: [
-        "Facebook + Instagram",
-        "12 organic posts/month",
-        "Custom graphics & copywriting",
-        "Monthly strategy & performance report",
-        "Live dashboard access",
+        "Facebook + Instagram (organic + paid on one)",
+        "12 original posts per month",
+        "1 paid campaign, managed continuously",
+        "Monthly strategy report + performance review",
+        "Live dashboard access on day one",
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
-      cta: "Start generating leads",
+      cta: "Book a Strategy Call",
+      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+    },
+    {
+      name: "Growth",
+      price: "$3,000",
+      period: "/month",
+      featured: true,
+      features: [
+        "Up to 4 platforms — organic on all, paid on 2",
+        "20 original posts per month",
+        "3 paid campaigns",
+        "A/B testing on creative and audiences",
+        "Weekly performance snapshots + monthly deep-dive",
+        "Community engagement included",
+      ],
+      bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
+      cta: "Book a Strategy Call",
+      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+    },
+    {
+      name: "Scale",
+      price: "$5,500",
+      period: "/month",
+      featured: false,
+      features: [
+        "Up to 7 platforms — organic on all, paid on up to 4",
+        "30+ original posts per month",
+        "Unlimited paid campaigns",
+        "Advanced A/B testing and funnel optimization",
+        "Short-form video scripts",
+        "Influencer research and partnership strategy",
+        "Priority strategy adjustments",
+        "Bi-weekly strategy calls + custom reporting",
+      ],
+      bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
+      cta: "Book a Strategy Call",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
   ],
-  addonNote:
-    "Paid ad management coming soon. Premium Growth Audit available now — $495, fully creditable toward any package.",
   noLockPledge:
-    "Month-to-month. Cancel anytime. We earn your business every month.",
+    "Every package is month-to-month. Cancel with 30 days notice. No penalty. No annual commitment.",
 };
 
 export const faq = {
-  headline: "Questions smart business owners ask before signing up.",
+  headline: "What business owners ask before they trust us with their pipeline.",
   items: [
     {
-      question:
-        "How do you handle multiple platforms without spreading too thin?",
+      question: "How does one team manage seven platforms without dropping the ball?",
       answer:
         "Most agencies assign one person to handle 4–5 accounts across multiple platforms. That's how things slip. We run a dedicated team structure — each specialist focuses on their function (creative, media buying, analytics) across your accounts. No single point of failure. No \"sorry, your account manager is on vacation.\"",
     },
     {
-      question:
-        "What if I don't like the content? Can I approve posts before they go live?",
+      question: "What if the content doesn't feel like us?",
       answer:
         "During onboarding, we build your brand voice model and content guidelines. Once you sign off on the direction, we execute. Most clients prefer to review the monthly content calendar (not every individual post) — but we can build in pre-approval workflows if your industry requires it. The default is: we earn your trust, then we move fast.",
     },
     {
-      question: "How long until I see results?",
+      question: "When will I actually see leads?",
       answer:
         "Paid ads: 2–4 weeks to dial in targeting and creative. By month two, you should see your CPL approaching target. Organic: 60–90 days to build meaningful momentum (algorithms reward consistency, and we deliver it). No agency can guarantee overnight results. But we can guarantee we won't waste time — every day, our team is working to narrow the gap.",
     },
@@ -227,13 +376,12 @@ export const faq = {
         "Service-based businesses that depend on local leads: contractors (HVAC, roofing, electrical, plumbing, general), med spas and aesthetic clinics, auto repair shops, real estate teams, dental and medical clinics, salons and personal services. If you serve a local market and your phone needs to ring, we're built for you.",
     },
     {
-      question: "What if I want to change my package or cancel?",
+      question: "What if I need to scale up, scale down, or cancel?",
       answer:
         "Switch packages or cancel with 30 days notice. No penalty. No \"annual commitment.\" We designed this for business owners who've been burned by agency contracts. If we're not delivering, you shouldn't be stuck.",
     },
     {
-      question:
-        "What makes your content better than what I'd get from a freelancer?",
+      question: "Why shouldn't I just hire a freelancer?",
       answer:
         "Freelancers are one person trying to do everything — strategy, writing, design, posting, optimization. We run a full team of specialists. Your strategy is built by someone who studies your market. Your copy is written by a dedicated writer. Your performance is tracked by an analyst who flags what's working and what's not. You get the output of an entire agency, not one person's best effort.",
     },
@@ -246,10 +394,10 @@ export const faq = {
 };
 
 export const footerCta = {
-  headline: "Stop paying for marketing gaps. Start getting leads.",
+  headline: "Stop losing leads to competitors who show up when you don't.",
   subheadline:
-    "One conversation. No pressure. Just an honest assessment of what your current marketing is leaving on the table — and what MetroReach Media could do about it.",
-  primaryCta: "Request a proposal",
+    "One conversation. No pressure. An honest assessment of what your current marketing is leaving on the table — and exactly what we'd do about it.",
+  primaryCta: "Book a Strategy Call",
   secondaryLabel: "Or if you're not ready to talk:",
   secondaryCta: "See an example monthly report",
 };

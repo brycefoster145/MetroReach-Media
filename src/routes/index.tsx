@@ -6,6 +6,8 @@ import { Container } from "~/components/Container";
 import { ProblemSection } from "~/components/sections/ProblemSection";
 import { SolutionSection } from "~/components/sections/SolutionSection";
 import { ServicesSection } from "~/components/sections/ServicesSection";
+import { ProcessSection } from "~/components/sections/ProcessSection";
+import { PortfolioSection } from "~/components/sections/PortfolioSection";
 import { SocialProof } from "~/components/sections/SocialProof";
 import { PricingSection } from "~/components/sections/PricingSection";
 import { FAQSection } from "~/components/sections/FAQSection";
@@ -31,30 +33,34 @@ function Home() {
   return (
     <main>
       <Hero />
-      {/* Free Audit CTA Banner */}
+
+      {/* Diagnostic Call CTA Banner */}
       <section className="py-8 bg-bg-surface border-b border-border-subtle">
         <Container>
-          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-bg-surface-raised border border-brand-primary/20">
+          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-bg-surface-raised border border-brand-teal/20">
             <div>
               <p className="text-sm font-semibold text-text-primary">
-                Not sure where your marketing stands?
+                Want to know what your marketing is leaving on the table?
               </p>
               <p className="text-sm text-text-secondary mt-0.5">
-                Get a free, specialist-level audit of your digital presence — delivered in under a minute.
+                Book a 15-minute diagnostic call. We'll look at your current presence and tell you exactly what's working, what's missing, and whether we're the right fit.
               </p>
             </div>
             <a
-              href="/free-audit"
-              className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-6 py-3 text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] transition-all duration-200"
+              href="/contact"
+              className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-6 py-3 text-sm font-semibold cta-glow"
             >
-              Get Your Free Audit →
+              Book a Diagnostic Call →
             </a>
           </div>
         </Container>
       </section>
+
       <ProblemSection />
       <SolutionSection />
       <ServicesSection />
+      <ProcessSection />
+      <PortfolioSection />
       <SocialProof />
       <PricingSection />
       <FAQSection />
