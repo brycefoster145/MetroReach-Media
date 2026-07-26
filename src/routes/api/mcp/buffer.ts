@@ -141,8 +141,7 @@ async function createPost(args: {
   const input: Record<string, unknown> = {
     channelId: args.channelId,
     text: args.text,
-    organizationId: BUFFER_ORG_ID,
-    mode: "SCHEDULED",
+    schedulingType: "AUTOMATIC",
   };
   if (args.scheduled_at) {
     input.scheduledAt = args.scheduled_at;
