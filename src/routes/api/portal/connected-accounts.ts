@@ -31,13 +31,20 @@ export const Route = createFileRoute("/api/portal/connected-accounts")({
             ORDER BY created_at DESC
           `;
 
-          // Determine if each page is Facebook or Instagram
-          const accounts = rows.map((r: any) => ({
-            platform: r.page_id && r.page_id.length > 20 ? "instagram" : "facebook",
-            page_id: r.page_id,
-            account_name: r.account_name,
-            created_at: String(r.created_at),
-          }));
+          // Map platform properly — Instagram pages have longer IDs for Meta platform.
+          // Other platforms (linkedin, tiktok, etc.) use the stored platform value directly.
+          const accounts = rows.map((r: any) => {
+            let displayPlatform = r.platform;
+            if (r.platform === "meta") {
+              displayPlatform = r.page_id && r.page_id.length > 20 ? "instagram" : "facebook";
+            }
+            return {
+              platform: displayPlatform,
+              page_id: r.page_id,
+              account_name: r.account_name,
+              created_at: String(r.created_at),
+            };
+          });
 
           return new Response(
             JSON.stringify({ accounts }),
