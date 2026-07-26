@@ -182,20 +182,34 @@ async function createPost(args: {
         : { link: { url } };
     });
   }
-  // Metadata with platform-specific type (required for FB/IG)
+  // Metadata with platform-specific fields for all 7 supported platforms.
+  // Each platform has its own PostMetadataInput type per Buffer's GraphQL schema.
+  // We populate sensible defaults so the metadata field is always present.
+  const metadata: Record<string, unknown> = {};
   if (service === "instagram") {
-    input.metadata = {
-      instagram: {
-        type: "post",
-        shouldShareToFeed: true,
-      },
-    };
+    metadata.instagram = { type: "post", shouldShareToFeed: true };
   } else if (service === "facebook") {
-    input.metadata = {
-      facebook: {
-        type: "post",
-      },
-    };
+    metadata.facebook = { type: "post" };
+  } else if (service === "linkedin") {
+    // LinkedInPostMetadataInput: annotations, firstComment, linkAttachment (all optional)
+    metadata.linkedin = {};
+  } else if (service === "tiktok") {
+    // TikTokPostMetadataInput: isAiGenerated, title (both optional)
+    metadata.tiktok = {};
+  } else if (service === "twitter") {
+    // TwitterPostMetadataInput: isAiGenerated, retweet, thread (all optional)
+    metadata.twitter = {};
+  } else if (service === "google") {
+    // GoogleBusinessPostMetadataInput: type (NON_NULL), title, detailsEvent, detailsOffer, detailsWhatsNew
+    // PostTypeGoogleBusiness enum: event, offer, whats_new
+    metadata.google = { type: "whats_new" };
+  } else if (service === "youtube") {
+    // YoutubePostMetadataInput: categoryId, embeddable, isAiGenerated, license,
+    // madeForKids, notifySubscribers, privacy, title (all optional fields)
+    metadata.youtube = {};
+  }
+  if (Object.keys(metadata).length > 0) {
+    input.metadata = metadata;
   }
   return graphqlRequest(`
     mutation CreatePost($input: CreatePostInput!) {
