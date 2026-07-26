@@ -39,18 +39,32 @@ function getSql(): Sql {
 /**
  * Lazy sql tagged-template function.
  * The first call initializes the connection pool; subsequent calls reuse it.
+ *
+ * Uses Object.assign on a real function so it survives bundler transformations.
+ * No Proxy — bundlers (esbuild, bun build) cannot reliably preserve Proxy traps.
  */
-export const sql = new Proxy({} as Sql, {
-  get(_target, prop) {
-    const client = getSql();
-    const value = (client as any)[prop];
-    if (typeof value === "function") {
-      return value.bind(client);
-    }
-    return value;
-  },
-  apply(_target, _thisArg, args) {
-    const client = getSql();
-    return (client as any)(...args);
-  },
-});
+function sqlFn(strings: TemplateStringsArray, ...values: unknown[]) {
+  const client = getSql();
+  return (client as any)(strings, ...values);
+}
+
+// Lazy property delegation via getter — evaluated at access time, not bundling time.
+// Each getter fetches the real client and returns the bound method.
+const lazyProps: Record<string, PropertyDescriptor> = {};
+const lazyMethods = [
+  "end", "unsafe", "array", "json", "begin", "notify",
+] as const;
+
+for (const method of lazyMethods) {
+  lazyProps[method] = {
+    get() {
+      const client = getSql();
+      const fn = (client as any)[method];
+      return typeof fn === "function" ? fn.bind(client) : fn;
+    },
+    configurable: true,
+    enumerable: true,
+  };
+}
+
+export const sql = Object.defineProperties(sqlFn, lazyProps) as unknown as Sql;
