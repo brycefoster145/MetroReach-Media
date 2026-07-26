@@ -9,6 +9,7 @@
  * Tools exposed:
  *   buffer_list_profiles      — list connected social media profiles
  *   buffer_create_post        — create/schedule a post
+ *   buffer_delete_post        — delete a pending/scheduled post
  *   buffer_get_post           — get a specific post by ID
  *   buffer_list_pending_posts — list pending/scheduled posts
  *   buffer_get_analytics      — get analytics for a post or profile
@@ -263,7 +264,6 @@ async function listPendingPosts(args: { profile_id: string }) {
           }
         }
         first: 50
-        sort: { field: dueAt, direction: asc }
       ) {
         edges {
           node {
@@ -280,6 +280,23 @@ async function listPendingPosts(args: { profile_id: string }) {
     orgId: BUFFER_ORG_ID,
     channelIds: [args.profile_id],
   });
+  return data;
+}
+
+async function deletePost(args: { post_id: string }) {
+  const data = await graphqlRequest<{
+    deletePost?: {
+      success?: boolean;
+    };
+  }>(`
+    mutation DeletePost($postId: PostId!) {
+      deletePost(input: { id: $postId }) {
+        ... on DeletePostSuccess {
+          success
+        }
+      }
+    }
+  `, { postId: args.post_id });
   return data;
 }
 
@@ -344,7 +361,6 @@ async function getAnalytics(args: { post_id?: string; profile_id?: string }) {
             filter: { channelIds: $channelIds, status: [sent] }
           }
           first: 20
-          sort: { field: dueAt, direction: desc }
         ) {
           edges {
             node {
@@ -438,6 +454,23 @@ const tools: ToolDef[] = [
       required: ["channelId", "text"],
     },
     handler: createPost,
+  },
+  {
+    name: "buffer_delete_post",
+    description:
+      "Delete a pending/scheduled post from Buffer by its ID. " +
+      "Cannot delete posts that have already been published.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        post_id: {
+          type: "string",
+          description: "The Buffer update/post ID to delete.",
+        },
+      },
+      required: ["post_id"],
+    },
+    handler: deletePost,
   },
   {
     name: "buffer_get_post",
