@@ -159,10 +159,16 @@ async function createPost(args: {
   return graphqlRequest(`
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
-        post {
-          id
-          text
-          createdAt
+        __typename
+        ... on PostActionSuccess {
+          post {
+            id
+            text
+            createdAt
+          }
+        }
+        ... on PostActionError {
+          message
         }
       }
     }
