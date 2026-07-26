@@ -109,7 +109,7 @@ export function ContactSection() {
   const errorCls = "text-xs text-error mt-1";
 
   return (
-    <section ref={ref} className="py-24 bg-bg-root relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-root relative overflow-hidden">
       {/* Gradient wash behind text */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_1000px_at_40%_50%,rgba(0,143,255,0.12),transparent)] pointer-events-none" />
 

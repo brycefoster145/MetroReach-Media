@@ -74,7 +74,7 @@ export function Hero() {
       {/* Noise texture */}
       <div className="absolute inset-0 bg-noise pointer-events-none" />
 
-      <Container className="relative z-10 py-24 lg:py-32">
+      <Container className="relative z-10 py-28 lg:py-36">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* ========================================= */}
           {/* LEFT: Text Content                         */}
@@ -82,7 +82,7 @@ export function Hero() {
           <div className="max-w-xl">
             {/* Tagline */}
             <p
-              className={`text-xs font-bold text-brand-primary uppercase tracking-widest mb-6 transition-all duration-500 ${
+              className={`text-xs font-bold text-brand-primary uppercase tracking-[0.2em] mb-6 transition-all duration-500 ${
                 visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
               }`}
             >
@@ -91,7 +91,7 @@ export function Hero() {
 
             {/* Headline with gradient on key phrase */}
             <h1
-              className={`text-4xl md:text-5xl lg:text-6xl font-bold font-heading text-text-primary tracking-tighter leading-[1.05] mb-6 transition-all duration-600 ${
+              className={`text-5xl md:text-6xl lg:text-7xl font-bold font-heading text-text-primary tracking-tighter leading-[1.05] mb-8 transition-all duration-600 ${
                 visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
               }`}
               style={{ transitionDelay: "100ms", transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
@@ -101,7 +101,7 @@ export function Hero() {
 
             {/* Subheadline */}
             <p
-              className={`text-lg text-text-primary-light max-w-lg mb-8 transition-all duration-500 ${
+              className={`text-xl text-text-primary-light max-w-lg mb-8 leading-loose transition-all duration-500 ${
                 visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
               }`}
               style={{ transitionDelay: "250ms", transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}

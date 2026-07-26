@@ -51,7 +51,7 @@ export function PortfolioSection() {
 
   // Responsive masonry: 2 cols on mobile, 3 on md+
   return (
-    <section ref={ref} className="py-28 lg:py-32 bg-bg-surface relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface relative overflow-hidden">
       <Container>
         <SectionHeading
           headline={portfolio.headline}
@@ -59,7 +59,7 @@ export function PortfolioSection() {
         />
 
         {/* Masonry grid */}
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 max-w-6xl mx-auto">
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 max-w-6xl mx-auto">
           {portfolio.items.map((item, i) => {
             const Icon = visualIconMap[item.visual] || Image;
             const bgGradient = visualColors[item.visual] || "from-brand-primary/20 to-brand-teal/20";
@@ -67,15 +67,15 @@ export function PortfolioSection() {
             // Vary heights for masonry look
             const heightClass =
               i % 3 === 0
-                ? "h-64"
+                ? "h-[17rem]"
                 : i % 3 === 1
-                  ? "h-80"
-                  : "h-72";
+                  ? "h-[21rem]"
+                  : "h-[19rem]";
 
             return (
               <div
                 key={item.title}
-                className={`break-inside-avoid mb-5 transition-all duration-500 ${
+                className={`break-inside-avoid mb-6 transition-all duration-500 ${
                   visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 }`}
                 style={{
@@ -88,16 +88,16 @@ export function PortfolioSection() {
                 >
                   {/* Mockup visual area */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${bgGradient} flex items-center justify-center`}>
-                    <Icon size={48} weight="duotone" className="text-text-primary/30" />
+                    <Icon size={56} weight="duotone" className="text-text-primary/20" />
                   </div>
 
                   {/* Hover overlay */}
-                  <div className="portfolio-overlay absolute inset-0 flex flex-col justify-end p-6">
-                    <div className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      <span className="inline-block text-xs font-semibold text-brand-teal uppercase tracking-wider mb-2">
+                  <div className="portfolio-overlay absolute inset-0 flex flex-col justify-end p-7">
+                    <div className="transform translate-y-3 group-hover:translate-y-0 transition-transform duration-500 ease-out">
+                      <span className="inline-block text-xs font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
                         {item.category}
                       </span>
-                      <h4 className="text-lg font-bold font-heading text-text-primary mb-1">
+                      <h4 className="text-xl font-bold font-heading text-text-primary mb-2">
                         {item.title}
                       </h4>
                       <p className="text-sm text-text-primary-light leading-relaxed">
@@ -107,7 +107,7 @@ export function PortfolioSection() {
                   </div>
 
                   {/* Border glow on hover */}
-                  <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-brand-primary/30 transition-colors duration-300 pointer-events-none" />
+                  <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-brand-primary/40 transition-colors duration-500 pointer-events-none" />
                 </div>
               </div>
             );

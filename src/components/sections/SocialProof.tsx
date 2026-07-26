@@ -26,7 +26,7 @@ export function SocialProof() {
   }, []);
 
   return (
-    <section ref={ref} className="py-28 lg:py-32 bg-bg-surface">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface">
       <Container>
         {/* ============================================= */}
         {/* Credibility Stats Bar (moved here)            */}
@@ -37,7 +37,7 @@ export function SocialProof() {
 
         {/* Stats bar */}
         <div
-          className={`border-b border-border-subtle pb-12 mb-16 transition-all duration-500 ${
+          className={`border-b border-border-subtle pb-14 mb-20 transition-all duration-500 ${
             visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-6"
           }`}
           style={{
@@ -49,22 +49,22 @@ export function SocialProof() {
             {credibility.stats.map((stat, i) => (
               <div key={stat.label} className="text-center relative">
                 {i < credibility.stats.length - 1 && (
-                  <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-border-subtle" />
+                  <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-12 bg-border-subtle" />
                 )}
                 <p
-                  className={`text-4xl md:text-5xl font-bold font-heading ${
+                  className={`text-5xl md:text-6xl font-extrabold font-heading ${
                     i === 1 ? "text-brand-teal" : "text-text-primary"
                   }`}
                 >
                   {stat.value}
                 </p>
-                <p className="text-sm text-text-secondary mt-2">{stat.label}</p>
+                <p className="text-sm text-text-secondary mt-3">{stat.label}</p>
               </div>
             ))}
           </div>
 
           {/* Industry badges */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-12">
             {credibility.badges.map((badge) => (
               <span
                 key={badge}
@@ -76,7 +76,7 @@ export function SocialProof() {
           </div>
 
           {/* Trust anchors */}
-          <p className="text-sm text-text-secondary text-center mt-6">
+          <p className="text-sm text-text-secondary text-center mt-8">
             No contracts. 30-day cancellation. We earn your business every month.
           </p>
         </div>
@@ -93,8 +93,8 @@ export function SocialProof() {
             transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
-          <div className="text-center mb-10">
-            <p className="text-sm font-semibold text-brand-gold uppercase tracking-widest mb-2">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-brand-gold uppercase tracking-[0.15em] mb-2">
               Case Studies
             </p>
             <h3 className="text-2xl md:text-3xl font-bold font-heading text-text-primary">
@@ -102,30 +102,30 @@ export function SocialProof() {
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {socialProof.caseStudies.map((cs, i) => (
               <div
                 key={cs.name}
-                className="glass-card p-6 card-hover transition-all duration-500"
+                className="glass-card p-7 card-hover transition-all duration-500"
                 style={{
                   transitionDelay: `${200 + i * 80}ms`,
                 }}
               >
-                <p className="text-xs font-semibold text-brand-teal uppercase tracking-wider mb-3">
+                <p className="text-xs font-semibold text-brand-teal uppercase tracking-[0.15em] mb-3">
                   {cs.industry}
                 </p>
-                <h4 className="text-lg font-semibold font-heading text-text-primary mb-4">
+                <h4 className="text-lg font-bold font-heading text-text-primary mb-4">
                   {cs.name}
                 </h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-2xl font-bold font-heading text-text-primary">
+                    <p className="text-3xl font-extrabold font-heading text-text-primary">
                       {cs.metric}
                     </p>
                     <p className="text-xs text-text-muted mt-1">{cs.metricLabel}</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-heading text-brand-teal">
+                    <p className="text-3xl font-extrabold font-heading text-brand-teal">
                       {cs.subMetric}
                     </p>
                     <p className="text-xs text-text-muted mt-1">{cs.subLabel}</p>
@@ -142,6 +142,9 @@ export function SocialProof() {
           </div>
         </div>
 
+        {/* Subtle divider before testimonials */}
+        <div className="section-divider mb-20" />
+
         {/* ============================================= */}
         {/* Testimonials (updated with star ratings)       */}
         {/* ============================================= */}
@@ -150,11 +153,11 @@ export function SocialProof() {
           description={socialProof.subheadline}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {socialProof.testimonials.map((t, i) => (
             <div
               key={t.name}
-              className={`relative bg-bg-surface border border-border-subtle rounded-2xl p-8 card-hover transition-all duration-500 ${
+              className={`relative bg-bg-surface border border-border-subtle rounded-2xl p-8 card-hover shadow-[0_2px_12px_rgba(0,0,0,0.15)] transition-all duration-500 ${
                 visible ? "opacity-100 scale-100" : "opacity-[0.01] scale-[0.97]"
               }`}
               style={{
@@ -167,7 +170,7 @@ export function SocialProof() {
                 {Array.from({ length: 5 }).map((_, si) => (
                   <Star
                     key={si}
-                    size={16}
+                    size={18}
                     weight="fill"
                     className={si < t.rating ? "star-rating" : "star-rating-empty"}
                   />
@@ -180,7 +183,7 @@ export function SocialProof() {
               </span>
 
               <blockquote className="relative z-10">
-                <p className="text-base text-text-primary-light leading-relaxed mb-6">
+                <p className="text-base text-text-primary-light leading-loose mb-6">
                   {t.quote}
                 </p>
               </blockquote>

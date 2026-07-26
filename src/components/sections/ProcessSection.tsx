@@ -41,7 +41,7 @@ export function ProcessSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-28 lg:py-32 bg-bg-root relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-root relative overflow-hidden">
       {/* Dot grid background */}
       <div className="absolute inset-0 bg-dot-grid pointer-events-none" />
 
@@ -51,12 +51,12 @@ export function ProcessSection() {
         {/* Desktop: horizontal timeline */}
         <div className="hidden lg:block max-w-6xl mx-auto">
           <div className="relative">
-            {/* Gradient connecting line */}
+            {/* Gradient connecting line with pulse */}
             <div
-              className="absolute top-8 left-[8%] right-[8%] h-0.5 process-line-gradient opacity-60"
+              className="absolute top-9 left-[8%] right-[8%] h-0.5 process-line-gradient process-line-animate"
             />
 
-            <div className="grid grid-cols-6 gap-4">
+            <div className="grid grid-cols-6 gap-6">
               {process.steps.map((step, i) => {
                 const Icon = iconMap[step.number];
                 const isFirst = i === 0;
@@ -75,29 +75,29 @@ export function ProcessSection() {
                   >
                     {/* Step circle */}
                     <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 border-2 transition-colors ${
+                      className={`w-[72px] h-[72px] rounded-full flex items-center justify-center mb-5 border-2 transition-colors bg-bg-surface-raised ${
                         isFirst
                           ? "process-circle-active"
                           : isLast
                             ? "process-circle-complete"
-                            : "border-border-subtle text-text-muted bg-bg-surface"
+                            : "border-border-subtle text-text-muted"
                       }`}
                     >
-                      <Icon size={28} weight="duotone" />
+                      <Icon size={32} weight="duotone" />
                     </div>
 
                     {/* Step number */}
-                    <p className="text-xs font-bold text-brand-teal uppercase tracking-widest mb-1">
+                    <p className="text-xs font-bold text-brand-teal uppercase tracking-[0.15em] mb-2">
                       Step {step.number}
                     </p>
 
                     {/* Label */}
-                    <p className="text-sm font-semibold text-text-primary mb-2">
+                    <p className="text-base font-semibold text-text-primary mb-2">
                       {step.label}
                     </p>
 
                     {/* Description */}
-                    <p className="text-xs text-text-secondary leading-relaxed max-w-[140px] mx-auto">
+                    <p className="text-sm text-text-secondary leading-relaxed max-w-[150px] mx-auto">
                       {step.description}
                     </p>
                   </div>
@@ -116,7 +116,7 @@ export function ProcessSection() {
             return (
               <div
                 key={step.number}
-                className={`flex gap-5 relative pb-10 transition-all duration-500 ${
+                className={`flex gap-5 relative pb-12 transition-all duration-500 ${
                   visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-6"
                 }`}
                 style={{
@@ -126,24 +126,24 @@ export function ProcessSection() {
               >
                 {/* Vertical connecting line */}
                 {!isLast && (
-                  <div className="absolute left-[31px] top-16 bottom-0 w-0.5 process-line-gradient opacity-40" />
+                  <div className="absolute left-[31px] top-[72px] bottom-0 w-0.5 process-line-gradient process-line-animate" />
                 )}
 
                 {/* Step circle */}
                 <div
-                  className={`w-[62px] h-[62px] rounded-full flex items-center justify-center flex-shrink-0 border-2 ${
+                  className={`w-[72px] h-[72px] rounded-full flex items-center justify-center flex-shrink-0 border-2 bg-bg-surface-raised ${
                     i === 0
                       ? "process-circle-active"
                       : i === process.steps.length - 1
                         ? "process-circle-complete"
-                        : "border-border-subtle text-text-muted bg-bg-surface"
+                        : "border-border-subtle text-text-muted"
                   }`}
                 >
-                  <Icon size={26} weight="duotone" />
+                  <Icon size={30} weight="duotone" />
                 </div>
 
-                <div className="pt-3">
-                  <p className="text-xs font-bold text-brand-teal uppercase tracking-widest mb-1">
+                <div className="pt-4">
+                  <p className="text-xs font-bold text-brand-teal uppercase tracking-[0.15em] mb-1">
                     Step {step.number}
                   </p>
                   <p className="text-base font-semibold text-text-primary mb-1">

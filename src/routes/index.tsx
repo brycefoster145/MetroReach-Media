@@ -34,12 +34,19 @@ function Home() {
       <Hero />
 
       <ProblemSection />
+      <div className="section-divider" />
       <SolutionSection />
+      <div className="section-divider" />
       <ServicesSection />
+      <div className="section-divider" />
       <ProcessSection />
+      <div className="section-divider" />
       <PortfolioSection />
+      <div className="section-divider" />
       <SocialProof />
+      <div className="section-divider" />
       <PricingSection />
+      <div className="section-divider" />
       <FAQSection />
       <ContactSection />
     </main>

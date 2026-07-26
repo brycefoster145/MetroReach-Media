@@ -42,20 +42,20 @@ export function SolutionSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-24 bg-bg-root">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-root">
       <Container>
         <SectionHeading
           headline={solution.headline}
           description={solution.subheadline}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {solution.differentiators.map((d, i) => {
             const Icon = iconMap[d.icon];
             return (
               <div
                 key={d.number}
-                className={`bg-bg-surface border border-border-subtle rounded-2xl p-8 card-hover transition-all duration-500 ${
+                className={`bg-bg-surface border border-border-subtle rounded-2xl p-10 card-hover transition-all duration-500 ${
                   visible
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-6"
@@ -68,21 +68,21 @@ export function SolutionSection() {
               >
                 {/* Icon */}
                 <div className={`${colorClasses[d.color]} mb-5`}>
-                  <Icon size={36} weight="duotone" />
+                  <Icon size={44} weight="duotone" />
                 </div>
 
                 {/* Number */}
-                <p className="text-xs font-semibold text-text-muted tracking-widest uppercase mb-2">
+                <p className="text-xs font-semibold text-text-muted tracking-[0.15em] uppercase mb-2">
                   {d.number}
                 </p>
 
                 {/* Headline */}
-                <h3 className="text-xl font-semibold font-heading text-text-primary mb-3">
+                <h3 className="text-xl font-bold font-heading text-text-primary mb-3">
                   {d.headline}
                 </h3>
 
                 {/* Body */}
-                <p className="text-base text-text-secondary">{d.body}</p>
+                <p className="text-base text-text-secondary leading-loose">{d.body}</p>
               </div>
             );
           })}

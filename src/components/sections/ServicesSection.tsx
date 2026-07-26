@@ -51,7 +51,7 @@ export function ServicesSection() {
   const gridServices = services.items.slice(2);
 
   return (
-    <section ref={ref} className="py-28 lg:py-32 bg-bg-surface relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface relative overflow-hidden">
       {/* Subtle background pattern */}
       <div className="absolute inset-0 bg-dot-grid opacity-30 pointer-events-none" />
 
@@ -59,7 +59,7 @@ export function ServicesSection() {
         <SectionHeading headline={services.headline} />
 
         {/* Featured row: 2 larger cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {featuredServices.map((svc, i) => {
             const Icon = iconMap[svc.icon] || Article;
             const iconColor = iconColorMap[svc.icon] || "text-brand-primary";
@@ -67,7 +67,7 @@ export function ServicesSection() {
             return (
               <div
                 key={svc.name}
-                className={`glass-card p-8 lg:p-10 card-hover transition-all duration-500 ${
+                className={`glass-card p-10 lg:p-12 service-card-hover transition-all duration-500 ${
                   visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 }`}
                 style={{
@@ -77,11 +77,11 @@ export function ServicesSection() {
               >
                 {/* Icon */}
                 <div className={`${iconColor} mb-5`}>
-                  <Icon size={40} weight="duotone" />
+                  <Icon size={48} weight="duotone" />
                 </div>
 
                 {/* Tagline */}
-                <p className="text-sm font-semibold text-brand-teal uppercase tracking-wider mb-2">
+                <p className="text-sm font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
                   {svc.tagline}
                 </p>
 
@@ -91,12 +91,12 @@ export function ServicesSection() {
                 </h3>
 
                 {/* Description */}
-                <p className="text-base text-text-primary-light leading-relaxed mb-6">
+                <p className="text-base text-text-primary-light leading-loose mb-6">
                   {svc.description}
                 </p>
 
                 {/* Feature pills */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {svc.features.map((f, j) => (
                     <span key={j} className="feature-pill">
                       {f}
@@ -109,7 +109,7 @@ export function ServicesSection() {
         </div>
 
         {/* Grid row: 3 smaller cards for remaining services */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {gridServices.map((svc, i) => {
             const Icon = iconMap[svc.icon] || Article;
             const iconColor = iconColorMap[svc.icon] || "text-brand-primary";
@@ -117,7 +117,7 @@ export function ServicesSection() {
             return (
               <div
                 key={svc.name}
-                className={`glass-card p-7 card-hover transition-all duration-500 ${
+                className={`glass-card p-8 service-card-hover transition-all duration-500 ${
                   visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 }`}
                 style={{
@@ -127,11 +127,11 @@ export function ServicesSection() {
               >
                 {/* Icon */}
                 <div className={`${iconColor} mb-4`}>
-                  <Icon size={32} weight="duotone" />
+                  <Icon size={38} weight="duotone" />
                 </div>
 
                 {/* Tagline */}
-                <p className="text-xs font-semibold text-brand-teal uppercase tracking-wider mb-2">
+                <p className="text-xs font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
                   {svc.tagline}
                 </p>
 
@@ -141,12 +141,12 @@ export function ServicesSection() {
                 </h3>
 
                 {/* Description */}
-                <p className="text-sm text-text-primary-light leading-relaxed mb-5">
+                <p className="text-sm text-text-primary-light leading-loose mb-5">
                   {svc.description}
                 </p>
 
                 {/* Feature pills */}
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {svc.features.map((f, j) => (
                     <span key={j} className="feature-pill text-xs">
                       {f}

@@ -24,9 +24,12 @@ export function ProblemSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-28 lg:py-32 bg-bg-surface relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface relative overflow-hidden">
+      {/* Dot grid background */}
+      <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none" />
+
       {/* Subtle diagonal line */}
-      <div className="absolute inset-0 pointer-events-none opacity-20">
+      <div className="absolute inset-0 pointer-events-none opacity-15">
         <div className="absolute top-0 left-1/2 w-px h-full bg-border-subtle rotate-[15deg] -translate-x-1/2" />
       </div>
 
@@ -39,7 +42,7 @@ export function ProblemSection() {
 
           {/* Pivot sentence */}
           <p
-            className={`text-xl font-semibold text-text-primary text-center py-6 border-y border-border-subtle my-8 transition-all duration-500 ${
+            className={`text-xl font-semibold text-text-primary text-center py-8 border-y border-border-subtle my-10 leading-loose transition-all duration-500 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
             style={{
@@ -52,7 +55,7 @@ export function ProblemSection() {
 
           {/* Problem bullets - 2 column grid */}
           <div
-            className={`grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mt-8 transition-all duration-500 ${
+            className={`grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 mt-10 transition-all duration-500 ${
               visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
             style={{

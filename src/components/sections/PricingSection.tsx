@@ -26,7 +26,7 @@ export function PricingSection() {
   }, []);
 
   return (
-    <section ref={ref} id="pricing" className="py-28 lg:py-32 bg-bg-root relative overflow-hidden">
+    <section ref={ref} id="pricing" className="py-32 lg:py-36 bg-bg-root relative overflow-hidden">
       {/* Subtle dot grid */}
       <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none" />
 
@@ -37,16 +37,16 @@ export function PricingSection() {
         />
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
           {pricing.tiers.map((tier, i) => {
             const isFeatured = tier.featured;
 
             return (
               <div
                 key={tier.name}
-                className={`relative rounded-2xl p-8 flex flex-col transition-all duration-500 ${
+                className={`relative rounded-2xl p-10 flex flex-col transition-all duration-500 ${
                   isFeatured
-                    ? "bg-bg-surface border border-brand-gold/40 ring-1 ring-brand-gold/10 glow-gold scale-[1.02] md:scale-105 z-10"
+                    ? "bg-bg-surface border border-brand-gold/50 ring-1 ring-brand-gold/15 glow-gold scale-[1.02] md:scale-[1.07] z-10"
                     : "bg-bg-surface border border-border-subtle card-hover"
                 } ${
                   visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -58,14 +58,14 @@ export function PricingSection() {
               >
                 {/* Featured gradient background */}
                 {isFeatured && (
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-gold/5 to-brand-primary/5 pointer-events-none" />
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-gold/8 to-brand-primary/8 pointer-events-none" />
                 )}
 
                 {/* Most Popular badge */}
                 {isFeatured && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="badge-gold inline-flex items-center gap-1 text-xs rounded-full px-4 py-1 shadow-lg">
-                      <Star size={12} weight="fill" /> Most Popular
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className="badge-gold badge-gold-glow inline-flex items-center gap-1 text-xs rounded-full px-5 py-1.5 shadow-lg">
+                      <Star size={14} weight="fill" /> Most Popular
                     </span>
                   </div>
                 )}
@@ -112,7 +112,7 @@ export function PricingSection() {
                   {isFeatured ? (
                     <a
                       href="/free-audit"
-                      className="inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow transition-all duration-200 w-full"
+                      className="cta-featured-hover inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow w-full"
                     >
                       {tier.cta} →
                     </a>

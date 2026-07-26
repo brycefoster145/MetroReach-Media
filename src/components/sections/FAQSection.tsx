@@ -102,7 +102,7 @@ export function FAQSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-24 bg-bg-surface">
+    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface">
       <Container>
         <div className="max-w-4xl mx-auto">
           <SectionHeading headline={faq.headline} />
