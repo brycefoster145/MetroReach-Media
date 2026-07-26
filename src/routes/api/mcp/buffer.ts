@@ -158,7 +158,7 @@ async function createPost(args: {
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
         ... on PostActionSuccess {
-          post { id text scheduledAt }
+          post { id text createdAt }
         }
       }
     }
