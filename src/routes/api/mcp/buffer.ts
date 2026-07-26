@@ -137,45 +137,33 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  // Buffer REST API: use access_token as query param (not Bearer header — public tokens only work this way)
-  const params = new URLSearchParams();
-  params.append("access_token", BUFFER_TOKEN);
-  params.append("profile_ids[]", args.channelId);
-  params.append("text", args.text);
-
+  // Use GraphQL mutation with correct ShareMode enum values:
+  // shareNow (immediate), customScheduled (scheduled), addToQueue, shareNext
+  const input: Record<string, unknown> = {
+    channelId: args.channelId,
+    text: args.text,
+    mode: args.scheduled_at ? "customScheduled" : "shareNow",
+  };
   if (args.scheduled_at) {
-    params.append("scheduled_at", args.scheduled_at);
-  } else {
-    params.append("now", "true");
+    input.scheduledAt = args.scheduled_at;
   }
-
   if (args.media_urls?.length) {
-    for (const url of args.media_urls) {
+    input.media = args.media_urls.map((url) => {
       const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-      const lower = url.toLowerCase();
-      if (imageExts.some((ext) => lower.includes(ext))) {
-        params.append("media[photo]", url);
-      } else {
-        params.append("media[link]", url);
+      return imageExts.some((ext) => url.toLowerCase().includes(ext))
+        ? { photoUrl: url }
+        : { linkUrl: url };
+    });
+  }
+  return graphqlRequest(`
+    mutation CreatePost($input: CreatePostInput!) {
+      createPost(input: $input) {
+        ... on PostActionSuccess {
+          post { id text createdAt }
+        }
       }
     }
-  }
-
-  const res = await fetch("https://api.bufferapp.com/1/updates/create.json", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-
-  const json = await res.json();
-
-  if (!res.ok) {
-    throw new Error(
-      `Buffer API error (${res.status}): ${JSON.stringify(json)}`,
-    );
-  }
-
-  return json;
+  `, { input });
 }
 
 async function getPost(args: { post_id: string }) {
