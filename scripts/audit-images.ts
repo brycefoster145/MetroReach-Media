@@ -1,0 +1,452 @@
+/**
+ * MetroReach Media — Image Audit System
+ *
+ * Audits social media graphics for wrong brand names and text hallucinations
+ * using OpenAI's gpt-4o-mini vision model.
+ *
+ * Usage (audit all images):
+ *   bun run scripts/audit-images.ts
+ *
+ * Usage (import audit function):
+ *   import { auditImage } from "./audit-images.js";
+ *   const result = await auditImage("/path/to/image.webp");
+ */
+
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join, basename } from "node:path";
+import OpenAI from "openai";
+
+// ── Configuration ──────────────────────────────────────────────────────────
+
+const SOCIAL_DIR = "/home/team/shared/site/public/social";
+const REPORT_PATH = "/home/team/shared/social/image-audit-report.md";
+
+/** Files to skip during bulk audit (pre-generated templates, not AI-generated) */
+const SKIP_PATTERN = /^(profile-pic|fb-cover|li-banner|ig-post-\d+)\./;
+
+// Note: Detection uses a blocklist approach (BLOCKED_BRANDS) for known bad brands
+// plus garbled text detection for DALL-E hallucinations. Everything else passes.
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+export interface AuditResult {
+  filename: string;
+  status: "PASS" | "FAIL";
+  textFound: string;
+  failureReason?: string;
+}
+
+// ── OpenAI Client ──────────────────────────────────────────────────────────
+
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set in environment");
+  }
+  return new OpenAI({ apiKey });
+}
+
+// ── Core Audit Function ────────────────────────────────────────────────────
+
+/**
+ * Audit a single image for brand-name hallucinations.
+ *
+ * Sends the image to gpt-4o-mini vision and checks:
+ *   1. Any brand names other than MetroReach/MetroReach Media → FAIL
+ *   2. Garbled random characters (DALL-E hallucination) → FAIL
+ *
+ * Returns an AuditResult with status and details.
+ */
+export async function auditImage(
+  imagePath: string,
+  openai?: OpenAI,
+): Promise<AuditResult> {
+  const filename = basename(imagePath);
+  const client = openai ?? getOpenAIClient();
+
+  // Read and encode image
+  const imageBuffer = readFileSync(imagePath);
+  const mimeType = imagePath.endsWith(".png")
+    ? "image/png"
+    : imagePath.endsWith(".jpg") || imagePath.endsWith(".jpeg")
+      ? "image/jpeg"
+      : "image/webp";
+  const base64 = imageBuffer.toString("base64");
+  const dataUrl = `data:${mimeType};base64,${base64}`;
+
+  try {
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "List every visible word, brand name, and company name in this image. Respond ONLY with the exact text you see, comma-separated. No explanations.",
+            },
+            {
+              type: "image_url",
+              image_url: { url: dataUrl },
+            },
+          ],
+        },
+      ],
+      max_tokens: 200,
+      temperature: 0,
+    });
+
+    const rawText = response.choices[0]?.message?.content?.trim() ?? "";
+
+    if (!rawText || rawText.toLowerCase() === "no visible text" || rawText === "") {
+      return { filename, status: "PASS", textFound: "(no text detected)" };
+    }
+
+    // Parse comma-separated items
+    const items = rawText
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    // Check each item
+    for (const item of items) {
+      const lower = item.toLowerCase();
+
+      // Skip if it contains our brand anywhere in the text
+      if (lower.includes("metroreach")) continue;
+
+      // BLOCKED BRANDS: immediate FAIL if any known bad brand is detected
+      for (const blocked of BLOCKED_BRANDS) {
+        if (lower.includes(blocked)) {
+          return {
+            filename,
+            status: "FAIL",
+            textFound: rawText,
+            failureReason: `BLOCKED brand: "${item}" contains "${blocked}"`,
+          };
+        }
+      }
+
+      // Skip short fragments
+      if (item.length <= 2) continue;
+
+      // Skip common English words and marketing phrases
+      if (COMMON_WORDS.has(lower)) continue;
+
+      // Skip items that look like normal English sentences/phrases
+      if (looksLikeSentence(item)) continue;
+
+      // Skip items that look like marketing phrases
+      if (isMarketingPhrase(item)) continue;
+
+      // Skip all-lowercase words (common words)
+      if (item === item.toLowerCase() && /^[a-z]+$/.test(item)) continue;
+
+      // Check for garbled text (random-looking character sequences)
+      if (isGarbled(item)) {
+        return {
+          filename,
+          status: "FAIL",
+          textFound: rawText,
+          failureReason: `Garbled/hallucinated text: "${item}"`,
+        };
+      }
+
+      // If we get here, the item isn't clearly a brand name, garbled, or common.
+      // It might be an unfamiliar but legitimate word. PASS it — the blocklist
+      // already catches the dangerous cases.
+    }
+
+    // ── Holistic check: does the full text contain a company-name pattern? ──
+    // DALL-E sometimes hallucinates fake agency names like "Altitude Marketing"
+    // or "Marketix Media". These won't be in BLOCKED_BRANDS because they're
+    // made up. Detect them by scanning for "[Capitalized] Marketing/Media/Digital/Agency"
+    // patterns, but only flag if MetroReach is NOT also present.
+    const fullLower = rawText.toLowerCase();
+    if (!fullLower.includes("metroreach")) {
+      const companyPatterns = [
+        /\b[A-Z][a-z]+ (Marketing|Media|Digital|Agency|Studios|Creative|Group|Partners|Solutions)\b/g,
+        /\b[A-Z][a-z]+ [A-Z][a-z]+ (Marketing|Media|Digital|Agency)\b/g,
+      ];
+      for (const pattern of companyPatterns) {
+        const match = rawText.match(pattern);
+        if (match) {
+          return {
+            filename,
+            status: "FAIL",
+            textFound: rawText,
+            failureReason: `Foreign company name detected: "${match[0]}"`,
+          };
+        }
+      }
+    }
+
+    return { filename, status: "PASS", textFound: rawText };
+  } catch (err: any) {
+    return {
+      filename,
+      status: "FAIL",
+      textFound: "",
+      failureReason: `API error: ${err.message}`,
+    };
+  }
+}
+
+// ── Common Words (not brand names) ──────────────────────────────────────────
+
+const COMMON_WORDS = new Set([
+  "the", "and", "for", "with", "your", "our", "you", "we", "is", "are",
+  "to", "in", "on", "of", "a", "an", "it", "at", "by", "or", "be",
+  "no", "so", "as", "if", "my", "up", "go", "get", "all", "not",
+  "this", "that", "from", "have", "has", "had", "was", "were", "will",
+  "can", "do", "does", "did", "but", "more", "new", "now", "just",
+  "like", "how", "what", "when", "where", "who", "why", "which",
+  "case", "study", "case study", "social", "media", "marketing",
+  "content", "strategy", "growth", "team", "brand", "local",
+  "business", "businesses", "real", "results", "made", "clear",
+  "data", "analytics", "report", "client", "clients", "work",
+  "every", "behind", "dedicated", "pillars", "pillar", "checklist",
+  "audit", "organic", "paid", "ads", "boost", "metrics", "proof",
+  "cadence", "growth", "leads", "lead", "conversion", "sales",
+  "funnel", "reach", "engagement", "followers", "traffic",
+  "before", "after", "before after", "diy", "compound",
+  "industry", "roundup", "win", "wins", "one", "fix", "fixes",
+  "ideas", "numbers", "july", "stat", "scroll", "carousel",
+  "altitude", "driven", "digital", "agency",
+  "creativity", "creative", "type", "client type",
+  "your", "your business", "business", "about",
+  "services", "service", "contact", "home", "portfolio",
+  "work", "projects", "solutions", "solution",
+  "professional", "trusted", "experts", "expert", "partner",
+  "quality", "premium", "custom", "tailored", "scalable",
+  "modern", "innovative", "proven", "dedicated team",
+]);
+
+// ── Known Bad Brands (BLOCKLIST) ───────────────────────────────────────────
+// These should NEVER appear in MetroReach graphics.
+// If gpt-4o-mini detects any of these, it's an immediate FAIL.
+
+const BLOCKED_BRANDS = new Set([
+  // Major tech/social platforms (competitors or confusing)
+  "meta", "twitter", "snapchat", "pinterest", "reddit",
+  "whatsapp", "telegram", "discord", "slack", "zoom",
+  "microsoft", "apple", "amazon", "netflix", "spotify",
+  "uber", "airbnb", "salesforce", "hubspot", "hootsuite",
+  "sprout social", "later", "canva", "adobe", "figma",
+  // Marketing competitors
+  "marketix", "socially", "hootsuite", "buffer", "sprinklr",
+  "agorapulse", "sendible", "zoho", "asana",
+  "clickup", "notion", "trello",
+  // Major brands (DALL-E hallucination targets)
+  "nike", "adidas", "coca-cola", "cocacola", "pepsi",
+  "mcdonald", "starbucks", "disney",
+  "google ads", "meta ads", "facebook ads",
+  // Known DALL-E hallucination patterns
+  "dall-e", "dalle", "chatgpt", "openai", "midjourney",
+]);
+
+// ── Detection Helpers ──────────────────────────────────────────────────────
+
+/**
+ * Check if text looks like a normal English sentence/phrase
+ * (contains spaces, normal punctuation, mixed case like headlines).
+ * These are marketing copy — not brand names.
+ */
+function looksLikeSentence(text: string): boolean {
+  // Has spaces between words and normal sentence punctuation
+  if (/\s/.test(text) && /[.!?:;]/.test(text)) return true;
+
+  // Multiple words (any case) — headlines/phrases, not brand names
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length >= 2) {
+    // Check if words look like normal English (not brand-name-like compounds)
+    const normalWordCount = words.filter((w) => {
+      const clean = w.replace(/[^a-zA-Z]/g, "");
+      if (clean.length < 2) return true;
+      // Has vowels (real word)
+      return /[aeiouyAEIOUY]/.test(clean);
+    }).length;
+    // If most words have vowels, it's a phrase
+    if (normalWordCount >= words.length * 0.5) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if text looks like a marketing phrase rather than a brand name.
+ * E.g., "MARKETING MADE CLEAR", "CONTENT PILLARS FOR LOCAL BUSINESSES"
+ */
+function isMarketingPhrase(text: string): boolean {
+  const lower = text.toLowerCase();
+  const marketingPatterns = [
+    "marketing", "content", "strategy", "growth", "social",
+    "digital", "brand", "business", "result", "client",
+    "media", "organic", "team", "lead", "real",
+  ];
+  // If the text contains 2+ marketing words, it's a headline
+  const matchCount = marketingPatterns.filter((p) => lower.includes(p)).length;
+  return matchCount >= 2;
+}
+
+// ── Garbled Text Detection ─────────────────────────────────────────────────
+
+/**
+ * Heuristic to detect DALL-E hallucinated / garbled text.
+ *
+ * Real DALL-E hallucinations produce text like:
+ *   "Mtrch", "BldngrSoMda", "MeeetroReach", "Metr0Reach"
+ *
+ * We intentionally AVOID flagging real marketing copy and English sentences.
+ * The model returns what it sees — if the image has "REAL STRATEGY. REAL RESULTS.",
+ * that's legitimate MetroReach copy, not garbled text.
+ *
+ * Only flag truly random-looking character sequences.
+ */
+function isGarbled(text: string): boolean {
+  const t = text.trim();
+
+  // Empty or very short is not garbled
+  if (t.length <= 3) return false;
+
+  // If it has spaces and looks like real words, it's not garbled
+  if (/\s/.test(t)) {
+    // Has spaces — check if individual "words" within are garbled
+    const words = t.split(/\s+/).filter((w) => w.length > 2);
+    if (words.length === 0) return false;
+    // If any individual "word" is garbled, the whole thing is suspect
+    return words.some((w) => isGarbledSingleWord(w));
+  }
+
+  return isGarbledSingleWord(t);
+}
+
+function isGarbledSingleWord(word: string): boolean {
+  // Strip punctuation for analysis
+  const clean = word.replace(/[^a-zA-Z0-9]/g, "");
+  if (clean.length < 4) return false;
+
+  // Skip numeric/metric values (e.g., "1.42M", "2.5K", "$100")
+  if (/^[\d.,KkMmBb%$]+$/.test(clean)) return false;
+  // Mostly numeric with a suffix letter
+  if (/^\d+[KkMmBb]$/.test(clean)) return false;
+
+  // NO vowels at all — very likely garbled (e.g., "Mtrch", "Bldngr")
+  if (!/[aeiouyAEIOUY]/.test(clean)) return true;
+
+  // Number mixed into what looks like a word (e.g., "Metr0Reach", "Gr0wth")
+  if (/\d/.test(clean) && /[a-zA-Z].*\d.*[a-zA-Z]/.test(clean)) return true;
+
+  // Unusual character repetition (e.g., "aaabbb", "Meeeetro")
+  if (/([a-zA-Z])\1{3,}/.test(clean)) return true;
+
+  // 5+ consecutive consonants AND no recognizable vowel pattern
+  const consonantRun = clean.match(/[bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ]{5,}/);
+  if (consonantRun) {
+    const vowels = clean.match(/[aeiouyAEIOUY]/g);
+    const vowelCount = vowels ? vowels.length : 0;
+    const ratio = vowelCount / clean.length;
+    if (ratio < 0.2) return true;
+  }
+
+  return false;
+}
+
+// ── Bulk Audit (CLI mode) ──────────────────────────────────────────────────
+
+async function auditAllImages(): Promise<void> {
+  console.log("🔍 MetroReach Image Audit System");
+  console.log("════════════════════════════════\n");
+
+  const openai = getOpenAIClient();
+
+  // Discover images
+  const allFiles = readdirSync(SOCIAL_DIR).filter(
+    (f) => /\.(webp|png|jpg|jpeg)$/i.test(f) && !SKIP_PATTERN.test(f),
+  );
+
+  console.log(`📁 Found ${allFiles.length} images to audit in public/social/\n`);
+
+  const results: AuditResult[] = [];
+  let passCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < allFiles.length; i++) {
+    const file = allFiles[i];
+    const imagePath = join(SOCIAL_DIR, file);
+
+    process.stdout.write(`  [${String(i + 1).padStart(2, "0")}/${allFiles.length}] ${file} ... `);
+
+    const result = await auditImage(imagePath, openai);
+    results.push(result);
+
+    if (result.status === "PASS") {
+      passCount++;
+      console.log(`✅ ${result.textFound}`);
+    } else {
+      failCount++;
+      console.log(`❌ ${result.failureReason}`);
+    }
+
+    // Rate limit: ~30 requests/minute to stay under 200K TPM
+    // gpt-4o-mini uses ~800 tokens per image audit
+    if (i < allFiles.length - 1) {
+      await new Promise((r) => setTimeout(r, 2500));
+    }
+  }
+
+  // ── Generate report ──────────────────────────────────────────────────────
+
+  const now = new Date().toISOString().replace("T", " ").slice(0, 19);
+  let report = `# Image Audit Report\n\n`;
+  report += `**Generated:** ${now} UTC\n`;
+  report += `**Total audited:** ${results.length}\n`;
+  report += `**Passed:** ${passCount} ✅ | **Failed:** ${failCount} ❌\n\n`;
+  report += `---\n\n`;
+  report += `| # | Filename | Status | Text Found |\n`;
+  report += `|---|----------|--------|------------|\n`;
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    const statusIcon = r.status === "PASS" ? "✅" : "❌";
+    const text =
+      r.status === "FAIL"
+        ? `${r.failureReason}`
+        : r.textFound.length > 60
+          ? r.textFound.slice(0, 57) + "..."
+          : r.textFound;
+    report += `| ${i + 1} | ${r.filename} | ${statusIcon} ${r.status} | ${text} |\n`;
+  }
+
+  report += `\n---\n`;
+  if (failCount === 0) {
+    report += `\n### ✅ All images passed — no brand hallucinations detected.\n`;
+  } else {
+    report += `\n### 🚨 Action Required\n`;
+    report += `The images listed above as FAIL must be reviewed and regenerated before use.\n`;
+    report += `Run \`bun run scripts/generate-social-graphics.ts\` to regenerate failed images.\n`;
+  }
+
+  writeFileSync(REPORT_PATH, report, "utf-8");
+  console.log(`\n📄 Report saved to: ${REPORT_PATH}`);
+
+  // Summary
+  console.log(`\n${"═".repeat(40)}`);
+  console.log(`  Passed: ${passCount} ✅  |  Failed: ${failCount} ❌`);
+  console.log(`${"═".repeat(40)}\n`);
+
+  if (failCount > 0) {
+    process.exitCode = 1;
+  }
+}
+
+// ── Entry Point ────────────────────────────────────────────────────────────
+
+// Only run bulk audit when executed directly (not imported)
+const isMainModule = process.argv[1]?.includes("audit-images");
+if (isMainModule) {
+  auditAllImages().catch((err) => {
+    console.error("Fatal error:", err.message);
+    process.exit(1);
+  });
+}

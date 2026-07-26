@@ -13,8 +13,9 @@
  *   - OPENAI_API_KEY set in .env.local
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
+import { auditImage } from "./audit-images.js";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -319,6 +320,8 @@ async function main() {
   // Generate each image
   let success = 0;
   let failed = 0;
+  let needsReview = 0;
+  const MAX_AUDIT_RETRIES = 3;
 
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i];
@@ -335,23 +338,61 @@ async function main() {
     );
     console.log(`    Size: ${task.size}, File: ${task.filename}`);
 
-    try {
-      const imageSource = await generateImage(task.prompt, task.size);
-      await saveImage(imageSource, outputPath);
-      success++;
+    let imageGenerated = false;
 
-      // Rate-limit: DALL-E 3 has rate limits, be gentle
-      if (i < tasks.length - 1) {
-        console.log("    ⏳ Waiting 2s before next request...");
-        await sleep(2000);
+    for (let attempt = 1; attempt <= MAX_AUDIT_RETRIES; attempt++) {
+      try {
+        // Build prompt — on retries, add anti-hallucination guard
+        let genPrompt = task.prompt;
+        if (attempt > 1) {
+          genPrompt = `${task.prompt} CRITICAL: The text MUST say MetroReach only. No other brand names allowed. No garbled or hallucinated text.`;
+        }
+
+        const imageSource = await generateImage(genPrompt, task.size);
+        await saveImage(imageSource, outputPath);
+
+        // ── Audit the generated image ──────────────────────────────────
+        console.log(`    🔍 Auditing (attempt ${attempt}/${MAX_AUDIT_RETRIES})...`);
+        const auditResult = await auditImage(outputPath);
+
+        if (auditResult.status === "PASS") {
+          console.log(`    ✅ Audit passed: ${auditResult.textFound}`);
+          success++;
+          imageGenerated = true;
+          break;
+        } else {
+          console.log(`    ❌ Audit failed (attempt ${attempt}): ${auditResult.failureReason}`);
+          // Don't keep failed images — remove them so next attempt overwrites cleanly
+          try {
+            unlinkSync(outputPath);
+          } catch {
+            // best-effort cleanup
+          }
+        }
+      } catch (err: any) {
+        console.error(`    ❌ Generation error (attempt ${attempt}): ${err.message}`);
       }
-    } catch (err: any) {
-      console.error(`  ❌ Failed: ${err.message}`);
+
+      // Small delay between retries
+      if (attempt < MAX_AUDIT_RETRIES) {
+        await sleep(1500);
+      }
+    }
+
+    if (!imageGenerated) {
+      console.log(`    🚨 All ${MAX_AUDIT_RETRIES} audit attempts failed — marking for manual review`);
+      needsReview++;
       failed++;
+    }
+
+    // Rate-limit: DALL-E 3 has rate limits, be gentle
+    if (i < tasks.length - 1) {
+      console.log("    ⏳ Waiting 2s before next request...");
+      await sleep(2000);
     }
   }
 
-  console.log(`\n✅ Done. ${success} generated, ${failed} failed, ${tasks.length - success - failed} skipped.`);
+  console.log(`\n✅ Done. ${success} generated, ${failed} failed (${needsReview} need manual review), ${tasks.length - success - failed} skipped.`);
 }
 
 main().catch((err) => {
