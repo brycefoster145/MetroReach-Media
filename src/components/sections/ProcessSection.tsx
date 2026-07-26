@@ -66,7 +66,7 @@ export function ProcessSection() {
                   <div
                     key={step.number}
                     className={`flex flex-col items-center text-center relative z-10 transition-all duration-500 ${
-                      visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                      visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-8"
                     }`}
                     style={{
                       transitionDelay: `${i * 100}ms`,
@@ -117,7 +117,7 @@ export function ProcessSection() {
               <div
                 key={step.number}
                 className={`flex gap-5 relative pb-10 transition-all duration-500 ${
-                  visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                  visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-6"
                 }`}
                 style={{
                   transitionDelay: `${i * 100}ms`,

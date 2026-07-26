@@ -96,8 +96,7 @@ export function Hero() {
               }`}
               style={{ transitionDelay: "100ms", transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
             >
-              Premium social media marketing for businesses that want{" "}
-              <span className="gradient-text-blue-teal">leads, not reports.</span>
+              Premium social media marketing for businesses that want<span className="gradient-text-blue-teal"> leads, not reports.</span>
             </h1>
 
             {/* Subheadline */}

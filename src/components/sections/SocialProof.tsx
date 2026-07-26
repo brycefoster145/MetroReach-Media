@@ -38,7 +38,7 @@ export function SocialProof() {
         {/* Stats bar */}
         <div
           className={`border-b border-border-subtle pb-12 mb-16 transition-all duration-500 ${
-            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-6"
           }`}
           style={{
             transitionDelay: "0ms",
@@ -86,7 +86,7 @@ export function SocialProof() {
         {/* ============================================= */}
         <div
           className={`mb-20 transition-all duration-500 ${
-            visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-6"
           }`}
           style={{
             transitionDelay: "100ms",
@@ -155,7 +155,7 @@ export function SocialProof() {
             <div
               key={t.name}
               className={`relative bg-bg-surface border border-border-subtle rounded-2xl p-8 card-hover transition-all duration-500 ${
-                visible ? "opacity-100 scale-100" : "opacity-0 scale-[0.97]"
+                visible ? "opacity-100 scale-100" : "opacity-[0.01] scale-[0.97]"
               }`}
               style={{
                 transitionDelay: `${300 + i * 100}ms`,
