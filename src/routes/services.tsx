@@ -204,9 +204,8 @@ function Services() {
             <p className="text-text-secondary mb-8">
               Book a strategy call. No pitch deck. Just an honest conversation about your marketing.
             </p>
-            <Button href="/contact">
-              Start getting leads
-              <ArrowRight size={18} weight="bold" />
+            <Button href="/free-audit">
+              Get a Free Audit
             </Button>
           </div>
         </Container>

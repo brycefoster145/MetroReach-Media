@@ -13,7 +13,7 @@ export const hero = {
   subheadline:
     "A dedicated team of specialists runs your organic content and paid ads across seven platforms. Consistent posting. Continuous optimization. Clear dashboard. One flat monthly retainer.",
   primaryCta: "Get a Free Audit",
-  secondaryCta: "See our work ↓",
+  secondaryCta: "See our work",
   trustBar: "HVAC. Med Spa. Real Estate. Auto Repair. Dental. Salon. — 340+ leads delivered monthly across 12+ markets.",
 };
 

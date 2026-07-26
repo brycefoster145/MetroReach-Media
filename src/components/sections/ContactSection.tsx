@@ -133,7 +133,7 @@ export function ContactSection() {
             </p>
 
             <div className="space-y-4">
-              <Button href="/book">{footerCta.primaryCta}</Button>
+              <Button href="/free-audit">{footerCta.primaryCta}</Button>
               <div>
                 <p className="text-sm text-text-muted mb-2">
                   {footerCta.secondaryLabel}

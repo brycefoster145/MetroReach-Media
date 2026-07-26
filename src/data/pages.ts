@@ -166,6 +166,7 @@ export const pricingPage = {
       price: "$3,000",
       period: "/month",
       description: "For businesses that need multi-platform presence and aggressive lead generation.",
+      comingSoon: true,
       features: [
         "Up to 4 platforms (organic on all, paid on 2)",
         "20 original posts per month",
@@ -183,6 +184,7 @@ export const pricingPage = {
       price: "$5,500",
       period: "/month",
       description: "For businesses that want to dominate their market across all relevant channels.",
+      comingSoon: true,
       features: [
         "Up to 7 platforms (organic on all, paid on up to 4)",
         "30+ original posts per month",
