@@ -161,14 +161,12 @@ async function createPost(args: {
       createPost(input: $input) {
         __typename
         ... on PostActionSuccess {
+          __typename
           post {
             id
             text
             createdAt
           }
-        }
-        ... on PostActionError {
-          message
         }
       }
     }
