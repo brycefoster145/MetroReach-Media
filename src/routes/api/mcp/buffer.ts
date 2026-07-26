@@ -137,32 +137,47 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  // Use GraphQL mutation (Bearer token auth — same as all other tools)
-  const input: Record<string, unknown> = {
-    channelId: args.channelId,
-    text: args.text,
-    schedulingType: "AUTOMATIC",
-  };
+  // Use Buffer REST API with Bearer auth (matching GraphQL auth)
+  const body = new URLSearchParams();
+  body.append("profile_ids[]", args.channelId);
+  body.append("text", args.text);
+
   if (args.scheduled_at) {
-    input.scheduledAt = args.scheduled_at;
+    body.append("scheduled_at", args.scheduled_at);
+  } else {
+    body.append("now", "true");
   }
+
   if (args.media_urls?.length) {
-    input.media = args.media_urls.map((url) => {
+    for (const url of args.media_urls) {
       const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-      return imageExts.some((ext) => url.toLowerCase().includes(ext))
-        ? { photoUrl: url }
-        : { linkUrl: url };
-    });
-  }
-  return graphqlRequest(`
-    mutation CreatePost($input: CreatePostInput!) {
-      createPost(input: $input) {
-        ... on PostActionSuccess {
-          post { id text createdAt }
-        }
+      const lower = url.toLowerCase();
+      if (imageExts.some((ext) => lower.includes(ext))) {
+        body.append("media[photo]", url);
+      } else {
+        body.append("media[link]", url);
       }
     }
-  `, { input });
+  }
+
+  const res = await fetch("https://api.bufferapp.com/1/updates/create.json", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${BUFFER_TOKEN}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    throw new Error(
+      `Buffer API error (${res.status}): ${JSON.stringify(json)}`,
+    );
+  }
+
+  return json;
 }
 
 async function getPost(args: { post_id: string }) {
