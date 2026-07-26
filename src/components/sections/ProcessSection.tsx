@@ -41,7 +41,7 @@ export function ProcessSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-32 lg:py-36 bg-bg-root relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-40 bg-bg-root relative overflow-hidden">
       {/* Dot grid background */}
       <div className="absolute inset-0 bg-dot-grid pointer-events-none" />
 
@@ -56,7 +56,7 @@ export function ProcessSection() {
               className="absolute top-9 left-[8%] right-[8%] h-0.5 process-line-gradient process-line-animate"
             />
 
-            <div className="grid grid-cols-6 gap-6">
+            <div className="grid grid-cols-6 gap-8">
               {process.steps.map((step, i) => {
                 const Icon = iconMap[step.number];
                 const isFirst = i === 0;
@@ -75,7 +75,7 @@ export function ProcessSection() {
                   >
                     {/* Step circle */}
                     <div
-                      className={`w-[72px] h-[72px] rounded-full flex items-center justify-center mb-5 border-2 transition-colors bg-bg-surface-raised ${
+                      className={`w-[72px] h-[72px] rounded-full flex items-center justify-center mb-5 border-2 transition-colors process-circle-tint ${
                         isFirst
                           ? "process-circle-active"
                           : isLast
@@ -92,7 +92,7 @@ export function ProcessSection() {
                     </p>
 
                     {/* Label */}
-                    <p className="text-base font-semibold text-text-primary mb-2">
+                    <p className="text-base font-bold text-text-primary mb-2">
                       {step.label}
                     </p>
 
@@ -131,7 +131,7 @@ export function ProcessSection() {
 
                 {/* Step circle */}
                 <div
-                  className={`w-[72px] h-[72px] rounded-full flex items-center justify-center flex-shrink-0 border-2 bg-bg-surface-raised ${
+                  className={`w-[72px] h-[72px] rounded-full flex items-center justify-center flex-shrink-0 border-2 process-circle-tint ${
                     i === 0
                       ? "process-circle-active"
                       : i === process.steps.length - 1
@@ -146,7 +146,7 @@ export function ProcessSection() {
                   <p className="text-xs font-bold text-brand-teal uppercase tracking-[0.15em] mb-1">
                     Step {step.number}
                   </p>
-                  <p className="text-base font-semibold text-text-primary mb-1">
+                  <p className="text-base font-bold text-text-primary mb-1">
                     {step.label}
                   </p>
                   <p className="text-sm text-text-secondary leading-relaxed">

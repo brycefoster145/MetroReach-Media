@@ -12,13 +12,13 @@ export function SectionHeading({
   centered = true,
 }: SectionHeadingProps) {
   return (
-    <div className={`${centered ? "text-center" : ""} mb-20`}>
+    <div className={`${centered ? "text-center" : ""} mb-24`}>
       {badge && (
         <p className="text-sm font-semibold text-brand-accent uppercase tracking-[0.2em] mb-4">
           {badge}
         </p>
       )}
-      <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold font-heading text-text-primary tracking-tight">
+      <h2 className="text-5xl md:text-6xl lg:text-7xl font-extrabold font-heading text-text-primary tracking-tight leading-[1.1]">
         {headline}
       </h2>
       {description && (

@@ -24,7 +24,7 @@ export function ProblemSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-40 bg-bg-surface relative overflow-hidden">
       {/* Dot grid background */}
       <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none" />
 

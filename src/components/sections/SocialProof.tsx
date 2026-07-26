@@ -26,7 +26,7 @@ export function SocialProof() {
   }, []);
 
   return (
-    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface">
+    <section ref={ref} className="py-32 lg:py-40 bg-bg-surface">
       <Container>
         {/* ============================================= */}
         {/* Credibility Stats Bar (moved here)            */}
@@ -37,7 +37,7 @@ export function SocialProof() {
 
         {/* Stats bar */}
         <div
-          className={`border-b border-border-subtle pb-14 mb-20 transition-all duration-500 ${
+          className={`border-b border-border-subtle pb-16 mb-24 transition-all duration-500 ${
             visible ? "opacity-100 translate-y-0" : "opacity-[0.01] translate-y-6"
           }`}
           style={{
@@ -52,8 +52,8 @@ export function SocialProof() {
                   <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-px h-12 bg-border-subtle" />
                 )}
                 <p
-                  className={`text-5xl md:text-6xl font-extrabold font-heading ${
-                    i === 1 ? "text-brand-teal" : "text-text-primary"
+                  className={`text-6xl md:text-7xl font-extrabold font-heading ${
+                    i === 1 || i === 3 ? "text-brand-teal" : "text-text-primary"
                   }`}
                 >
                   {stat.value}
@@ -119,13 +119,13 @@ export function SocialProof() {
                 </h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-3xl font-extrabold font-heading text-text-primary">
+                    <p className="text-4xl font-extrabold font-heading text-text-primary">
                       {cs.metric}
                     </p>
                     <p className="text-xs text-text-muted mt-1">{cs.metricLabel}</p>
                   </div>
                   <div>
-                    <p className="text-3xl font-extrabold font-heading text-brand-teal">
+                    <p className="text-4xl font-extrabold font-heading text-brand-teal">
                       {cs.subMetric}
                     </p>
                     <p className="text-xs text-text-muted mt-1">{cs.subLabel}</p>
@@ -153,7 +153,7 @@ export function SocialProof() {
           description={socialProof.subheadline}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {socialProof.testimonials.map((t, i) => (
             <div
               key={t.name}

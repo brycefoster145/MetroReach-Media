@@ -26,7 +26,7 @@ export function PricingSection() {
   }, []);
 
   return (
-    <section ref={ref} id="pricing" className="py-32 lg:py-36 bg-bg-root relative overflow-hidden">
+    <section ref={ref} id="pricing" className="py-32 lg:py-40 bg-bg-root relative overflow-hidden">
       {/* Subtle dot grid */}
       <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none" />
 
@@ -46,7 +46,7 @@ export function PricingSection() {
                 key={tier.name}
                 className={`relative rounded-2xl p-10 flex flex-col transition-all duration-500 ${
                   isFeatured
-                    ? "bg-bg-surface border border-brand-gold/50 ring-1 ring-brand-gold/15 glow-gold scale-[1.02] md:scale-[1.07] z-10"
+                    ? "bg-bg-surface border border-brand-gold/50 ring-1 ring-brand-gold/15 glow-gold scale-[1.02] md:scale-[1.10] z-10 gradient-border-card shadow-2xl"
                     : "bg-bg-surface border border-border-subtle card-hover"
                 } ${
                   visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -64,6 +64,7 @@ export function PricingSection() {
                 {/* Most Popular badge */}
                 {isFeatured && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-transparent via-brand-gold to-transparent rounded-full" />
                     <span className="badge-gold badge-gold-glow inline-flex items-center gap-1 text-xs rounded-full px-5 py-1.5 shadow-lg">
                       <Star size={14} weight="fill" /> Most Popular
                     </span>
@@ -143,6 +144,21 @@ export function PricingSection() {
         >
           <LockOpen size={18} weight="regular" className="text-brand-teal" />
           <p className="text-base text-text-secondary">{pricing.noLockPledge}</p>
+        </div>
+
+        {/* Trust anchor — visible below cards */}
+        <div
+          className={`flex items-center justify-center gap-3 mt-6 transition-all duration-500 ${
+            visible ? "opacity-100" : "opacity-0"
+          }`}
+          style={{
+            transitionDelay: "700ms",
+            transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          <span className="bg-bg-surface-raised border border-border-subtle rounded-full px-5 py-2 text-sm font-medium text-text-secondary">
+            No contracts. Cancel anytime. 30-day notice.
+          </span>
         </div>
       </Container>
     </section>

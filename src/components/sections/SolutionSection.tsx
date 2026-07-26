@@ -42,8 +42,10 @@ export function SolutionSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-32 lg:py-36 bg-bg-root">
-      <Container>
+    <section ref={ref} className="py-32 lg:py-40 bg-bg-root relative overflow-hidden">
+      {/* Dot grid background — alternating visual rhythm */}
+      <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none" />
+      <Container className="relative z-10">
         <SectionHeading
           headline={solution.headline}
           description={solution.subheadline}

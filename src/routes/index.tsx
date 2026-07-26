@@ -48,6 +48,7 @@ function Home() {
       <PricingSection />
       <div className="section-divider" />
       <FAQSection />
+      <div className="section-divider" />
       <ContactSection />
     </main>
   );

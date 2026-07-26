@@ -74,7 +74,7 @@ export function Hero() {
       {/* Noise texture */}
       <div className="absolute inset-0 bg-noise pointer-events-none" />
 
-      <Container className="relative z-10 py-28 lg:py-36">
+      <Container className="relative z-10 py-32 lg:py-40">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* ========================================= */}
           {/* LEFT: Text Content                         */}

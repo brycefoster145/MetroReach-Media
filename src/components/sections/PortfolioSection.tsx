@@ -51,7 +51,7 @@ export function PortfolioSection() {
 
   // Responsive masonry: 2 cols on mobile, 3 on md+
   return (
-    <section ref={ref} className="py-32 lg:py-36 bg-bg-surface relative overflow-hidden">
+    <section ref={ref} className="py-32 lg:py-40 bg-bg-surface relative overflow-hidden">
       <Container>
         <SectionHeading
           headline={portfolio.headline}
