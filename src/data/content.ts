@@ -4,7 +4,7 @@
 export const siteMeta = {
   title: "MetroReach Media — Premium Social Media Marketing Agency",
   description:
-    "Premium social media management for service businesses. Organic content and paid ads across every major platform. Agency quality without the traditional overhead.",
+    "Premium social media management for service businesses. Organic content and paid ads across every major platform. A dedicated team of specialists running your marketing.",
 };
 
 export const hero = {
@@ -63,7 +63,7 @@ export const problem = {
 export const solution = {
   headline: "A marketing team built differently.",
   subheadline:
-    "MetroReach Media is a premium social media agency. Premium strategy. Premium creative. Paid ad management across every platform that matters. A dedicated team of specialists — at a cost that reflects our efficiency, not someone else's overhead.",
+    "MetroReach Media is a premium social media agency. Premium strategy. Premium creative. Paid ad management across every platform that matters. A dedicated team of seven specialists — strategist, copywriter, designer, media buyer, analyst, QA, and engineer — focused entirely on your account.",
   differentiators: [
     {
       number: "01",
@@ -74,8 +74,8 @@ export const solution = {
     },
     {
       number: "02",
-      headline: "Premium Quality at 40–60% Less",
-      body: "Traditional agencies charge premium rates because they carry premium overhead: account managers, junior creatives, office leases, billable-hour padding. We eliminated the overhead — not the quality. You get agency-grade creative, strategic rigor, and multi-platform execution for a fraction of what a comparable traditional agency charges.",
+      headline: "Specialist-Led. Not Account-Managed.",
+      body: "Traditional agencies give you an account manager juggling five clients. We give you a dedicated team of seven specialists — strategist, copywriter, designer, media buyer, analyst, QA, and engineer — focused on one account. Yours. Every function handled by someone who does that one thing exceptionally well. That's how you get premium output without premium bloat.",
       icon: "SealCheck" as const,
       color: "brand-accent",
     },
