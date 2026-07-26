@@ -42,7 +42,7 @@ function Cart() {
         </p>
         <Link
           to="/services"
-          className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200 mt-4"
+          className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 mt-4"
         >
           Browse Services
           <ArrowRight size={18} weight="bold" />
@@ -116,7 +116,7 @@ function Cart() {
               </Link>
               <Link
                 to="/checkout"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-200 flex-1 sm:flex-none"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] transition-all duration-200 flex-1 sm:flex-none"
               >
                 Proceed to Checkout
                 <ArrowRight size={18} weight="bold" />

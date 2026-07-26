@@ -631,7 +631,7 @@ function PortalDashboard() {
                 <button
                   type="submit"
                   disabled={sending || !newMessage.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                 >
                   {sending ? <Spinner size={16} className="animate-spin" /> : <PaperPlaneTilt size={16} weight="fill" />}
                   Send
@@ -698,7 +698,7 @@ function PortalDashboard() {
                 <button
                   type="submit"
                   disabled={uploading || uploadFiles.length === 0}
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? (
                     <><Spinner size={16} className="animate-spin" /> Uploading...</>

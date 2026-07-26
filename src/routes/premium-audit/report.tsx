@@ -105,7 +105,7 @@ function GaugeRing({ score, size = "md" }: { score: number; size?: "sm" | "md" }
   const circumference = 2 * Math.PI * r;
   const pct = score / 100;
   const dashOffset = circumference * (1 - pct);
-  const color = pct >= 0.7 ? "#06D6A0" : pct >= 0.4 ? "#F59E0B" : "#EF4444";
+  const color = pct >= 0.7 ? "#008fff" : pct >= 0.4 ? "#F59E0B" : "#EF4444";
   const textSize = size === "sm" ? "text-xl" : "text-3xl";
 
   return (
@@ -228,12 +228,12 @@ function PremiumAuditReportPage() {
         ) : isPaymentRequired ? (
           <a
             href="https://buy.stripe.com/7sY6oH3iYd1Q69ad891ck0m"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200"
+            className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
           >
             Complete Your Purchase →
           </a>
         ) : (
-          <a href="/premium-audit" className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200">
+          <a href="/premium-audit" className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200">
             Purchase Premium Audit →
           </a>
         )}
@@ -289,7 +289,7 @@ function PremiumAuditReportPage() {
     <main>
       {/* ── Header ── */}
       <section className="relative py-16 lg:py-24 bg-bg-root overflow-hidden border-b border-border-subtle">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_500px_at_50%_50%,rgba(59,130,246,0.06),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_500px_at_50%_50%,rgba(0,143,255,0.06),transparent)] pointer-events-none" />
         <Container className="relative z-10">
           <div className="max-w-3xl mx-auto">
             <p className="text-xs font-medium text-text-muted uppercase tracking-widest mb-4">
@@ -699,7 +699,7 @@ function PremiumAuditReportPage() {
               {primaryRec?.stripeLink ? (
                 <a
                   href={primaryRec.stripeLink}
-                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
+                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
                 >
                   Start My Growth Plan
                   <ArrowRight size={18} weight="bold" />
@@ -707,7 +707,7 @@ function PremiumAuditReportPage() {
               ) : (
                 <a
                   href="/contact"
-                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
+                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
                 >
                   Start My Growth Plan
                   <ArrowRight size={18} weight="bold" />

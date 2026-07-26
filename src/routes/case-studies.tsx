@@ -25,7 +25,7 @@ function CaseStudies() {
     <main>
       {/* Hero */}
       <section className="relative py-24 lg:py-32 bg-bg-root overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_at_50%_30%,rgba(59,130,246,0.06),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_at_50%_30%,rgba(0,143,255,0.06),transparent)] pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_400px_at_80%_60%,rgba(6,214,160,0.04),transparent)] pointer-events-none" />
 
         <Container className="relative z-10">

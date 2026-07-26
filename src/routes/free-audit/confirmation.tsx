@@ -171,7 +171,7 @@ function ConfirmationPage() {
             </p>
             <a
               href="/contact"
-              className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]"
+              className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
             >
               Contact Our Team
               <ArrowRight size={18} weight="bold" />

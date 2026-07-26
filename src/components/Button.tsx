@@ -24,7 +24,7 @@ export function Button({
 
   const variants: Record<string, string> = {
     primary:
-      "bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:scale-[1.02]",
+      "bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]",
     secondary:
       "text-text-secondary hover:text-text-primary group text-base",
     ghost:

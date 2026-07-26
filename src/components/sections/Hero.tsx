@@ -66,7 +66,7 @@ export function Hero() {
       />
 
       {/* Radial gradient wash */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_800px_at_50%_40%,rgba(59,130,246,0.08),transparent)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_800px_at_50%_40%,rgba(0,143,255,0.08),transparent)] pointer-events-none" />
 
       <Container className="relative z-10 py-24 lg:py-32">
         <div className="max-w-4xl mx-auto text-center">

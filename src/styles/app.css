@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-primary: #3B82F6;
-  --color-brand-primary-glow: #60A5FA;
-  --color-brand-accent: #06D6A0;
-  --color-brand-accent-glow: #34D399;
-  --color-bg-root: #060912;
-  --color-bg-surface: #0D1117;
-  --color-bg-surface-raised: #141B24;
-  --color-bg-surface-high: #1B2433;
+  --color-brand-primary: #008fff;
+  --color-brand-primary-glow: #33a8ff;
+  --color-brand-accent: #008fff;
+  --color-brand-accent-glow: #33a8ff;
+  --color-bg-root: #0a0f16;
+  --color-bg-surface: #12171d;
+  --color-bg-surface-raised: #181e26;
+  --color-bg-surface-high: #1e2530;
   --color-text-primary: #F1F5F9;
   --color-text-secondary: #94A3B8;
   --color-text-muted: #94A3B8;
   --color-border-subtle: #1E293B;
   --color-border-emphasis: #334155;
-  --color-success: #06D6A0;
+  --color-success: #008fff;
   --color-warning: #F59E0B;
   --color-error: #EF4444;
   --font-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
@@ -26,7 +26,7 @@
   html {
     scroll-behavior: smooth;
     scroll-padding-top: 5rem;
-    background-color: #060912;
+    background-color: #0a0f16;
     color: #F1F5F9;
   }
 
@@ -64,7 +64,7 @@
 }
 .card-hover:hover {
   border-color: #334155;
-  background-color: #141B24;
+  background-color: #181e26;
   transform: translateY(-2px);
 }
 
@@ -72,14 +72,14 @@
   transition: all 200ms ease-out;
 }
 .featured-card-hover:hover {
-  border-color: rgba(59, 130, 246, 0.5);
+  border-color: rgba(0, 143, 255, 0.5);
 }
 
 /* Platform icon sequence */
 @keyframes platform-illuminate {
   0%, 100% { color: #64748B; }
-  40% { color: #3B82F6; }
-  60% { color: #06D6A0; }
+  40% { color: #008fff; }
+  60% { color: #008fff; }
 }
 
 @keyframes platform-breathing {
@@ -112,7 +112,7 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #60A5FA, #3B82F6, #06D6A0);
+  background: linear-gradient(135deg, #33a8ff, #008fff, #0066cc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -133,7 +133,7 @@
 
 /* Mobile nav backdrop */
 .nav-backdrop {
-  background: rgba(6, 9, 18, 0.95);
+  background: rgba(10, 15, 22, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }

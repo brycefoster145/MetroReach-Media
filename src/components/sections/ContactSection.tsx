@@ -111,7 +111,7 @@ export function ContactSection() {
   return (
     <section ref={ref} className="py-24 bg-bg-root relative overflow-hidden">
       {/* Gradient wash behind text */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_1000px_at_40%_50%,rgba(59,130,246,0.12),transparent)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_1000px_at_40%_50%,rgba(0,143,255,0.12),transparent)] pointer-events-none" />
 
       <Container className="relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">

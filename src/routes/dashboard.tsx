@@ -218,7 +218,7 @@ function LeadChart() {
                   style={{
                     height: `${heightPct}%`,
                     background:
-                      "linear-gradient(180deg, #3B82F6 0%, rgba(59,130,246,0.3) 100%)",
+                      "linear-gradient(180deg, #008fff 0%, rgba(0,143,255,0.3) 100%)",
                   }}
                 />
               </div>
@@ -431,7 +431,7 @@ function Dashboard() {
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-text-primary bg-brand-primary rounded-xl hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-text-primary bg-brand-primary rounded-xl hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
             >
               <DownloadSimple size={16} />
               Download Report

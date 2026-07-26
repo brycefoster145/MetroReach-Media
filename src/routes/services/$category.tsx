@@ -39,7 +39,7 @@ function ServiceCategory() {
         </p>
         <Link
           to="/services"
-          className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent transition-all duration-200"
+          className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
         >
           <ArrowLeft size={18} weight="bold" />
           Back to Services
@@ -92,7 +92,7 @@ function ServiceCategory() {
     <main>
       {/* Hero */}
       <section className="relative py-20 lg:py-28 bg-bg-root overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_at_50%_30%,rgba(59,130,246,0.06),transparent)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_at_50%_30%,rgba(0,143,255,0.06),transparent)] pointer-events-none" />
         <Container className="relative z-10">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-text-muted mb-8">
@@ -199,7 +199,7 @@ function ServiceCategory() {
                           className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
                             isCheckingOut
                               ? "bg-brand-primary/70 text-text-primary cursor-wait"
-                              : "bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-accent hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                              : "bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)]"
                           }`}
                         >
                           <CreditCard size={16} weight="bold" />
