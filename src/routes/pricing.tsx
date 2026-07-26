@@ -103,21 +103,16 @@ function Pricing() {
                   </div>
 
                   {/* CTA */}
-                  {isFeatured ? (
-                    <button
-                      disabled
-                      className="w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle"
-                    >
-                      Coming Soon
-                    </button>
-                  ) : (
-                    <button
-                      disabled
-                      className="w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle"
-                    >
-                      Coming Soon
-                    </button>
-                  )}
+                  <a
+                    href={tier.paymentLink}
+                    className={`w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-all duration-200 ${
+                      isFeatured
+                        ? "bg-brand-primary text-white hover:bg-brand-primary-glow hover:shadow-[0_0_20px_rgba(0,143,255,0.3)]"
+                        : "bg-bg-surface-high text-text-primary border border-border-subtle hover:border-brand-primary hover:text-brand-primary"
+                    }`}
+                  >
+                    Get Started
+                  </a>
                 </div>
               </div>
             );
