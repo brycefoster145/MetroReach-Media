@@ -178,8 +178,8 @@ async function createPost(args: {
     input.assets = args.media_urls.map((url) => {
       const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
       return imageExts.some((ext) => url.toLowerCase().includes(ext))
-        ? { mediaUrl: url }
-        : { mediaUrl: url };
+        ? { image: { url } }
+        : { link: { url } };
     });
   }
   // Metadata with platform-specific type (required for FB/IG)
