@@ -59,9 +59,23 @@ const MAPPING: Array<[string, string]> = [
 
   // SUNDAY
   ["Sunday reset: audit your social profiles", "ig-w1-sun-edu-audit-checklist.webp"],
+  ["Sunday reset", "ig-w1-sun-edu-audit-checklist.webp"],
+  ["audit your social profiles in 15 minutes", "ig-w1-sun-edu-audit-checklist.webp"],
   ["DIY marketing → dedicated team", "ig-w1-sun-proof-diy-to-team.webp"],
+  ["DIY marketing", "ig-w1-sun-proof-diy-to-team.webp"],
   ["One thing to fix on your Facebook page this week", "fb-w1-sun-edu-one-fix.webp"],
+  ["One thing to fix on your Facebook", "fb-w1-sun-edu-one-fix.webp"],
+  ["One thing to fix", "fb-w1-sun-edu-one-fix.webp"],
   ["This is what consistent posting did for one client's pipeline", "fb-w1-sun-proof-compound-growth.webp"],
+  ["consistent posting did for one client", "fb-w1-sun-proof-compound-growth.webp"],
+
+  // ALREADY SCHEDULED (Post #2 - IG Slot 2 Monday, skipped)
+  ["already scheduled", "SKIP_ALREADY_SCHEDULED"],
+
+  // SLOT 2 POSTS (3rd IG post each day — these are the late-night IG posts)
+  // They don't have Week 1 images yet; skip for now or use placeholder
+  // Monday Slot 2 IG was already scheduled with ig-post-3.webp
+  ["Slot 2", "SKIP_SLOT2"],
 ];
 
 export const Route = createFileRoute("/api/migrate-media-urls")({
@@ -95,6 +109,20 @@ export const Route = createFileRoute("/api/migrate-media-urls")({
 
             for (const [substring, filename] of MAPPING) {
               if (content.includes(substring)) {
+                if (filename === "SKIP_ALREADY_SCHEDULED" || filename === "SKIP_SLOT2") {
+                  console.log(
+                    `[migrate-media-urls] ${postId} (${platform}) → ${filename} (intentionally skipped)`,
+                  );
+                  results.push({
+                    id: postId,
+                    platform,
+                    matched: filename,
+                    media_urls: [],
+                  });
+                  matched = true;
+                  break;
+                }
+
                 if (filename === "TEXT_ONLY_LINKEDIN") {
                   // LinkedIn text-only posts — no media
                   console.log(
