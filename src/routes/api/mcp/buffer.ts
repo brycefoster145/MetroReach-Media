@@ -144,7 +144,6 @@ async function createPost(args: {
     text: args.text,
     mode: args.scheduled_at ? "customScheduled" : "shareNow",
     schedulingType: "automatic",
-    type: "post",
   };
   if (args.scheduled_at) {
     input.dueAt = args.scheduled_at;
