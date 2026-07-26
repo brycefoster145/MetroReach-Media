@@ -137,15 +137,16 @@ async function createPost(args: {
   media_urls?: string[];
   scheduled_at?: string;
 }) {
-  // Use Buffer REST API with Bearer auth (matching GraphQL auth)
-  const body = new URLSearchParams();
-  body.append("profile_ids[]", args.channelId);
-  body.append("text", args.text);
+  // Buffer REST API: use access_token as query param (not Bearer header — public tokens only work this way)
+  const params = new URLSearchParams();
+  params.append("access_token", BUFFER_TOKEN);
+  params.append("profile_ids[]", args.channelId);
+  params.append("text", args.text);
 
   if (args.scheduled_at) {
-    body.append("scheduled_at", args.scheduled_at);
+    params.append("scheduled_at", args.scheduled_at);
   } else {
-    body.append("now", "true");
+    params.append("now", "true");
   }
 
   if (args.media_urls?.length) {
@@ -153,20 +154,17 @@ async function createPost(args: {
       const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
       const lower = url.toLowerCase();
       if (imageExts.some((ext) => lower.includes(ext))) {
-        body.append("media[photo]", url);
+        params.append("media[photo]", url);
       } else {
-        body.append("media[link]", url);
+        params.append("media[link]", url);
       }
     }
   }
 
   const res = await fetch("https://api.bufferapp.com/1/updates/create.json", {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${BUFFER_TOKEN}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: body.toString(),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
   });
 
   const json = await res.json();
