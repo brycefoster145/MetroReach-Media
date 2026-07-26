@@ -142,7 +142,7 @@ async function createPost(args: {
     channelId: args.channelId,
     text: args.text,
     organizationId: BUFFER_ORG_ID,
-    mode: "PUBLISH",
+    mode: "SCHEDULED",
   };
   if (args.scheduled_at) {
     input.scheduledAt = args.scheduled_at;
