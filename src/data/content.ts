@@ -182,7 +182,7 @@ export const pricing = {
     {
       name: "Starter",
       price: "$1,500",
-      featured: false,
+      featured: true,
       features: [
         "Facebook + Instagram",
         "12 organic posts/month",
@@ -193,23 +193,6 @@ export const pricing = {
       bestFor: "Auto shops, salons, small contractors getting started with social.",
       cta: "Start generating leads",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
-    },
-    {
-      name: "Starter Daily",
-      price: "$5,000",
-      featured: true,
-      features: [
-        "Facebook + Instagram (2 posts/day each)",
-        "60 organic posts/month",
-        "Custom graphics & copywriting",
-        "Monthly strategy & performance report",
-        "Live dashboard access",
-        "Commission tracking included",
-      ],
-      bestFor:
-        "Businesses ready to dominate social with daily content and a full dedicated team.",
-      cta: "Build your pipeline",
-      paymentLink: "https://buy.stripe.com/7sYbJ1f1G7Hw2WYd891ck1y",
     },
   ],
   addonNote:
