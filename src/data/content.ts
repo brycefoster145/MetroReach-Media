@@ -12,7 +12,7 @@ export const hero = {
   headline: "Premium social media marketing for businesses that want leads, not reports.",
   subheadline:
     "A dedicated team of specialists runs your organic content and paid ads across seven platforms. Consistent posting. Continuous optimization. Clear dashboard. One flat monthly retainer.",
-  primaryCta: "Book a Strategy Call",
+  primaryCta: "Get a Free Audit",
   secondaryCta: "See our work ↓",
   trustBar: "HVAC. Med Spa. Real Estate. Auto Repair. Dental. Salon. — 340+ leads delivered monthly across 12+ markets.",
 };
@@ -308,7 +308,7 @@ export const pricing = {
         "Live dashboard access on day one",
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
-      cta: "Book a Strategy Call",
+      cta: "Get a Free Audit",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
@@ -325,7 +325,7 @@ export const pricing = {
         "Community engagement included",
       ],
       bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
-      cta: "Book a Strategy Call",
+      cta: "Get a Free Audit",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
@@ -344,7 +344,7 @@ export const pricing = {
         "Bi-weekly strategy calls + custom reporting",
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
-      cta: "Book a Strategy Call",
+      cta: "Get a Free Audit",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
   ],
@@ -397,7 +397,7 @@ export const footerCta = {
   headline: "Stop losing leads to competitors who show up when you don't.",
   subheadline:
     "One conversation. No pressure. An honest assessment of what your current marketing is leaving on the table — and exactly what we'd do about it.",
-  primaryCta: "Book a Strategy Call",
+  primaryCta: "Get a Free Audit",
   secondaryLabel: "Or if you're not ready to talk:",
   secondaryCta: "See an example monthly report",
 };

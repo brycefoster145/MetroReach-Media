@@ -62,7 +62,7 @@ function ConfirmationPage() {
     },
     {
       icon: PhoneCall,
-      title: "Strategy Call",
+      title: "Free Audit",
       description:
         "Your lead strategist will schedule a kickoff call to dive into your goals, brand voice, and priorities — so every piece of content and every campaign is built for your business.",
     },

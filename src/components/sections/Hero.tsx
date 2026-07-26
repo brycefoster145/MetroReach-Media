@@ -117,7 +117,7 @@ export function Hero() {
               style={{ transitionDelay: "400ms", transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
             >
               <a
-                href="/contact"
+                href="/free-audit"
                 className="inline-flex items-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow transition-all duration-200"
               >
                 {hero.primaryCta} →

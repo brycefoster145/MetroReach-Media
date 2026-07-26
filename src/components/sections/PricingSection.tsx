@@ -111,7 +111,7 @@ export function PricingSection() {
                   {/* CTA */}
                   {isFeatured ? (
                     <a
-                      href="/contact"
+                      href="/free-audit"
                       className="inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow transition-all duration-200 w-full"
                     >
                       {tier.cta} →
@@ -119,7 +119,7 @@ export function PricingSection() {
                   ) : (
                     <Button
                       variant="ghost"
-                      href="/contact"
+                      href="/free-audit"
                       className="w-full justify-center"
                     >
                       {tier.cta}

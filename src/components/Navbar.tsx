@@ -76,10 +76,10 @@ export function Navbar() {
             )}
           </a>
           <a
-            href="/contact"
+            href="/free-audit"
             className="inline-flex items-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-6 py-2.5 text-sm cta-glow transition-all duration-200"
           >
-            Book a Strategy Call
+            Get a Free Audit
           </a>
         </div>
 
@@ -110,11 +110,11 @@ export function Navbar() {
             ))}
             <div className="mt-6">
               <a
-                href="/contact"
+                href="/free-audit"
                 onClick={close}
                 className="inline-flex items-center justify-center gap-2 w-full font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow"
               >
-                Book a Strategy Call
+                Get a Free Audit
               </a>
             </div>
           </div>

@@ -34,23 +34,23 @@ function Home() {
     <main>
       <Hero />
 
-      {/* Diagnostic Call CTA Banner */}
+      {/* Free Audit CTA Banner */}
       <section className="py-8 bg-bg-surface border-b border-border-subtle">
         <Container>
           <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-bg-surface-raised border border-brand-teal/20">
             <div>
               <p className="text-sm font-semibold text-text-primary">
-                Want to know what your marketing is leaving on the table?
+                Not sure where to start?
               </p>
               <p className="text-sm text-text-secondary mt-0.5">
-                Book a 15-minute diagnostic call. We'll look at your current presence and tell you exactly what's working, what's missing, and whether we're the right fit.
+                Get a free audit of your current marketing. We'll identify gaps, opportunities, and whether we're the right fit — no pressure, no pitch.
               </p>
             </div>
             <a
-              href="/contact"
+              href="/free-audit"
               className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-6 py-3 text-sm font-semibold cta-glow"
             >
-              Book a Diagnostic Call →
+              Get a Free Audit →
             </a>
           </div>
         </Container>

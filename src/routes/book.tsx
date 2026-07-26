@@ -45,7 +45,7 @@ const submitBooking = createServerFn({ method: "POST" })
 
     // Send Telegram notification (non-blocking)
     const lines: string[] = [];
-    lines.push("📅 <b>New Strategy Call Request</b>");
+    lines.push("📅 <b>New Free Audit Request</b>");
     lines.push("");
     lines.push(`Name: ${data.fullName}`);
     lines.push(`Business: ${data.businessName}`);
@@ -67,7 +67,7 @@ const submitBooking = createServerFn({ method: "POST" })
 export const Route = createFileRoute("/book")({
   head: () => ({
     meta: [
-      { title: "Book a Strategy Call — MetroReach Media" },
+      { title: "Get a Free Audit — MetroReach Media" },
       { name: "description", content: "Book a 30-minute strategy call with MetroReach Media. No pitch. Just an honest assessment of your marketing." },
       { property: "og:url", content: "https://www.metroreachagency.com/book" },
     ],
@@ -168,7 +168,7 @@ function Book() {
     <section className="py-24 bg-bg-root min-h-dvh">
       <Container>
         <SectionHeading
-          headline="Book a Strategy Call"
+          headline="Get a Free Audit"
           description="30 minutes. No pressure. Just an honest assessment of your current marketing."
         />
 

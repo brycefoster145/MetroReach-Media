@@ -50,8 +50,8 @@ function BookingsPage() {
     <section className="py-24 bg-bg-root min-h-dvh">
       <Container>
         <SectionHeading
-          headline="Strategy Call Bookings"
-          description="All strategy call requests submitted through the MetroReach Media website."
+          headline="Free Audit Requests"
+          description="All free audit requests submitted through the MetroReach Media website."
         />
 
         <div className="mb-8">
