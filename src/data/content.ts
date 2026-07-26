@@ -202,7 +202,6 @@ export const pricing = {
         "Facebook + Instagram (2 posts/day each)",
         "60 organic posts/month",
         "Custom graphics & copywriting",
-        "Full 7-person specialist team",
         "Monthly strategy & performance report",
         "Live dashboard access",
         "Commission tracking included",
