@@ -196,7 +196,7 @@ export const pricing = {
     },
     {
       name: "Starter Daily",
-      price: "$3,500",
+      price: "$5,000",
       featured: true,
       features: [
         "Facebook + Instagram (2 posts/day each)",
@@ -209,7 +209,7 @@ export const pricing = {
       bestFor:
         "Businesses ready to dominate social with daily content and a full dedicated team.",
       cta: "Build your pipeline",
-      paymentLink: "https://buy.stripe.com/aFafZh8Di3rg4126JL1ck1w",
+      paymentLink: "https://buy.stripe.com/7sYbJ1f1G7Hw2WYd891ck1y",
     },
   ],
   addonNote:

@@ -163,7 +163,7 @@ export const pricingPage = {
     },
     {
       name: "Starter Daily",
-      price: "$3,500",
+      price: "$5,000",
       period: "/month",
       description: "For businesses ready to dominate social with daily content and a full dedicated team.",
       features: [
@@ -176,7 +176,7 @@ export const pricingPage = {
       ],
       bestFor: "Businesses ready to dominate social with daily content and a full dedicated team.",
       featured: true,
-      paymentLink: "https://buy.stripe.com/aFafZh8Di3rg4126JL1ck1w",
+      paymentLink: "https://buy.stripe.com/7sYbJ1f1G7Hw2WYd891ck1y",
     },
   ],
   addonNote:
