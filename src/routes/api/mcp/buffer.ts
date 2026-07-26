@@ -192,13 +192,11 @@ async function createPost(args: {
   }>(`
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
-        ... on PostActionSuccess {
-          post {
-            id
-            status
-            text
-            dueAt
-          }
+        post {
+          id
+          status
+          text
+          dueAt
         }
       }
     }
@@ -291,9 +289,7 @@ async function deletePost(args: { post_id: string }) {
   }>(`
     mutation DeletePost($postId: PostId!) {
       deletePost(input: { id: $postId }) {
-        ... on DeletePostSuccess {
-          success
-        }
+        success
       }
     }
   `, { postId: args.post_id });
