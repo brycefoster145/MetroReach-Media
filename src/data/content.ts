@@ -199,8 +199,8 @@ export const pricing = {
       price: "$3,500",
       featured: true,
       features: [
-        "Facebook + Instagram",
-        "30 organic posts/month (daily)",
+        "Facebook + Instagram (2 posts/day each)",
+        "60 organic posts/month",
         "Custom graphics & copywriting",
         "Full 7-person specialist team",
         "Monthly strategy & performance report",

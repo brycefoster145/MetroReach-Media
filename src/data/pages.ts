@@ -167,8 +167,8 @@ export const pricingPage = {
       period: "/month",
       description: "For businesses ready to dominate social with daily content and a full dedicated team.",
       features: [
-        "Facebook + Instagram",
-        "30 organic posts/month (daily)",
+        "Facebook + Instagram (2 posts/day each)",
+        "60 organic posts/month",
         "Custom graphics & copywriting",
         "Full 7-person specialist team",
         "Monthly strategy & performance report",
