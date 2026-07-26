@@ -22,6 +22,7 @@
  *   meta_reply_to_comment     — reply to a specific comment on a post
  *   meta_get_page_conversations — get recent Messenger DMs for a page
  *   meta_reply_to_message     — reply to a conversation/message
+ *   meta_create_post          — create a post directly on a connected Facebook Page or Instagram
  */
 
 import { createFileRoute } from "@tanstack/react-router";
