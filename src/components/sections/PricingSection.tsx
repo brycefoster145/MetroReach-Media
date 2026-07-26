@@ -110,21 +110,27 @@ export function PricingSection() {
                   </div>
 
                   {/* CTA */}
-                  {isFeatured ? (
+                  {(tier as any).comingSoon ? (
+                    <button
+                      disabled
+                      className="w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle"
+                    >
+                      Coming Soon
+                    </button>
+                  ) : isFeatured ? (
                     <a
-                      href="/free-audit"
+                      href={(tier as any).paymentLink || "#"}
                       className="cta-featured-hover inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow w-full"
                     >
                       {tier.cta} →
                     </a>
                   ) : (
-                    <Button
-                      variant="ghost"
-                      href="/free-audit"
-                      className="w-full justify-center"
+                    <a
+                      href={(tier as any).paymentLink || "#"}
+                      className="inline-flex items-center justify-center gap-2 font-semibold rounded-full px-8 py-3.5 text-base w-full border border-border-subtle text-text-secondary bg-bg-surface hover:border-brand-primary hover:text-brand-primary transition-colors"
                     >
                       {tier.cta}
-                    </Button>
+                    </a>
                   )}
                 </div>
               </div>

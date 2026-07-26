@@ -71,7 +71,7 @@ for (let attempt = 1; ; attempt++) {
           if (await file.exists()) return withSecurityHeaders(new Response(file));
         }
         return withSecurityHeaders(
-          (handler as { fetch: (r: Request) => Response | Promise<Response> }).fetch(req),
+          await (handler as { fetch: (r: Request) => Promise<Response> }).fetch(req),
         );
       },
     });

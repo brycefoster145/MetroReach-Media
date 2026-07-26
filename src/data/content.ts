@@ -308,7 +308,7 @@ export const pricing = {
         "Live dashboard access on day one",
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
-      cta: "Get a Free Audit",
+      cta: "Get Started",
       paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
@@ -316,6 +316,7 @@ export const pricing = {
       price: "$3,000",
       period: "/month",
       featured: true,
+      comingSoon: true,
       features: [
         "Up to 4 platforms — organic on all, paid on 2",
         "20 original posts per month",
@@ -325,14 +326,13 @@ export const pricing = {
         "Community engagement included",
       ],
       bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
-      cta: "Get a Free Audit",
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
     {
       name: "Scale",
       price: "$5,500",
       period: "/month",
       featured: false,
+      comingSoon: true,
       features: [
         "Up to 7 platforms — organic on all, paid on up to 4",
         "30+ original posts per month",
@@ -344,8 +344,6 @@ export const pricing = {
         "Bi-weekly strategy calls + custom reporting",
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
-      cta: "Get a Free Audit",
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
     },
   ],
   noLockPledge:
