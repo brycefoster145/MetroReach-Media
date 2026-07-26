@@ -6,7 +6,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { getClientFromRequest, generateId } from "~/lib/client-auth";
+import { getClientFromRequest, generateId, checkCsrf } from "~/lib/client-auth";
 import { sql } from "~/lib/db";
 
 export const Route = createFileRoute("/api/portal/messages")({
@@ -39,6 +39,14 @@ export const Route = createFileRoute("/api/portal/messages")({
       },
 
       POST: async ({ request }) => {
+        // CSRF protection
+        if (!checkCsrf(request)) {
+          return new Response(
+            JSON.stringify({ error: "Invalid request" }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const client = getClientFromRequest(request);
         if (!client) {
           return new Response(
@@ -61,6 +69,12 @@ export const Route = createFileRoute("/api/portal/messages")({
         if (!message || typeof message !== "string" || !message.trim()) {
           return new Response(
             JSON.stringify({ error: "Message is required" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (message.length > 5000) {
+          return new Response(
+            JSON.stringify({ error: "Message must be under 5000 characters" }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }

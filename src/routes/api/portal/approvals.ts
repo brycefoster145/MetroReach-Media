@@ -6,7 +6,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { getClientFromRequest } from "~/lib/client-auth";
+import { getClientFromRequest, checkCsrf } from "~/lib/client-auth";
 import { sql } from "~/lib/db";
 
 export const Route = createFileRoute("/api/portal/approvals")({
@@ -42,6 +42,14 @@ export const Route = createFileRoute("/api/portal/approvals")({
       },
 
       PATCH: async ({ request }) => {
+        // CSRF protection
+        if (!checkCsrf(request)) {
+          return new Response(
+            JSON.stringify({ error: "Invalid request" }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const client = getClientFromRequest(request);
         if (!client) {
           return new Response(
@@ -72,6 +80,14 @@ export const Route = createFileRoute("/api/portal/approvals")({
         if (!validStatuses.includes(status)) {
           return new Response(
             JSON.stringify({ error: "Invalid status. Use 'approved' or 'changes_requested'" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        // Validate notes length
+        if (notes && notes.length > 2000) {
+          return new Response(
+            JSON.stringify({ error: "Notes must be under 2000 characters" }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }

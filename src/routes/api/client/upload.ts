@@ -9,7 +9,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { getClientFromRequest } from "~/lib/client-auth";
+import { getClientFromRequest, checkCsrf } from "~/lib/client-auth";
 import { sql } from "~/lib/db";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -18,6 +18,14 @@ export const Route = createFileRoute("/api/client/upload")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // CSRF protection
+        if (!checkCsrf(request)) {
+          return new Response(
+            JSON.stringify({ error: "Invalid request" }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const client = getClientFromRequest(request);
         if (!client) {
           return new Response(

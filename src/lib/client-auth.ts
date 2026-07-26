@@ -145,3 +145,13 @@ function parseCookies(header: string): Record<string, string> {
 export function generateId(prefix: string): string {
   return `${prefix}-${crypto.randomBytes(8).toString("hex")}`;
 }
+
+// ── CSRF protection ──
+
+/**
+ * Check for CSRF custom header on state-changing requests.
+ * Returns true if the request includes the required header.
+ */
+export function checkCsrf(request: Request): boolean {
+  return request.headers.get("x-csrf-protection") === "1";
+}
