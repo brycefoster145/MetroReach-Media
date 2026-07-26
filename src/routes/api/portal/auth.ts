@@ -9,13 +9,32 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { createClientToken, setTokenCookie } from "~/lib/client-auth";
+import { createClientToken, setTokenCookie, checkCsrf } from "~/lib/client-auth";
 import { sql } from "~/lib/db";
+import { rateLimit, getClientIp } from "~/lib/rate-limit";
 
 export const Route = createFileRoute("/api/portal/auth")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Rate limit: 5 attempts per IP per minute
+        const ip = getClientIp(request);
+        const rl = rateLimit(`portal-auth:${ip}`, 5, 60_000);
+        if (!rl.allowed) {
+          return new Response(
+            JSON.stringify({ error: "Too many attempts. Please wait before trying again." }),
+            { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+          );
+        }
+
+        // CSRF protection
+        if (!checkCsrf(request)) {
+          return new Response(
+            JSON.stringify({ error: "Invalid request" }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         let body: { token: string };
         try {
           body = await request.json();
@@ -27,7 +46,7 @@ export const Route = createFileRoute("/api/portal/auth")({
         }
 
         const { token } = body;
-        if (!token || typeof token !== "string" || token.length < 8) {
+        if (!token || typeof token !== "string" || token.length < 8 || token.length > 128) {
           return new Response(
             JSON.stringify({ error: "Invalid invite code" }),
             { status: 400, headers: { "Content-Type": "application/json" } },

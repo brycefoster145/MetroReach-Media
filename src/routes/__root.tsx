@@ -3,6 +3,7 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  useRouterState,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { siteMeta } from "~/data/content";
@@ -97,14 +98,17 @@ gtag('config', 'G-7R5Q4S37JT');`,
 });
 
 function RootComponent() {
+  const routerState = useRouterState();
+  const isPortalRoute = routerState.location.pathname.startsWith("/portal");
+
   return (
     <CartProvider>
       <RootDocument>
-        <Navbar />
+        {!isPortalRoute && <Navbar />}
         <div id="main-content">
           <Outlet />
         </div>
-        <Footer />
+        {!isPortalRoute && <Footer />}
       </RootDocument>
     </CartProvider>
   );

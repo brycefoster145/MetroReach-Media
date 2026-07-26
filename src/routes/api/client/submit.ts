@@ -9,6 +9,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { getClientFromRequest } from "~/lib/client-auth";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -34,6 +35,15 @@ export const Route = createFileRoute("/api/client/submit")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Require authentication
+        const client = getClientFromRequest(request);
+        if (!client) {
+          return new Response(
+            JSON.stringify({ error: "Unauthorized" }),
+            { status: 401, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         let formData: FormData;
         try {
           formData = await request.formData();

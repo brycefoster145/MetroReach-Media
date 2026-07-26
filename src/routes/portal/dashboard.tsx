@@ -135,6 +135,7 @@ function PortalDashboard() {
   // Upload
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [uploadMsgType, setUploadMsgType] = useState<"success" | "error" | "">("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -167,24 +168,62 @@ function PortalDashboard() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [data?.messages]);
 
+  // Escape key — close approval modal
+  useEffect(() => {
+    if (!selectedApproval) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        closeApprovalModal();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedApproval, approvalNotes]);
+
+  function closeApprovalModal() {
+    if (approvalNotes.trim().length > 0) {
+      if (!confirm("You have unsaved notes. Close without saving?")) return;
+    }
+    setSelectedApproval(null);
+    setApprovalNotes("");
+  }
+
   // ── Actions ──
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!newMessage.trim()) return;
     setSending(true);
+
+    // Optimistic UI — add message immediately
+    const optimisticMsg: PortalMessage = {
+      id: `opt-${Date.now()}`,
+      sender_type: "client",
+      message: newMessage.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    setData((prev) => prev ? { ...prev, messages: [...prev.messages, optimisticMsg] } : prev);
+    setNewMessage("");
+
     try {
       const res = await fetch("/api/portal/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage.trim() }),
+        headers: { "Content-Type": "application/json", "x-csrf-protection": "1" },
+        body: JSON.stringify({ message: optimisticMsg.message }),
       });
-      if (res.ok) {
-        setNewMessage("");
-        fetchDashboard();
+      if (res.status === 401) {
+        window.location.href = "/portal";
+        return;
+      }
+      if (!res.ok) {
+        // Remove optimistic message on failure
+        setData((prev) => prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticMsg.id) } : prev);
       }
     } catch (e) {
       console.error("Message failed", e);
+      // Remove optimistic message on failure
+      setData((prev) => prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticMsg.id) } : prev);
     } finally {
       setSending(false);
     }
@@ -194,9 +233,13 @@ function PortalDashboard() {
     try {
       const res = await fetch("/api/portal/approvals", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-csrf-protection": "1" },
         body: JSON.stringify({ id: approvalId, status, notes: approvalNotes }),
       });
+      if (res.status === 401) {
+        window.location.href = "/portal";
+        return;
+      }
       if (res.ok) {
         setSelectedApproval(null);
         setApprovalNotes("");
@@ -210,8 +253,26 @@ function PortalDashboard() {
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (uploadFiles.length === 0) return;
+
+    // Client-side file validation
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_TYPES = ["video/mp4", "video/quicktime", "image/jpeg", "image/png", "image/webp"];
+    for (const f of uploadFiles) {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        setUploadMsg(`Unsupported file type: "${f.name}". Use MP4, MOV, JPG, PNG, or WebP.`);
+        setUploadMsgType("error");
+        return;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        setUploadMsg(`File "${f.name}" exceeds the 10MB limit.`);
+        setUploadMsgType("error");
+        return;
+      }
+    }
+
     setUploading(true);
     setUploadMsg("");
+    setUploadMsgType("");
 
     const formData = new FormData();
     for (const f of uploadFiles) {
@@ -219,26 +280,37 @@ function PortalDashboard() {
     }
 
     try {
-      const res = await fetch("/api/client/submit", {
+      const res = await fetch("/api/client/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
+        headers: { "x-csrf-protection": "1" },
       });
+      if (res.status === 401) {
+        window.location.href = "/portal";
+        return;
+      }
       if (res.ok) {
         setUploadMsg("Files uploaded successfully.");
+        setUploadMsgType("success");
         setUploadFiles([]);
       } else {
         const err = await res.json();
         setUploadMsg(err.error || "Upload failed.");
+        setUploadMsgType("error");
       }
     } catch {
       setUploadMsg("Network error.");
+      setUploadMsgType("error");
     } finally {
       setUploading(false);
     }
   }
 
-  function handleSignOut() {
-    document.cookie = "metroreach_client_token=; Path=/; Max-Age=0; SameSite=Lax";
+  async function handleSignOut() {
+    try {
+      await fetch("/api/portal/logout", { method: "POST", credentials: "include" });
+    } catch {}
     window.location.href = "/portal";
   }
 
@@ -337,7 +409,7 @@ function PortalDashboard() {
         </div>
 
         {/* ── Nav tabs ── */}
-        <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1">
+        <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1 portal-tabs">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = section === item.key;
@@ -367,7 +439,7 @@ function PortalDashboard() {
 
         {/* ── Activity Feed ── */}
         {section === "activity" && (
-          <div className="space-y-4">
+          <div key="activity" className="space-y-4 tab-panel-enter">
             <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Recent Activity</h3>
             {deliverables.length === 0 ? (
               <div className="bg-bg-surface border border-border-subtle rounded-2xl p-10 text-center">
@@ -399,7 +471,7 @@ function PortalDashboard() {
 
         {/* ── Content Approvals ── */}
         {section === "approvals" && (
-          <div className="space-y-4">
+          <div key="approvals" className="space-y-4 tab-panel-enter">
             <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Content for Review</h3>
             {approvals.length === 0 ? (
               <div className="bg-bg-surface border border-border-subtle rounded-2xl p-10 text-center">
@@ -465,7 +537,7 @@ function PortalDashboard() {
                         <p className="text-sm text-text-muted capitalize">{selectedApproval.content_type.replace("_", " ")}</p>
                       </div>
                       <button
-                        onClick={() => { setSelectedApproval(null); setApprovalNotes(""); }}
+                        onClick={closeApprovalModal}
                         className="p-1.5 rounded-lg hover:bg-bg-surface-raised text-text-muted hover:text-text-primary transition-colors"
                       >
                         <X size={20} />
@@ -481,6 +553,7 @@ function PortalDashboard() {
                         onChange={(e) => setApprovalNotes(e.target.value)}
                         placeholder="Add notes or request specific changes..."
                         rows={4}
+                        maxLength={2000}
                         className="w-full px-4 py-3 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus-visible:outline-2 focus-visible:outline-brand-primary resize-none"
                       />
                     </div>
@@ -507,7 +580,7 @@ function PortalDashboard() {
 
         {/* ── Messages ── */}
         {section === "messages" && (
-          <div className="space-y-4">
+          <div key="messages" className="space-y-4 tab-panel-enter">
             <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Messages</h3>
             <div className="bg-bg-surface border border-border-subtle rounded-2xl overflow-hidden flex flex-col h-[500px]">
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -546,6 +619,7 @@ function PortalDashboard() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
                   rows={2}
+                  maxLength={5000}
                   className="flex-1 px-4 py-2.5 bg-bg-surface-raised border border-border-subtle rounded-xl text-text-primary placeholder:text-text-muted text-sm focus-visible:outline-2 focus-visible:outline-brand-primary resize-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -569,7 +643,7 @@ function PortalDashboard() {
 
         {/* ── Upload Assets ── */}
         {section === "upload" && (
-          <div className="space-y-4">
+          <div key="upload" className="space-y-4 tab-panel-enter">
             <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Submit Assets</h3>
             <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6">
               <p className="text-sm text-text-secondary mb-4">
@@ -633,7 +707,7 @@ function PortalDashboard() {
                   )}
                 </button>
                 {uploadMsg && (
-                  <p className={`text-xs text-center ${uploadMsg.includes("fail") || uploadMsg.includes("error") ? "text-error" : "text-brand-accent"}`}>
+                  <p className={`text-xs text-center ${uploadMsgType === "error" ? "text-error" : "text-brand-accent"}`}>
                     {uploadMsg}
                   </p>
                 )}
