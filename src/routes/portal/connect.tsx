@@ -15,6 +15,7 @@ import {
   InstagramLogo,
   LinkedinLogo,
   TiktokLogo,
+  TwitterLogo,
   Link,
   CheckCircle,
   WarningCircle,
@@ -34,6 +35,69 @@ const LINKEDIN_OAUTH_URL = `https://www.linkedin.com/oauth/v2/authorization?resp
 const TIKTOK_CLIENT_KEY = "placeholder_tiktok_client_id";
 const TIKTOK_REDIRECT_URI = "https://metroreachagency.com/api/portal/tiktok-oauth-callback";
 const TIKTOK_OAUTH_URL = `https://www.tiktok.com/v2/auth/authorize/?client_key=${TIKTOK_CLIENT_KEY}&redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&response_type=code&scope=user.info.basic,video.publish,video.upload&state=metroreach`;
+
+const X_CLIENT_ID = "placeholder_x_client_id";
+const X_REDIRECT_URI = "https://metroreachagency.com/api/portal/x-oauth-callback";
+const X_SCOPE = "tweet.read%20tweet.write%20users.read%20offline.access";
+
+/**
+ * Generate a cryptographically random PKCE code_verifier.
+ * Uses characters from the unreserved set: A-Z, a-z, 0-9, -, ., _, ~
+ */
+function generateCodeVerifier(): string {
+  const charset =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  let result = "";
+  for (let i = 0; i < 64; i++) {
+    result += charset[array[i] % charset.length];
+  }
+  return result;
+}
+
+/**
+ * Compute the S256 code_challenge from a code_verifier.
+ * Returns a base64url-encoded SHA-256 hash.
+ */
+async function computeCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  // Convert to base64url (no padding)
+  const bytes = new Uint8Array(hash);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Build the X OAuth authorization URL with PKCE, set the code_verifier
+ * cookie, and redirect the browser.
+ */
+async function redirectToXAuth() {
+  const codeVerifier = generateCodeVerifier();
+  // Store code_verifier in a cookie for the callback to retrieve
+  document.cookie =
+    `x_code_verifier=${encodeURIComponent(codeVerifier)}; ` +
+    `path=/; max-age=600; SameSite=Lax; Secure`;
+
+  const codeChallenge = await computeCodeChallenge(codeVerifier);
+  const state = "metroreach_" + Date.now().toString(36);
+
+  const url = new URL("https://x.com/i/oauth2/authorize");
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("client_id", X_CLIENT_ID);
+  url.searchParams.set("redirect_uri", X_REDIRECT_URI);
+  url.searchParams.set("scope", "tweet.read tweet.write users.read offline.access");
+  url.searchParams.set("state", state);
+  url.searchParams.set("code_challenge", codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
+
+  window.location.href = url.toString();
+}
 
 interface ConnectedAccount {
   platform: string;
@@ -120,10 +184,18 @@ function PortalConnect() {
     window.location.href = TIKTOK_OAUTH_URL;
   }
 
+  async function handleXConnect() {
+    setConnecting(true);
+    setError("");
+    // PKCE flow: generate code_verifier, set cookie, redirect to X OAuth
+    await redirectToXAuth();
+  }
+
   const hasFacebook = accounts.some((a) => a.platform === "facebook");
   const hasInstagram = accounts.some((a) => a.platform === "instagram");
   const hasLinkedIn = accounts.some((a) => a.platform === "linkedin");
   const hasTikTok = accounts.some((a) => a.platform === "tiktok");
+  const hasX = accounts.some((a) => a.platform === "x");
 
   return (
     <main className="min-h-dvh bg-bg-root">
@@ -409,6 +481,68 @@ function PortalConnect() {
               </div>
             )}
           </div>
+
+          {/* ── X (Twitter) Connect Card ── */}
+          <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 flex items-center justify-center">
+                <TwitterLogo size={20} className="text-[#1DA1F2]" weight="fill" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-heading text-text-primary">X</h3>
+                <p className="text-xs text-text-muted">Connect your X account</p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner size={24} className="text-brand-primary animate-spin" />
+              </div>
+            ) : hasX ? (
+              <div className="space-y-3">
+                {accounts
+                  .filter((a) => a.platform === "x")
+                  .map((a) => (
+                    <div
+                      key={a.page_id}
+                      className="flex items-center gap-3 p-3 bg-bg-surface-raised border border-border-subtle rounded-xl"
+                    >
+                      <CheckCircle size={18} className="text-brand-accent flex-shrink-0" weight="fill" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate">{a.account_name}</p>
+                        <p className="text-xs text-text-muted">Connected {new Date(a.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <span className="text-xs font-semibold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  ))}
+                <button
+                  onClick={handleXConnect}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-bg-surface-raised border border-border-subtle text-text-secondary text-sm font-medium hover:border-border-emphasis hover:text-text-primary transition-colors mt-2"
+                >
+                  <Link size={14} /> Reconnect
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-text-secondary mb-4">
+                  Connect your X account to let us publish tweets and manage your presence.
+                </p>
+                <button
+                  onClick={handleXConnect}
+                  disabled={connecting}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1DA1F2] text-white text-sm font-semibold hover:bg-[#1A8CD8] transition-colors disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <><Spinner size={16} className="animate-spin" /> Connecting...</>
+                  ) : (
+                    <><TwitterLogo size={16} weight="fill" /> Connect X</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Info ── */}
@@ -466,9 +600,16 @@ function PortalConnect() {
                 <p className="text-xs text-text-muted">Upload and publish videos to your TikTok profile</p>
               </div>
             </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle size={16} className="text-text-muted flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">X (Twitter) posting</p>
+                <p className="text-xs text-text-muted">Publish tweets and manage your X presence</p>
+              </div>
+            </div>
           </div>
           <p className="text-xs text-text-muted mt-4 pt-4 border-t border-border-subtle">
-            You can revoke access at any time from your Facebook Business Settings, LinkedIn app permissions, or TikTok app settings.
+            You can revoke access at any time from your Facebook Business Settings, LinkedIn app permissions, TikTok app settings, or X app permissions.
             Your data is encrypted and stored securely.
           </p>
         </div>
