@@ -131,12 +131,37 @@ async function listProfiles() {
   return data;
 }
 
+// Channel service cache — fetched lazily on first createPost call
+let channelServiceCache: Map<string, string> | null = null;
+
+async function getChannelService(channelId: string): Promise<string> {
+  if (!channelServiceCache) {
+    const data = await graphqlRequest<{
+      channels?: Channel[];
+    }>(`
+      query ListChannels($orgId: OrganizationId!) {
+        channels(input: { organizationId: $orgId }) {
+          id
+          service
+        }
+      }
+    `, { orgId: BUFFER_ORG_ID });
+    channelServiceCache = new Map();
+    for (const ch of data.channels ?? []) {
+      channelServiceCache.set(ch.id, ch.service);
+    }
+  }
+  return channelServiceCache.get(channelId) ?? "unknown";
+}
+
 async function createPost(args: {
   channelId: string;
   text: string;
   media_urls?: string[];
   scheduled_at?: string;
 }) {
+  const service = await getChannelService(args.channelId);
+
   // Use GraphQL mutation with correct ShareMode enum values:
   // shareNow (immediate), customScheduled (scheduled), addToQueue, shareNext
   const input: Record<string, unknown> = {
@@ -144,17 +169,33 @@ async function createPost(args: {
     text: args.text,
     mode: args.scheduled_at ? "customScheduled" : "shareNow",
     schedulingType: "automatic",
+    assets: [], // Required field — empty array for text-only posts
   };
   if (args.scheduled_at) {
     input.dueAt = args.scheduled_at;
   }
   if (args.media_urls?.length) {
-    input.media = args.media_urls.map((url) => {
+    input.assets = args.media_urls.map((url) => {
       const imageExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
       return imageExts.some((ext) => url.toLowerCase().includes(ext))
-        ? { photoUrl: url }
-        : { linkUrl: url };
+        ? { mediaUrl: url }
+        : { mediaUrl: url };
     });
+  }
+  // Metadata with platform-specific type (required for FB/IG)
+  if (service === "instagram") {
+    input.metadata = {
+      instagram: {
+        type: "post",
+        shouldShareToFeed: true,
+      },
+    };
+  } else if (service === "facebook") {
+    input.metadata = {
+      facebook: {
+        type: "post",
+      },
+    };
   }
   return graphqlRequest(`
     mutation CreatePost($input: CreatePostInput!) {
