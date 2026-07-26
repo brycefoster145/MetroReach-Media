@@ -46,7 +46,7 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <a href="/" className="inline-flex items-center bg-white/5 rounded-lg px-3 py-1">
+        <a href="/" className="inline-flex items-center">
           <img src="/logo-nav.png" alt="MetroReach Media" className="w-48 h-auto" />
         </a>
 
