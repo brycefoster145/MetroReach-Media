@@ -58,7 +58,7 @@ export const problem = {
 export const solution = {
   headline: "A marketing team that delivers. Daily.",
   subheadline:
-    "MetroReach Media gives every client a dedicated team of specialists — strategist, copywriter, designer, media buyer, and analyst. No account manager juggling five clients. No freelancer who goes dark. Just consistent, premium output at a cost that reflects our efficiency, not someone's overhead.",
+    "MetroReach Media gives every client a dedicated team of specialists — strategist, copywriter, designer, media buyer, analyst, engineer, and QA. No account manager juggling five clients. No freelancer who goes dark. Just consistent, premium output at a cost that reflects our efficiency, not someone's overhead.",
   differentiators: [
     {
       number: "01",
@@ -70,7 +70,7 @@ export const solution = {
     {
       number: "02",
       headline: "Specialist-led. Not account-managed.",
-      body: "Traditional agencies give you one account manager. We give you a team of five specialists — each focused on a single function, each accountable for their output. Strategy. Copy. Design. Media buying. Analytics. No single point of failure. No \"sorry, your account manager is on vacation.\"",
+      body: "Traditional agencies give you one account manager. We give you a team of seven specialists — each focused on a single function, each accountable for their output. Strategy. Copy. Design. Media buying. Analytics. Engineering. QA. No single point of failure. No \"sorry, your account manager is on vacation.\"",
       icon: "SealCheck" as const,
       color: "brand-teal",
     },
