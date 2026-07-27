@@ -14,6 +14,7 @@ import { sql } from "~/lib/db";
 import { getAllEmptySlots, fillSlot } from "~/lib/slot-assigner";
 import { SLOT_CONFIG } from "~/lib/slot-utils";
 import { generateImage } from "~/lib/generate-image";
+import { getHashtags } from "~/lib/hashtags";
 import OpenAI from "openai";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -245,7 +246,7 @@ export const Route = createFileRoute("/api/cron/auto-fill")({
             const result = await fillSlot(
               slot.platform,
               content,
-              "#MetroReachMedia #SocialMediaMarketing #GrowYourBusiness",
+              getHashtags(slot.platform, content),
               "metroreach",
             );
 
