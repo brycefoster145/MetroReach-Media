@@ -134,7 +134,8 @@ export async function sendEmail({
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return { success: false, error: `SendGrid error: ${message}` };
+      console.warn(`SendGrid failed, falling back to Microsoft Graph: ${message}`);
+      // Fall through to Microsoft Graph below
     }
   }
 
