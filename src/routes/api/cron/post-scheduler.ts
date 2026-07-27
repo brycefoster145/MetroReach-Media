@@ -127,6 +127,15 @@ async function processDuePosts(): Promise<Response> {
     }
   } catch (err: any) {
     console.error("[post-scheduler] Query error:", err.message);
+
+    // Record failed cron run
+    try {
+      await sql`
+        INSERT INTO cron_runs (posts_found, posts_processed, posts_succeeded, posts_failed, error)
+        VALUES (0, 0, 0, 0, ${err.message})
+      `;
+    } catch (_) { /* don't fail the whole run over logging */ }
+
     return new Response(
       JSON.stringify({ error: err.message, results }),
       {
@@ -134,6 +143,21 @@ async function processDuePosts(): Promise<Response> {
         headers: { "Content-Type": "application/json" },
       },
     );
+  }
+
+  // Record successful cron run
+  const foundCount = results.length;
+  const succeededCount = results.filter((r) => r.status === "posted").length;
+  const failedCount = results.filter((r) => r.status === "failed").length;
+  const processedCount = succeededCount + failedCount;
+
+  try {
+    await sql`
+      INSERT INTO cron_runs (posts_found, posts_processed, posts_succeeded, posts_failed)
+      VALUES (${foundCount}, ${processedCount}, ${succeededCount}, ${failedCount})
+    `;
+  } catch (logErr: any) {
+    console.error("[post-scheduler] Failed to record cron run:", logErr.message);
   }
 
   return new Response(JSON.stringify({ results, count: results.length }), {

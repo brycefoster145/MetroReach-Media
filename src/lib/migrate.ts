@@ -331,6 +331,21 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
   console.log("✓ scheduled_posts table ready");
 
+  // ── cron_runs table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS cron_runs (
+      id SERIAL PRIMARY KEY,
+      posts_found INTEGER DEFAULT 0,
+      posts_processed INTEGER DEFAULT 0,
+      posts_succeeded INTEGER DEFAULT 0,
+      posts_failed INTEGER DEFAULT 0,
+      error TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_cron_runs_created ON cron_runs(created_at DESC)`;
+  console.log("✓ cron_runs table ready");
+
   console.log("Migration complete.");
 }
 

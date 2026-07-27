@@ -50,9 +50,29 @@ export const Route = createFileRoute("/api/force-migrate")({
           await n`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
           results.push("✓ idx_scheduled_posts_client index ready");
 
+          // ── cron_runs table ──
+          await n`
+            CREATE TABLE IF NOT EXISTS cron_runs (
+              id SERIAL PRIMARY KEY,
+              posts_found INTEGER DEFAULT 0,
+              posts_processed INTEGER DEFAULT 0,
+              posts_succeeded INTEGER DEFAULT 0,
+              posts_failed INTEGER DEFAULT 0,
+              error TEXT,
+              created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+          `;
+          results.push("✓ cron_runs table ready");
+
+          await n`CREATE INDEX IF NOT EXISTS idx_cron_runs_created ON cron_runs(created_at DESC)`;
+          results.push("✓ idx_cron_runs_created index ready");
+
           // Verify
           const count = await n`SELECT COUNT(*) as cnt FROM scheduled_posts`;
-          results.push(`Table has ${count[0]?.cnt} rows`);
+          results.push(`scheduled_posts has ${count[0]?.cnt} rows`);
+
+          const crCount = await n`SELECT COUNT(*) as cnt FROM cron_runs`;
+          results.push(`cron_runs has ${crCount[0]?.cnt} rows`);
 
           // Check pending due posts
           const dueCount = await n`
