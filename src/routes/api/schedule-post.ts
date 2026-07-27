@@ -54,6 +54,25 @@ export const Route = createFileRoute("/api/schedule-post")({
           );
         }
 
+        // ── Validate due_at is in the future ──
+        const dueAtDate = new Date(due_at);
+        if (isNaN(dueAtDate.getTime())) {
+          return new Response(
+            JSON.stringify({
+              error: "Invalid due_at: must be a valid ISO-8601 datetime string",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (dueAtDate.getTime() <= Date.now()) {
+          return new Response(
+            JSON.stringify({
+              error: "due_at must be in the future — cannot schedule posts for a past time",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const validPlatforms = [
           "facebook",
           "instagram",
@@ -95,9 +114,10 @@ export const Route = createFileRoute("/api/schedule-post")({
         }
 
         try {
-          // ── Dedup check: upsert by platform + due_at ──
-          // If a pending post already exists for this platform + time slot,
-          // update it instead of creating a duplicate.
+          // ── Dedup check: REJECT duplicate platform + time slot ──
+          // A pending post already exists for this platform + due_at.
+          // Duplicate time slots are not allowed — the caller must pick a
+          // different time or cancel the existing post first.
           const existing = await sql`
             SELECT id FROM scheduled_posts
             WHERE platform = ${platform}
@@ -107,30 +127,13 @@ export const Route = createFileRoute("/api/schedule-post")({
           `;
 
           if (existing.length > 0) {
-            // Update the existing post
-            const existingId = existing[0].id as string;
-            await sql`
-              UPDATE scheduled_posts
-              SET
-                client_id = ${client_id as string},
-                page_id = ${page_id as string},
-                ig_user_id = ${ig_user_id ? (ig_user_id as string) : null},
-                content = ${content as string},
-                media_urls = ${sql.json(finalMediaUrls)},
-                hashtags = ${hashtags as string}
-              WHERE id = ${existingId}
-            `;
-
             return new Response(
               JSON.stringify({
-                success: true,
-                id: existingId,
-                platform,
-                due_at,
-                updated: true,
-                message: `Post updated for ${due_at} (existing post replaced)`,
+                error: "Duplicate time slot",
+                detail: `A pending post already exists for ${platform} at ${due_at}. Cancel it first or pick a different time.`,
+                existingPostId: existing[0].id,
               }),
-              { status: 200, headers: { "Content-Type": "application/json" } },
+              { status: 409, headers: { "Content-Type": "application/json" } },
             );
           }
 
