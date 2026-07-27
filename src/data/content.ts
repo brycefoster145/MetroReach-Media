@@ -301,9 +301,9 @@ export const pricing = {
       period: "/month",
       featured: false,
       features: [
-        "Facebook + Instagram (organic + paid on one)",
+        "Facebook + Instagram (organic)",
+        "X/Twitter (organic)",
         "12 original posts per month",
-        "1 paid campaign, managed continuously",
         "Monthly strategy report + performance review",
         "Live dashboard access on day one",
       ],
