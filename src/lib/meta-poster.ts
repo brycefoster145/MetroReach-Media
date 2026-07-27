@@ -190,7 +190,27 @@ export async function postToInstagram(
     pageToken,
   );
 
-  // Step 2: Publish the container
+  // Step 2: Wait for container to be ready before publishing
+  // Meta needs time to process the image; publishing immediately yields error 9007
+  let status = "IN_PROGRESS";
+  for (let i = 0; i < 10; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const check = await graphApiRequest<{ status_code?: string; status?: string }>(
+      "GET",
+      `/${container.id}?fields=status_code,status`,
+      undefined,
+      undefined,
+      pageToken,
+    );
+    status = check.status_code || check.status || "IN_PROGRESS";
+    if (status === "FINISHED") break;
+  }
+
+  if (status !== "FINISHED") {
+    throw new Error(`Media container not ready after 20s: ${status}`);
+  }
+
+  // Step 3: Publish the container
   const publishResult = await graphApiRequest<{ id: string }>(
     "POST",
     `/${igUserId}/media_publish`,
