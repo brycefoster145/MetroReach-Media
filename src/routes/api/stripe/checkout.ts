@@ -27,7 +27,11 @@ function getStripe(): Stripe {
 
 // ── Determine the site's public URL ──
 function getSiteUrl(): string {
-  // Vercel provides this at build time
+  // Production: always use the custom domain
+  if (process.env.VERCEL_ENV === "production") {
+    return "https://metroreachagency.com";
+  }
+  // Preview/staging: Vercel provides the preview URL at build time
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
