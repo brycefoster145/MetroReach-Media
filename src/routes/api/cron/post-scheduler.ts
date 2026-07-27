@@ -13,6 +13,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { publishPost, NoMediaError } from "~/lib/meta-poster";
 import { publishToX } from "~/lib/x-poster";
+import { publishToGoogle } from "~/lib/google-poster";
 
 export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
@@ -163,6 +164,37 @@ async function processDuePosts(): Promise<Response> {
             postsFailed++;
             postsProcessed++;
           }
+          continue;
+        }
+
+        // ── Google (GMB + YouTube) ──
+        if (platform === "google") {
+          const googleMediaUrls = Array.isArray(post.media_urls)
+            ? (post.media_urls as string[])
+            : [];
+
+          const googleResult = await publishToGoogle(
+            (post.client_id as string) || "metroreach",
+            post.page_id as string,
+            fullText as string,
+            googleMediaUrls.length > 0 ? googleMediaUrls : undefined,
+          );
+
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'posted', meta_post_id = ${googleResult.post_id}, posted_at = NOW()
+            WHERE id = ${postId}
+          `;
+
+          console.log(
+            `[post-scheduler] Published google post ${postId} → ${googleResult.platform} ID ${googleResult.post_id}`,
+          );
+          results.push({
+            id: postId,
+            platform: googleResult.platform,
+            status: "posted",
+            post_id: googleResult.post_id,
+          });
           continue;
         }
 
