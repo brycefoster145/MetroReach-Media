@@ -13,6 +13,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
+import { getSiteUrl } from "~/lib/site-url";
 import {
   SLOT_CONFIG,
   DAY_NAMES,
@@ -99,6 +100,43 @@ async function lookupPostIdentifiers(
     page_id: rows[0].page_id as string,
     ig_user_id: (rows[0].ig_user_id as string) || null,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTM LINK GENERATION
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Generate a UTM-tagged click-tracking link for a scheduled post.
+ *
+ * Pattern: /go/{clientSlug}/{postId}?utm_source={platform}&utm_medium=social&utm_campaign={clientSlug}&utm_content={postId}
+ *
+ * Returns null if the client cannot be found.
+ */
+async function generateUtmLink(
+  clientId: string,
+  postId: string,
+  platform: string,
+): Promise<string | null> {
+  try {
+    const clientRows = await sql`
+      SELECT service_slug FROM clients WHERE id = ${clientId} LIMIT 1
+    `;
+    if (clientRows.length === 0) return null;
+
+    const clientSlug = (clientRows[0].service_slug as string) || clientId;
+    const baseUrl = getSiteUrl();
+    const params = new URLSearchParams({
+      utm_source: platform,
+      utm_medium: "social",
+      utm_campaign: clientSlug,
+      utm_content: postId,
+    });
+    return `${baseUrl}/go/${encodeURIComponent(clientSlug)}/${encodeURIComponent(postId)}?${params.toString()}`;
+  } catch (err: any) {
+    console.error("[slot-assigner] UTM link generation error:", err.message);
+    return null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -274,11 +312,14 @@ export async function fillSlot(
   // Insert the post
   const id = `post-${randomBytes(8).toString("hex")}`;
 
+  // Generate UTM-tagged click-tracking link
+  const utmLink = await generateUtmLink(clientId, id, platform);
+
   try {
     await sql`
       INSERT INTO scheduled_posts (
         id, client_id, platform, page_id, ig_user_id,
-        content, media_urls, hashtags, due_at, status
+        content, media_urls, hashtags, due_at, status, utm_link
       ) VALUES (
         ${id},
         ${clientId},
@@ -289,7 +330,8 @@ export async function fillSlot(
         ${JSON.stringify([])}::jsonb,
         ${hashtags},
         ${slot.utcTimestamp}::timestamptz,
-        'pending'
+        'pending',
+        ${utmLink || null}
       )
     `;
 
