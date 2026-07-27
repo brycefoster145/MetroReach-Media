@@ -70,73 +70,74 @@ export const Route = createFileRoute("/api/schedule-post")({
           );
         }
 
-        // ── Dedup check: upsert by platform + due_at ──
-        // If a pending post already exists for this platform + time slot,
-        // update it instead of creating a duplicate.
-        const existing = await sql`
-          SELECT id FROM scheduled_posts
-          WHERE platform = ${platform}
-            AND due_at = ${due_at}::timestamptz
-            AND status = 'pending'
-          LIMIT 1
-        `;
+        try {
+          // ── Dedup check: upsert by platform + due_at ──
+          // If a pending post already exists for this platform + time slot,
+          // update it instead of creating a duplicate.
+          const existing = await sql`
+            SELECT id FROM scheduled_posts
+            WHERE platform = ${platform}
+              AND due_at = ${due_at}::timestamptz
+              AND status = 'pending'
+            LIMIT 1
+          `;
 
-        if (existing.length > 0) {
-          // Update the existing post
-          const existingId = existing[0].id as string;
+          if (existing.length > 0) {
+            // Update the existing post
+            const existingId = existing[0].id as string;
+            await sql`
+              UPDATE scheduled_posts
+              SET
+                client_id = ${client_id as string},
+                page_id = ${page_id as string},
+                ig_user_id = ${ig_user_id ? (ig_user_id as string) : null},
+                content = ${content as string},
+                media_urls = ${JSON.stringify(media_urls || [])}::jsonb,
+                hashtags = ${hashtags as string}
+              WHERE id = ${existingId}
+            `;
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                id: existingId,
+                platform,
+                due_at,
+                updated: true,
+                message: `Post updated for ${due_at} (existing post replaced)`,
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
+          const id = `post-${randomBytes(8).toString("hex")}`;
+
           await sql`
-            UPDATE scheduled_posts
-            SET
-              client_id = ${client_id as string},
-              page_id = ${page_id as string},
-              ig_user_id = ${ig_user_id ? (ig_user_id as string) : null},
-              content = ${content as string},
-              media_urls = ${JSON.stringify(media_urls || [])}::jsonb,
-              hashtags = ${hashtags as string}
-            WHERE id = ${existingId}
+            INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
+            VALUES (
+              ${id},
+              ${client_id as string},
+              ${platform},
+              ${page_id as string},
+              ${ig_user_id ? (ig_user_id as string) : null},
+              ${content as string},
+              ${JSON.stringify(media_urls || [])}::jsonb,
+              ${hashtags as string},
+              ${due_at}::timestamptz,
+              'pending'
+            )
           `;
 
           return new Response(
             JSON.stringify({
               success: true,
-              id: existingId,
+              id,
               platform,
               due_at,
-              updated: true,
-              message: `Post updated for ${due_at} (existing post replaced)`,
+              message: `Post scheduled for ${due_at}`,
             }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
+            { status: 201, headers: { "Content-Type": "application/json" } },
           );
-        }
-
-        const id = `post-${randomBytes(8).toString("hex")}`;
-
-        await sql`
-          INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
-          VALUES (
-            ${id},
-            ${client_id as string},
-            ${platform},
-            ${page_id as string},
-            ${ig_user_id ? (ig_user_id as string) : null},
-            ${content as string},
-            ${JSON.stringify(media_urls || [])}::jsonb,
-            ${hashtags as string},
-            ${due_at}::timestamptz,
-            'pending'
-          )
-        `;
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            id,
-            platform,
-            due_at,
-            message: `Post scheduled for ${due_at}`,
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
         } catch (err: any) {
           console.error("[schedule-post] Insert error:", err.message);
           return new Response(
