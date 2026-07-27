@@ -450,6 +450,16 @@ export const STRIPE_PRODUCT_MAP: StripeProductMapping[] = [
     recurring: false,
     priceLabel: "From $600 one-time",
   },
+  {
+    slug: "vip-daily",
+    stripePriceId: "price_1TxK7NDGk9TbScamrFcsm8I1",
+    stripeProductId: "prod_UxEawjHXDUZA8g",
+    name: "Starter Daily — Facebook + Instagram (2 posts/day)",
+    category: "organic-content",
+    amount: 600000,
+    recurring: true,
+    priceLabel: "From $6,000/month",
+  },
 ];
 
 /** Lookup a mapping by service slug */
@@ -507,4 +517,5 @@ export const PRICE_TO_SERVICE: Record<string, { name: string; slug: string }> = 
   "price_1TwsEB1v80UmMrLI6PY5T1Bi": { name: "Platform Setup & Optimization", slug: "platform-setup-community" },
   "price_1TwsEC1v80UmMrLIUqPV21WV": { name: "Social Inbox Management", slug: "social-inbox-management" },
   "price_1TwsEC1v80UmMrLIU8rpLrcd": { name: "Social Inbox Design", slug: "social-inbox-design" },
+  "price_1TxK7NDGk9TbScamrFcsm8I1": { name: "Starter Daily — Facebook + Instagram (2 posts/day)", slug: "vip-daily" },
 };

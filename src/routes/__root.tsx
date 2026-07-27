@@ -100,15 +100,16 @@ gtag('config', 'G-7R5Q4S37JT');`,
 function RootComponent() {
   const routerState = useRouterState();
   const isPortalRoute = routerState.location.pathname.startsWith("/portal");
+  const isVipRoute = routerState.location.pathname.startsWith("/vip");
 
   return (
     <CartProvider>
       <RootDocument>
-        {!isPortalRoute && <Navbar />}
+        {!isPortalRoute && !isVipRoute && <Navbar />}
         <div id="main-content">
           <Outlet />
         </div>
-        {!isPortalRoute && <Footer />}
+        {!isPortalRoute && !isVipRoute && <Footer />}
       </RootDocument>
     </CartProvider>
   );

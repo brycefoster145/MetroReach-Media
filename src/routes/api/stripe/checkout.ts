@@ -113,7 +113,8 @@ export const Route = createFileRoute("/api/stripe/checkout")({
                   },
                 }
               : {
-                  // For one-time payments
+                  // For one-time payments — should also allow promo codes
+                  allow_promotion_codes: true,
                   payment_intent_data: {
                     metadata: {
                       service_slug: slug,
