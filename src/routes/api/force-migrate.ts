@@ -89,6 +89,21 @@ export const Route = createFileRoute("/api/force-migrate")({
           `;
           results.push(`Pending+due posts: ${dueCount[0]?.cnt}`);
 
+          // ── cron_runs table ──
+          await n`
+            CREATE TABLE IF NOT EXISTS cron_runs (
+              id SERIAL PRIMARY KEY,
+              run_at TIMESTAMPTZ DEFAULT NOW(),
+              posts_found INTEGER DEFAULT 0,
+              posts_processed INTEGER DEFAULT 0,
+              posts_succeeded INTEGER DEFAULT 0,
+              posts_failed INTEGER DEFAULT 0,
+              elapsed_ms INTEGER DEFAULT 0,
+              error TEXT
+            )
+          `;
+          results.push("✓ cron_runs table ready");
+
           return new Response(
             JSON.stringify({ success: true, results }),
             { status: 200, headers: { "Content-Type": "application/json" } },
