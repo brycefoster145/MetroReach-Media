@@ -13,6 +13,19 @@ import { CartProvider } from "~/context/CartContext";
 
 import appCss from "~/styles/app.css?url";
 
+// UTM capture script — runs on every page load to persist attribution data
+const utmCaptureScript = `
+(function(){
+  var url=new URL(window.location.href);
+  var utm={};
+  url.searchParams.forEach(function(v,k){
+    if(k.indexOf('utm_')===0) utm[k]=v;
+  });
+  if(Object.keys(utm).length>0){
+    document.cookie='__utm='+encodeURIComponent(JSON.stringify(utm))+';max-age=2592000;path=/;samesite=lax';
+  }
+})();`;
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -65,6 +78,10 @@ export const Route = createRootRoute({
       {
         type: "application/ld+json",
         children: JSON.stringify(jsonLd),
+      },
+      // UTM capture — runs first, before analytics
+      {
+        children: utmCaptureScript,
       },
       {
         src: "https://www.googletagmanager.com/gtag/js?id=G-7R5Q4S37JT",

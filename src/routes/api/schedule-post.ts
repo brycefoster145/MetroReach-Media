@@ -10,6 +10,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
 import { generateImage } from "~/lib/generate-image";
 import { getNextAvailableSlot } from "~/lib/slot-assigner";
+import { getSiteUrl } from "~/lib/site-url";
 
 export const Route = createFileRoute("/api/schedule-post")({
   server: {
@@ -172,8 +173,32 @@ export const Route = createFileRoute("/api/schedule-post")({
 
           const id = `post-${randomBytes(8).toString("hex")}`;
 
+          // ── Generate UTM-tagged click-tracking link ──
+          let utmLink: string | null = null;
+          try {
+            const clientRows = await sql`
+              SELECT service_slug FROM clients WHERE id = ${client_id as string} LIMIT 1
+            `;
+            const clientSlug =
+              clientRows.length > 0
+                ? (clientRows[0].service_slug as string)
+                : (client_id as string);
+            const params = new URLSearchParams({
+              utm_source: platform,
+              utm_medium: "social",
+              utm_campaign: clientSlug,
+              utm_content: id,
+            });
+            utmLink = `${getSiteUrl()}/go/${encodeURIComponent(clientSlug)}/${encodeURIComponent(id)}?${params.toString()}`;
+          } catch (utmErr: any) {
+            console.error(
+              "[schedule-post] UTM link generation error:",
+              utmErr.message,
+            );
+          }
+
           await sql`
-            INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
+            INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status, utm_link)
             VALUES (
               ${id},
               ${client_id as string},
@@ -184,7 +209,8 @@ export const Route = createFileRoute("/api/schedule-post")({
               ${JSON.stringify(finalMediaUrls)}::jsonb,
               ${hashtags as string},
               ${resolvedDueAt}::timestamptz,
-              'pending'
+              'pending',
+              ${utmLink || null}
             )
           `;
 

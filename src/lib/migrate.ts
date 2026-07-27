@@ -316,6 +316,10 @@ export async function migrate(): Promise<void> {
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0`;
   console.log("[migration] ✓ scheduled_posts.retry_count column ready");
 
+  // ── UTM attribution: utm_link for click tracking redirects ──
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS utm_link TEXT`;
+  console.log("[migration] ✓ scheduled_posts.utm_link column ready");
+
   // ── H1: Unique partial index — prevents duplicate slots ──
   await sql`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_posts_slot
