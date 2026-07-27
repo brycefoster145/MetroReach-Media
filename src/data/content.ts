@@ -301,7 +301,7 @@ export const pricing = {
       period: "/month",
       featured: false,
       features: [
-        "Up to 2 platforms — Facebook + Instagram, X",
+        "Up to 2 platforms",
         "12 original posts per month",
         "Monthly strategy report + performance review",
         "Live dashboard access on day one",
