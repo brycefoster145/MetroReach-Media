@@ -17,8 +17,20 @@ import { sql } from "~/lib/db";
 import { generateImage } from "~/lib/generate-image";
 
 export const Route = createFileRoute("/api/generate-images")({
+  ssr: false,
   server: {
     handlers: {
+      GET: async () => {
+        return new Response(
+          JSON.stringify({
+            status: "ok",
+            endpoint: "/api/generate-images",
+            method: "POST",
+            usage: "POST { postId, all, resetFailed, dryRun } — generates images for Instagram posts missing media_urls",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
       POST: async ({ request }) => {
         let body: Record<string, unknown> = {};
         try {
