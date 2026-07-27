@@ -258,7 +258,7 @@ const BLOCKED_BRANDS = new Set([
   "uber", "airbnb", "salesforce", "hubspot", "hootsuite",
   "sprout social", "later", "canva", "adobe", "figma",
   // Marketing competitors
-  "marketix", "socially", "hootsuite", "buffer", "sprinklr",
+  "marketix", "socially", "hootsuite", "sprinklr",
   "agorapulse", "sendible", "zoho", "asana",
   "clickup", "notion", "trello",
   // Major brands (DALL-E hallucination targets)

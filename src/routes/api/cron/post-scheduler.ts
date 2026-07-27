@@ -3,7 +3,7 @@
  *
  * Called by Vercel Cron Job every ~60 seconds.
  *
- * BUFFER-STYLE SLOT SCHEDULING:
+ * TIME-SLOT SCHEDULING:
  * Each platform has LOCKED posting time slots. The cron checks whether
  * the current Eastern time falls within a posting window for any platform.
  * If it does, it publishes the ONE post scheduled for that exact slot.

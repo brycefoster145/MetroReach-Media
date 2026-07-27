@@ -385,7 +385,7 @@ function calculateScores(
   });
 
   // ── 4. Posting Consistency (0-100) ──
-  // Without Buffer API access, we score based on profile count as a proxy
+  // Score based on profile count as a proxy for posting capability
   // for having channels to post on, and note what we can't measure.
   let postConsistency = 0;
   const evidencePC: string[] = [];

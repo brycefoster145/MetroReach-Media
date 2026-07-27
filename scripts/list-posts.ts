@@ -37,7 +37,7 @@ async function main() {
       const created = new Date(p.created_at as string);
       const cutoff = new Date("2026-07-26T00:00:00Z");
       if (created < cutoff) {
-        reasons.push("BUFFER_ERA");
+        reasons.push("LEGACY_ERA");
       }
     }
 

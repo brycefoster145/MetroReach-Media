@@ -198,35 +198,7 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_deliverables_status ON deliverables(client_id, status)`;
   console.log("✓ deliverables table ready");
 
-  // ── buffer_channels table ──
-  await sql`
-    CREATE TABLE IF NOT EXISTS buffer_channels (
-      id SERIAL PRIMARY KEY,
-      client_id TEXT NOT NULL REFERENCES clients(id),
-      platform TEXT NOT NULL,
-      platform_url TEXT NOT NULL DEFAULT '',
-      buffer_channel_id TEXT,
-      is_active BOOLEAN DEFAULT true,
-      cost_per_channel INTEGER DEFAULT 12,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `;
-  await sql`CREATE INDEX IF NOT EXISTS idx_buffer_channels_client ON buffer_channels(client_id)`;
-  await sql`CREATE INDEX IF NOT EXISTS idx_buffer_channels_platform ON buffer_channels(platform)`;
-  await sql`CREATE INDEX IF NOT EXISTS idx_buffer_channels_active ON buffer_channels(client_id, is_active)`;
-  await sql`
-    DO $
-    BEGIN
-      IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'buffer_channels_client_platform_unique'
-      ) THEN
-        ALTER TABLE buffer_channels ADD CONSTRAINT buffer_channels_client_platform_unique UNIQUE (client_id, platform);
-      END IF;
-    END
-    $
-  `.catch(() => {});
-  console.log("✓ buffer_channels table ready");
+  // ── buffer_channels table REMOVED — Buffer decommissioned 2026-07-27 ──
 
   // ── client_leads table ──
   await sql`

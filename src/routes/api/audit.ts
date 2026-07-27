@@ -1,7 +1,8 @@
 /**
  * Social Media Audit API endpoint.
- * POST /api/audit — accepts form data, pulls real profile data from Buffer,
- * runs scoring algorithm, generates observations, stores result, returns report ID.
+ * POST /api/audit — accepts form data, runs scoring algorithm,
+ * generates observations, stores result, returns report ID.
+ * (Buffer integration removed — decommissioned 2026-07-27)
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -27,15 +28,6 @@ interface AuditFormData {
   goals: string;
 }
 
-interface BufferChannel {
-  id: string;
-  name: string;
-  service: string;
-  displayName?: string;
-  avatar?: string;
-  isDisconnected?: boolean;
-}
-
 interface PostMetric {
   type: string;
   name: string;
@@ -44,10 +36,10 @@ interface PostMetric {
   unit: string;
 }
 
-interface BufferPost {
-  id: string;
-  text: string;
-  status: string;
+interface AuditPost {
+  id?: string;
+  text?: string;
+  status?: string;
   dueAt: string | null;
   metrics?: PostMetric[];
 }
@@ -65,7 +57,7 @@ interface PlatformProfile {
   followerCount: number;
   followingCount: number;
   postCount30d: number;
-  posts: BufferPost[];
+  posts: AuditPost[];
   metrics: PostMetric[];
   hasEngagement: boolean;
   hasReplies: boolean;
@@ -142,41 +134,6 @@ interface QuickWin {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: call Buffer MCP internally
-// ---------------------------------------------------------------------------
-
-async function bufferRpc(method: string, params?: Record<string, unknown>): Promise<any> {
-  const res = await fetch("http://localhost:3000/api/mcp/buffer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method,
-      params,
-    }),
-  });
-
-  if (res.status === 204) return null;
-
-  const json = await res.json() as any;
-  if (json.error) {
-    throw new Error(`Buffer RPC error (${method}): ${json.error.message}`);
-  }
-
-  // Parse the text content from MCP response
-  const content = json.result?.content;
-  if (content?.[0]?.text) {
-    try {
-      return JSON.parse(content[0].text);
-    } catch {
-      return content[0].text;
-    }
-  }
-  return json.result;
-}
-
-// ---------------------------------------------------------------------------
 // Helper: extract handle from URL
 // ---------------------------------------------------------------------------
 
@@ -186,22 +143,6 @@ function extractHandle(url: string): string {
   const clean = url.replace(/\/+$/, "").split("?")[0];
   const parts = clean.split("/");
   return parts[parts.length - 1] || parts[parts.length - 2] || "";
-}
-
-// ---------------------------------------------------------------------------
-// Helper: normalize service name
-// ---------------------------------------------------------------------------
-
-function normalizeService(service: string): string {
-  const map: Record<string, string> = {
-    twitter: "x",
-    facebook: "facebook",
-    instagram: "instagram",
-    tiktok: "tiktok",
-    linkedin: "linkedin",
-    youtube: "youtube",
-  };
-  return map[service?.toLowerCase()] || service?.toLowerCase() || "unknown";
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +157,7 @@ function generateId(): string {
 // Helper: count posts in last 30 days
 // ---------------------------------------------------------------------------
 
-function countPostsLast30Days(posts: BufferPost[]): number {
+function countPostsLast30Days(posts: AuditPost[]): number {
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   return posts.filter((p) => {
     if (!p.dueAt) return false;
@@ -228,7 +169,7 @@ function countPostsLast30Days(posts: BufferPost[]): number {
 // Helper: find gaps in posting schedule
 // ---------------------------------------------------------------------------
 
-function countLargeGaps(posts: BufferPost[]): number {
+function countLargeGaps(posts: AuditPost[]): number {
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const dates = posts
     .filter((p) => p.dueAt && new Date(p.dueAt).getTime() >= thirtyDaysAgo)
@@ -388,7 +329,7 @@ function scoreProfileCompleteness(
 // ---------------------------------------------------------------------------
 
 function scorePostingConsistency(
-  posts: BufferPost[],
+  posts: AuditPost[],
   platformLabel: string
 ): ConsistencyScore {
   const postCount = countPostsLast30Days(posts);
@@ -906,19 +847,9 @@ export const Route = createFileRoute("/api/audit")({
         }
 
         // -------------------------------------------------------------------
-        // Step 1: Pull real profile data from Buffer
+        // Step 1: Build platform profiles from submitted URLs
+        // (Buffer integration removed — decommissioned 2026-07-27)
         // -------------------------------------------------------------------
-        let channels: BufferChannel[] = [];
-        try {
-          const profilesResult = await bufferRpc("tools/call", {
-            name: "buffer_list_profiles",
-            arguments: {},
-          });
-          channels = profilesResult?.channels || [];
-        } catch (err: any) {
-          console.error("Buffer list_profiles error:", err.message);
-          // Continue with empty channels — we'll build reports from what we have
-        }
 
         // Map provided URLs to platforms
         const urlMap: Record<string, { url: string; platform: string }> = {};
@@ -927,128 +858,33 @@ export const Route = createFileRoute("/api/audit")({
         if (formData.tiktokUrl) urlMap["tiktok"] = { url: formData.tiktokUrl, platform: "TikTok" };
         if (formData.linkedinUrl) urlMap["linkedin"] = { url: formData.linkedinUrl, platform: "LinkedIn" };
 
-        // For each platform with a URL, try to match a Buffer channel and pull analytics
         const platforms: PlatformProfile[] = [];
 
         for (const [service, { url, platform }] of Object.entries(urlMap)) {
           const handle = extractHandle(url);
-          // Find matching channel
-          const channel = channels.find(
-            (c) => normalizeService(c.service) === service && !c.isDisconnected
-          );
-
-          let posts: BufferPost[] = [];
-          let metrics: PostMetric[] = [];
-          let followerCount = 0;
-          let followingCount = 0;
-
-          if (channel) {
-            try {
-              const analyticsResult = await bufferRpc("tools/call", {
-                name: "buffer_get_analytics",
-                arguments: { profile_id: channel.id },
-              });
-
-              if (analyticsResult?.posts?.edges) {
-                posts = analyticsResult.posts.edges.map((e: any) => e.node);
-              }
-              if (analyticsResult?.aggregatedPostMetrics?.metrics) {
-                metrics = analyticsResult.aggregatedPostMetrics.metrics;
-              }
-              // Extract follower/following from metrics
-              for (const m of metrics) {
-                if (m.type?.toLowerCase().includes("follower") || m.name?.toLowerCase().includes("follower")) {
-                  if (m.name?.toLowerCase().includes("following") || m.type?.toLowerCase().includes("following")) {
-                    followingCount = m.value;
-                  } else {
-                    followerCount = m.value;
-                  }
-                }
-              }
-            } catch (err: any) {
-              console.error(`Buffer analytics error for ${platform}:`, err.message);
-            }
-          }
-
-          // Determine competitive signals from available data
-          // These would ideally come from Buffer, but Buffer's GraphQL API may not expose them directly
-          // We infer from what we have
-          const hasReels = posts.some((p) =>
-            p.text?.toLowerCase().includes("reel") ||
-            p.text?.toLowerCase().includes("#reel") ||
-            p.text?.toLowerCase().includes("video")
-          );
-          const hasStories = posts.some((p) =>
-            p.text?.toLowerCase().includes("story") ||
-            p.text?.toLowerCase().includes("#story")
-          );
-
-          // Check if there are reviews/recommendations by looking for review-related metrics
-          const hasReviews = metrics.some((m) =>
-            m.type?.toLowerCase().includes("review") ||
-            m.name?.toLowerCase().includes("review") ||
-            m.type?.toLowerCase().includes("recommendation") ||
-            m.type?.toLowerCase().includes("rating")
-          );
 
           platforms.push({
             platform: platform,
             url: url,
             handle: handle,
-            displayName: channel?.displayName || channel?.name || formData.businessName,
-            avatar: channel?.avatar || null,
-            bio: null, // Buffer's channel list doesn't include bio text by default
-            websiteUrl: null, // Not directly available from Buffer channels list
-            coverImage: null, // Not directly available from Buffer channels list
-            category: null, // Not directly available
-            followerCount,
-            followingCount,
-            postCount30d: countPostsLast30Days(posts),
-            posts,
-            metrics,
-            hasEngagement: hasEngagementActivity(metrics),
-            hasReplies: hasReplyActivity(metrics),
-            hasStories,
-            hasReels,
-            hasReviews,
-            isVerified: channel ? !channel.isDisconnected : false,
+            displayName: formData.businessName,
+            avatar: null,
+            bio: null,
+            websiteUrl: null,
+            coverImage: null,
+            category: null,
+            followerCount: 0,
+            followingCount: 0,
+            postCount30d: 0,
+            posts: [],
+            metrics: [],
+            hasEngagement: false,
+            hasReplies: false,
+            hasStories: false,
+            hasReels: false,
+            hasReviews: false,
+            isVerified: false,
           });
-        }
-
-        // If no platforms had matching Buffer channels, create a mock entry for the first URL
-        // so the report isn't empty
-        if (platforms.length === 0) {
-          const firstUrl = formData.facebookUrl || formData.instagramUrl || formData.tiktokUrl || formData.linkedinUrl;
-          if (firstUrl) {
-            const service = formData.facebookUrl ? "facebook" :
-                           formData.instagramUrl ? "instagram" :
-                           formData.tiktokUrl ? "tiktok" : "linkedin";
-            const platformLabel = service === "facebook" ? "Facebook" :
-                                  service === "instagram" ? "Instagram" :
-                                  service === "tiktok" ? "TikTok" : "LinkedIn";
-            platforms.push({
-              platform: platformLabel,
-              url: firstUrl,
-              handle: extractHandle(firstUrl),
-              displayName: formData.businessName,
-              avatar: null,
-              bio: null,
-              websiteUrl: null,
-              coverImage: null,
-              category: null,
-              followerCount: 0,
-              followingCount: 0,
-              postCount30d: 0,
-              posts: [],
-              metrics: [],
-              hasEngagement: false,
-              hasReplies: false,
-              hasStories: false,
-              hasReels: false,
-              hasReviews: false,
-              isVerified: false,
-            });
-          }
         }
 
         // -------------------------------------------------------------------

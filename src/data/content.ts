@@ -218,7 +218,7 @@ export const credibility = {
     { value: "98.7%", label: "On-time content delivery" },
     { value: "12+", label: "Markets served" },
   ],
-  badges: ["Meta", "Google", "Canva", "Buffer", "Shopify", "WordPress"],
+  badges: ["Meta", "Google", "Canva", "Shopify", "WordPress"],
 };
 
 export const socialProof = {
