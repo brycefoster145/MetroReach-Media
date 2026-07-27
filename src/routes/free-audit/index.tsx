@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -91,6 +91,7 @@ function FreeAudit() {
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   const update = (field: FieldName, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -221,6 +222,22 @@ function FreeAudit() {
     }
   };
 
+  // Native submit fallback — ensures the form works even if React's synthetic
+  // event delegation fails to intercept the submit event on the client.
+  useEffect(() => {
+    const formEl = formRef.current;
+    if (!formEl) return;
+
+    const nativeHandler = (e: Event) => {
+      e.preventDefault();
+      if (status === "submitting") return;
+      handleSubmit(e as unknown as FormEvent);
+    };
+
+    formEl.addEventListener("submit", nativeHandler);
+    return () => formEl.removeEventListener("submit", nativeHandler);
+  }, [status]);
+
   const inputClass =
     "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
   const labelClass = "block text-sm font-medium text-text-secondary mb-2";
@@ -303,7 +320,7 @@ function FreeAudit() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-8" noValidate>
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-8" noValidate>
               {/* ── Business Information ── */}
               <fieldset className="space-y-5">
                 <legend className="text-lg font-semibold font-heading text-text-primary mb-1">
