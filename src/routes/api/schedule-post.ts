@@ -199,6 +199,16 @@ export const Route = createFileRoute("/api/schedule-post")({
             { status: 201, headers: { "Content-Type": "application/json" } },
           );
         } catch (err: any) {
+          // H1: Catch unique constraint violation from idx_scheduled_posts_slot
+          if (err.code === '23505' || err.message?.includes('duplicate key') || err.message?.includes('unique')) {
+            return new Response(
+              JSON.stringify({
+                error: "Duplicate time slot",
+                detail: `A pending post already exists for ${platform} at ${resolvedDueAt}. Cancel it first or pick a different time.`,
+              }),
+              { status: 409, headers: { "Content-Type": "application/json" } },
+            );
+          }
           console.error("[schedule-post] Insert error:", err.message);
           return new Response(
             JSON.stringify({ error: "Failed to schedule post", detail: err.message }),

@@ -285,7 +285,8 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_lookup ON client_platform_tokens(client_id, platform)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_expires ON client_platform_tokens(token_status, expires_at)`;
   await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS token_status TEXT DEFAULT 'active'`;
-  console.log("[migration] ✓ client_platform_tokens table ready");
+  await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS refresh_token TEXT`;
+  console.log("[migration] ✓ client_platform_tokens table ready (incl. refresh_token)");
 
   // ── cron_runs table (deduplicated from above — skipped if exists) ──
 
@@ -311,10 +312,22 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
   console.log("[migration] ✓ scheduled_posts table ready");
 
+  // ── C1: retry_count for failed post retry with exponential backoff ──
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0`;
+  console.log("[migration] ✓ scheduled_posts.retry_count column ready");
+
+  // ── H1: Unique partial index — prevents duplicate slots ──
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_scheduled_posts_slot
+    ON scheduled_posts (client_id, platform, due_at)
+    WHERE status = 'pending'
+  `.catch(() => {});
+  console.log("[migration] ✓ idx_scheduled_posts_slot unique index ready");
+
   // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
   try {
     await sql`
-      ALTER TABLE scheduled_posts 
+      ALTER TABLE scheduled_posts
       ALTER COLUMN due_at TYPE TIMESTAMPTZ USING due_at::TIMESTAMPTZ
     `;
     console.log("[migration] ✓ due_at column type fixed to TIMESTAMPTZ");

@@ -79,25 +79,41 @@ interface RunStats {
 // MAIN SCHEDULER LOGIC
 // ═══════════════════════════════════════════════════════════════════
 
-async function processSlotRun(): Promise<Response> {
-  const startTime = Date.now();
-  const results: PostResult[] = [];
-  const stats: RunStats = {
-    found: 0,
-    processed: 0,
-    succeeded: 0,
-    failed: 0,
-    missed: 0,
-    elapsed_ms: 0,
-    error: null,
-  };
+// ═══════════════════════════════════════════════════════════════════
+// H2: isRunning guard — prevents concurrent execution
+// ═══════════════════════════════════════════════════════════════════
+let isProcessing = false;
 
-  console.log("[cron] ======== SLOT SCHEDULER RUN START ========");
-  console.log(`[cron] Server UTC: ${new Date().toISOString()}`);
+async function processSlotRun(): Promise<Response> {
+  // H2: Guard against concurrent runs (Vercel self-healing kicker + cron overlap)
+  if (isProcessing) {
+    console.log("[cron] ⚠️ Already processing — skipping duplicate run");
+    return new Response(
+      JSON.stringify({ message: "Already processing — skipping duplicate run" }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  isProcessing = true;
 
   try {
-    const now = new Date();
-    const est = getEasternInfo(now);
+    const startTime = Date.now();
+    const results: PostResult[] = [];
+    const stats: RunStats = {
+      found: 0,
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      missed: 0,
+      elapsed_ms: 0,
+      error: null,
+    };
+
+    console.log("[cron] ======== SLOT SCHEDULER RUN START ========");
+    console.log(`[cron] Server UTC: ${new Date().toISOString()}`);
+
+    try {
+      const now = new Date();
+      const est = getEasternInfo(now);
 
     console.log(
       `[cron] Eastern time: ${est.dateStr} ${String(est.hour).padStart(2, "0")}:${String(est.minute).padStart(2, "0")} ` +
@@ -210,14 +226,49 @@ async function processSlotRun(): Promise<Response> {
       }
     }
 
+    // ── C1: Retry sweep — retry failed posts with exponential backoff ──
+    // Posts that errored on first attempt get retried: 1min → 5min → 15min
+    // Only marks 'failed' after 3 failed attempts.
+    try {
+      const retryRows = await sql`
+        SELECT id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, retry_count
+        FROM scheduled_posts
+        WHERE status = 'pending'
+          AND retry_count > 0
+          AND retry_count < 3
+          AND posted_at <= NOW() - INTERVAL '1 minute' * POWER(5, retry_count - 1)
+        ORDER BY posted_at ASC
+        LIMIT 5
+      `;
+
+      if (retryRows.length > 0) {
+        console.log(
+          `[cron] 🔄 Retry sweep: found ${retryRows.length} post(s) to retry`,
+        );
+        for (const post of retryRows) {
+          stats.found++;
+          console.log(
+            `[cron]   → Retrying post ${post.id} for ${post.platform} (attempt ${(post.retry_count as number) + 1}/3)`,
+          );
+          await publishOnePost(post, results, stats);
+        }
+      }
+    } catch (retryErr: any) {
+      console.error(
+        `[cron] ❌ Error during retry sweep: ${retryErr.message}`,
+      );
+    }
+
     // ── Missed-post sweep ──
     // Any pending post whose due_at is more than MISSED_THRESHOLD_MINUTES
     // in the past has missed its window and should NEVER be published.
+    // Excludes posts being retried (retry_count > 0) — those are handled above.
     try {
       const missedResult = await sql`
         UPDATE scheduled_posts
         SET status = 'missed'
         WHERE status = 'pending'
+          AND retry_count = 0
           AND due_at < (NOW() - INTERVAL '15 minutes')
         RETURNING id, platform
       `;
@@ -291,6 +342,33 @@ async function processSlotRun(): Promise<Response> {
       headers: { "Content-Type": "application/json" },
     },
   );
+  } finally {
+    isProcessing = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// C1: RETRY HELPER
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Increment retry_count and update status based on retry threshold.
+ * Keeps post as 'pending' for retries 1-2. Marks 'failed' on retry 3+.
+ */
+async function markPostRetryable(postId: string): Promise<{ retryCount: number; isFailed: boolean }> {
+  const rows = await sql`
+    UPDATE scheduled_posts
+    SET retry_count = retry_count + 1,
+        posted_at = NOW(),
+        status = CASE WHEN retry_count + 1 >= 3 THEN 'failed' ELSE 'pending' END
+    WHERE id = ${postId}
+    RETURNING retry_count, status
+  `;
+  if (rows.length === 0) return { retryCount: 0, isFailed: true };
+  return {
+    retryCount: rows[0].retry_count as number,
+    isFailed: (rows[0].status as string) === 'failed',
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -383,18 +461,23 @@ async function publishOnePost(
         console.error(
           `[cron]   ❌ FAILED to publish X post ${postId}: ${xErr.message}`,
         );
-        await sql`
-          UPDATE scheduled_posts
-          SET status = 'failed', posted_at = NOW()
-          WHERE id = ${postId}
-        `;
+        const { retryCount, isFailed } = await markPostRetryable(postId);
+        if (isFailed) {
+          console.error(
+            `[cron]   🚫 X post ${postId} permanently failed after ${retryCount} attempts`,
+          );
+          stats.failed++;
+        } else {
+          console.log(
+            `[cron]   🔄 X post ${postId} queued for retry (attempt ${retryCount}/3)`,
+          );
+        }
         results.push({
           id: postId,
           platform,
-          status: "failed",
+          status: isFailed ? "failed" : "pending_retry",
           error: xErr.message,
         });
-        stats.failed++;
         stats.processed++;
       }
       return;
@@ -529,19 +612,24 @@ async function publishOnePost(
       );
     }
 
-    await sql`
-      UPDATE scheduled_posts
-      SET status = 'failed', posted_at = NOW()
-      WHERE id = ${postId}
-    `;
+    const { retryCount, isFailed } = await markPostRetryable(postId);
+    if (isFailed) {
+      console.error(
+        `[cron]   🚫 ${platform} post ${postId} permanently failed after ${retryCount} attempts`,
+      );
+      stats.failed++;
+    } else {
+      console.log(
+        `[cron]   🔄 ${platform} post ${postId} queued for retry (attempt ${retryCount}/3)`,
+      );
+    }
 
     results.push({
       id: postId,
       platform,
-      status: "failed",
+      status: isFailed ? "failed" : "pending_retry",
       error: err.message,
     });
-    stats.failed++;
     stats.processed++;
   }
 }
