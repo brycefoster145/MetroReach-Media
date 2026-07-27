@@ -17,6 +17,7 @@ export const paymentLinks: Record<string, string> = {
   "profile-bio-optimization": "https://buy.stripe.com/aFabJ1f1G7HwfJK6JL1ck1P",
 
   // Paid Advertising
+  "meta-ads-management": "https://buy.stripe.com/dRmcN5cTy3rgcxy5FH1ck2a",
   "ad-account-setup": "https://buy.stripe.com/dRm5kD7ze5zobtuecd1ck1Q",
   "ad-creative-package": "https://buy.stripe.com/9B6dR95r68LA1SU1pr1ck1R",
   "ab-testing-optimization": "https://buy.stripe.com/3cI7sL06M0f4eFG0ln1ck1S",
