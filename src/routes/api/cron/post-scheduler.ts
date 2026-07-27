@@ -52,13 +52,16 @@ async function processDuePosts(): Promise<Response> {
 
   try {
     // ── STEP 1: Query for due posts ──
-    console.log("[cron] STEP 1: Querying for due posts...");
+    // CRITICAL: Pick exactly ONE post per platform (the earliest due one).
+    // DISTINCT ON (platform) guarantees at most 1 row per platform.
+    // This prevents the cron from dumping every queued post for a single
+    // platform at once (e.g., 6 Facebook posts at 2am).
+    console.log("[cron] STEP 1: Querying for due posts (1 per platform)...");
     const duePosts = await sql`
-      SELECT id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at
+      SELECT DISTINCT ON (platform) id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at
       FROM scheduled_posts
       WHERE status = 'pending' AND due_at <= NOW()
-      ORDER BY due_at ASC
-      LIMIT 25
+      ORDER BY platform, due_at ASC
     `;
 
     postsFound = duePosts.length;
