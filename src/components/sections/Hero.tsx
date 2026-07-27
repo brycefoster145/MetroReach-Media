@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   FacebookLogo,
   InstagramLogo,
-  TiktokLogo,
-  GoogleLogo,
-  YoutubeLogo,
-  LinkedinLogo,
   XLogo,
   Star,
 } from "@phosphor-icons/react";
@@ -16,10 +12,6 @@ import { hero, platforms } from "~/data/content";
 const platformIcons = [
   { Icon: FacebookLogo, label: "Facebook" },
   { Icon: InstagramLogo, label: "Instagram" },
-  { Icon: TiktokLogo, label: "TikTok" },
-  { Icon: GoogleLogo, label: "Google" },
-  { Icon: YoutubeLogo, label: "YouTube" },
-  { Icon: LinkedinLogo, label: "LinkedIn" },
   { Icon: XLogo, label: "X" },
 ];
 
@@ -226,7 +218,7 @@ export function Hero() {
             <span className="w-[6px] h-[6px] rounded-full bg-brand-primary" />
           </span>
           <span className="text-xs text-text-muted ml-1">
-            Active — managing campaigns now
+            Active — posting daily
           </span>
         </div>
       </Container>

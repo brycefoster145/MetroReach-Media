@@ -3,10 +3,6 @@ import { ArrowRight, Check, ArrowUpRight } from "@phosphor-icons/react";
 import {
   FacebookLogo,
   InstagramLogo,
-  TiktokLogo,
-  GoogleLogo,
-  YoutubeLogo,
-  LinkedinLogo,
   XLogo,
   Article,
   Target,
@@ -38,10 +34,6 @@ const categorySlugs: Record<string, string> = {
 const platformIcons = [
   { Icon: FacebookLogo, label: "Facebook" },
   { Icon: InstagramLogo, label: "Instagram" },
-  { Icon: TiktokLogo, label: "TikTok" },
-  { Icon: GoogleLogo, label: "Google" },
-  { Icon: YoutubeLogo, label: "YouTube" },
-  { Icon: LinkedinLogo, label: "LinkedIn" },
   { Icon: XLogo, label: "X" },
 ];
 
@@ -49,7 +41,7 @@ export const Route = createFileRoute("/services")({
   head: () => ({
     meta: [
       { title: "Social Media Marketing Services — MetroReach Media" },
-      { name: "description", content: "Premium social media marketing services for service businesses. Organic content, paid ads, and strategy across 7 platforms — delivered by a specialist team." },
+      { name: "description", content: "Premium social media marketing services for service businesses. Organic content and strategy across Facebook, Instagram, and X — delivered by a specialist team." },
       { property: "og:url", content: "https://www.metroreachagency.com/services" },
     ],
     links: [
@@ -151,10 +143,10 @@ function Services() {
         <Container>
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold font-heading text-text-primary mb-4">
-              Seven platforms. One team.
+              Three platforms. One team.
             </h2>
             <p className="text-text-secondary mb-10">
-              We manage organic content and paid advertising across every platform that matters to service businesses.
+              We manage organic content across Facebook, Instagram, and X — the platforms that matter for service businesses.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               {platformIcons.map(({ Icon, label }) => (
