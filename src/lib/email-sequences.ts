@@ -44,8 +44,9 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
   reporting: "Performance Reporting",
 };
 
-const FROM_ADDRESS = "bryce@metroreachagency.com";
+const CONTACT_ADDRESS = "contact@metroreachagency.com";
 const SUPPORT_ADDRESS = "support@metroreachagency.com";
+const REPORTS_ADDRESS = "reports@metroreachagency.com";
 
 // ── Helpers ──
 
@@ -106,7 +107,7 @@ export async function sendWelcomeEmail(client: Client): Promise<void> {
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: CONTACT_ADDRESS,
     subject: `Welcome to MetroReach — ${client.service}`,
     body: emailShell(`Welcome to MetroReach`, content),
   });
@@ -144,7 +145,7 @@ export async function sendOnboardingRequest(client: Client): Promise<void> {
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: SUPPORT_ADDRESS,
     subject: `Next step: Complete your onboarding — MetroReach`,
     body: emailShell(`Let's get you set up`, content),
   });
@@ -180,7 +181,7 @@ ${detailHtml}
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: SUPPORT_ADDRESS,
     subject: `Update: ${stageLabel} — MetroReach`,
     body: emailShell(`Your project: ${stageLabel}`, content),
   });
@@ -217,7 +218,7 @@ ${descriptionHtml}
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: REPORTS_ADDRESS,
     subject: `Your deliverable is ready — MetroReach`,
     body: emailShell(`Your deliverable is ready`, content),
   });
@@ -258,7 +259,7 @@ export async function sendPurchaseConfirmation(client: Client, amountCents: numb
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: CONTACT_ADDRESS,
     subject: `Purchase confirmed: ${client.service} — MetroReach`,
     body: emailShell(`Your purchase is confirmed`, content),
   });
