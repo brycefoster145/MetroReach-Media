@@ -13,6 +13,12 @@ import { sql } from "~/lib/db";
 import { publishPost, NoMediaError } from "~/lib/meta-poster";
 import { generateImage } from "~/lib/generate-image";
 
+// ── MetroReach Media account defaults ──
+// Used when client_id === "metroreach" so publish-now works via curl
+// without requiring page_id/ig_user_id to be passed explicitly.
+const DEFAULT_PAGE_ID = "623055204204992";
+const DEFAULT_IG_USER_ID = "17841472858895937";
+
 export const Route = createFileRoute("/api/publish-now")({
   server: {
     handlers: {
@@ -45,7 +51,11 @@ export const Route = createFileRoute("/api/publish-now")({
           hashtags?: string;
         };
 
-        if (!platform || !page_id || !content) {
+        // Apply MetroReach Media defaults when no explicit IDs are provided
+        const resolvedPageId = page_id || (client_id === "metroreach" ? DEFAULT_PAGE_ID : undefined);
+        const resolvedIgUserId = ig_user_id || (client_id === "metroreach" ? DEFAULT_IG_USER_ID : undefined);
+
+        if (!platform || !resolvedPageId || !content) {
           return new Response(
             JSON.stringify({ error: "Missing required fields: platform, page_id, content" }),
             { status: 400, headers: { "Content-Type": "application/json" } },
@@ -84,8 +94,8 @@ export const Route = createFileRoute("/api/publish-now")({
 
           const result = await publishPost({
             platform: platform as "facebook" | "instagram",
-            pageId: page_id as string,
-            igUserId: (ig_user_id as string) || undefined,
+            pageId: resolvedPageId,
+            igUserId: resolvedIgUserId || undefined,
             text: fullText,
             mediaUrls: finalMediaUrls.length > 0 ? finalMediaUrls : undefined,
           });
@@ -99,8 +109,8 @@ export const Route = createFileRoute("/api/publish-now")({
               ${postId},
               ${client_id as string},
               ${platform},
-              ${page_id as string},
-              ${ig_user_id ? (ig_user_id as string) : null},
+              ${resolvedPageId},
+              ${resolvedIgUserId ? resolvedIgUserId : null},
               ${content as string},
               ${JSON.stringify(finalMediaUrls)}::jsonb,
               ${hashtags as string},
@@ -132,8 +142,8 @@ export const Route = createFileRoute("/api/publish-now")({
                 ${postId},
                 ${client_id as string},
                 ${platform},
-                ${page_id as string},
-                ${ig_user_id ? (ig_user_id as string) : null},
+                ${resolvedPageId},
+                ${resolvedIgUserId ? resolvedIgUserId : null},
                 ${content as string},
                 ${JSON.stringify(finalMediaUrls)}::jsonb,
                 ${hashtags as string},
