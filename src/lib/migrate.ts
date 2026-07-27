@@ -7,6 +7,8 @@
  * Run with: DATABASE_URL=... bun run src/lib/migrate.ts
  */
 import { neon } from "@neondatabase/serverless";
+import { mkdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -344,10 +346,23 @@ async function migrate() {
     // If it's already TIMESTAMPTZ, the ALTER is a no-op and may throw.
     // Swallow the error — the column is already correct.
     console.log(`ℹ due_at column migration skipped: ${err.message}`);
-  }
+    }
 
-  console.log("Migration complete.");
-}
+    // ── Ensure generated image directory exists ──
+    const generatedDir = join(process.cwd(), "public", "social", "generated");
+    if (!existsSync(generatedDir)) {
+    try {
+      mkdirSync(generatedDir, { recursive: true });
+      console.log("✓ public/social/generated/ directory created");
+    } catch (err2: any) {
+      console.log(`ℹ generated directory creation skipped: ${err2.message}`);
+    }
+    } else {
+    console.log("✓ public/social/generated/ directory exists");
+    }
+
+    console.log("Migration complete.");
+    }
 
 migrate().catch((err) => {
   console.error("Migration failed (non-fatal during build):", err.message);
