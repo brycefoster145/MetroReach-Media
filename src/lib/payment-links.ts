@@ -13,7 +13,7 @@ export const paymentLinks: Record<string, string> = {
   "social-listening": "https://buy.stripe.com/28E6oHdXCd1Q7ded891ck1N",
   "dm-management": "https://buy.stripe.com/4gM5kD06MaTIbtugkl1ck2b",
   "single-platform-management": "https://buy.stripe.com/8x200jaLq2nc0OQgkl1ck1F",
-  "multi-platform-management": "https://buy.stripe.com/aFaaEX06M6Ds8hi2tv1ck1G",
+  "multi-platform-management": "https://buy.stripe.com/bJedR96va8LA9lmd891ck2h",
   "platform-setup-optimization": "https://buy.stripe.com/4gM6oH1aQ0f4cxyb011ck1O",
   "profile-bio-optimization": "https://buy.stripe.com/aFabJ1f1G7HwfJK6JL1ck1P",
 
