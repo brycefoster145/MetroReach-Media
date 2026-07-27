@@ -116,7 +116,7 @@ export const Route = createFileRoute("/api/schedule-post")({
                 page_id = ${page_id as string},
                 ig_user_id = ${ig_user_id ? (ig_user_id as string) : null},
                 content = ${content as string},
-                media_urls = ${JSON.stringify(finalMediaUrls)}::jsonb,
+                media_urls = ${sql.json(finalMediaUrls)},
                 hashtags = ${hashtags as string}
               WHERE id = ${existingId}
             `;
@@ -145,7 +145,7 @@ export const Route = createFileRoute("/api/schedule-post")({
               ${page_id as string},
               ${ig_user_id ? (ig_user_id as string) : null},
               ${content as string},
-              ${JSON.stringify(finalMediaUrls)}::jsonb,
+              ${sql.json(finalMediaUrls)},
               ${hashtags as string},
               ${due_at}::timestamptz,
               'pending'
