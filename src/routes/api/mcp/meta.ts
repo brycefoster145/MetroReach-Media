@@ -61,7 +61,7 @@ interface GraphApiError {
  * The access_token is appended as a query parameter (Facebook auth pattern).
  */
 async function graphApiRequest<T = unknown>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "DELETE",
   path: string,
   params?: Record<string, string>,
   body?: Record<string, unknown>,
@@ -429,6 +429,44 @@ async function replyToMessage(args: { conversation_id: string; message: string; 
     args.page_token,
   );
   return { message_id: data.message_id, status: "success" };
+}
+
+// ---------------------------------------------------------------------------
+// Page feed & post deletion tools
+// ---------------------------------------------------------------------------
+
+async function listPagePosts(args: { page_id: string; limit?: number; page_token?: string }) {
+  const limit = args.limit ?? 25;
+  const data = await graphApiRequest<{
+    data?: Array<{
+      id: string;
+      message?: string;
+      created_time: string;
+      permalink_url?: string;
+    }>;
+    paging?: { next?: string; previous?: string };
+  }>(
+    "GET",
+    `/${args.page_id}/feed`,
+    {
+      fields: "id,message,created_time,permalink_url",
+      limit: String(limit),
+    },
+    undefined,
+    args.page_token,
+  );
+  return data;
+}
+
+async function deletePost(args: { post_id: string; page_token?: string }) {
+  const data = await graphApiRequest<{ success?: boolean }>(
+    "DELETE",
+    `/${args.post_id}`,
+    undefined,
+    undefined,
+    args.page_token,
+  );
+  return { deleted: true, post_id: args.post_id };
 }
 
 // ---------------------------------------------------------------------------
@@ -970,9 +1008,58 @@ const tools: ToolDef[] = [
     handler: replyToMessage,
     },
     {
-    name: "meta_create_post",
-    description:
-      "Create and publish a post directly to a connected Facebook Page or Instagram account. " +
+      name: "meta_list_page_posts",
+      description:
+        "List recent posts from a Facebook Page's feed. " +
+        "Returns post IDs, messages, creation times, and permalink URLs. " +
+        "Requires a page_id. Use this to find posts before deleting them.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          page_id: {
+            type: "string",
+            description: "Facebook Page ID (numeric string, e.g., 623055204204992).",
+          },
+          limit: {
+            type: "number",
+            description: "Maximum posts to return. Default: 25.",
+          },
+          page_token: {
+            type: "string",
+            description: "Optional page access token for page-specific operations.",
+          },
+        },
+        required: ["page_id"],
+      },
+      handler: listPagePosts,
+    },
+    {
+      name: "meta_delete_post",
+      description:
+        "Delete a post from a Facebook Page. " +
+        "Requires a post_id (obtain from meta_list_page_posts). " +
+        "The access token must have permission to delete the post. " +
+        "Returns confirmation of deletion.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          post_id: {
+            type: "string",
+            description: "The Facebook post ID to delete (e.g., 623055204204992_123456789).",
+          },
+          page_token: {
+            type: "string",
+            description: "Optional page access token for page-specific operations.",
+          },
+        },
+        required: ["post_id"],
+      },
+      handler: deletePost,
+    },
+    {
+      name: "meta_create_post",
+      description:
+        "Create and publish a post directly to a connected Facebook Page or Instagram account. " +
       "Uses the client's stored page access token (connected via /portal/connect). " +
       "Requires client_id, page_id, and text. Optionally accepts media_urls (array of public image URLs) " +
       "and scheduled_at (ISO 8601 timestamp for scheduled posts). " +
