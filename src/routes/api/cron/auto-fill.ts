@@ -13,6 +13,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { getAllEmptySlots, fillSlot } from "~/lib/slot-assigner";
 import { SLOT_CONFIG } from "~/lib/slot-utils";
+import { generateImage } from "~/lib/generate-image";
 import OpenAI from "openai";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -251,6 +252,25 @@ export const Route = createFileRoute("/api/cron/auto-fill")({
             if (result.success) {
               filled++;
               console.log(`[auto-fill] ✅ Created ${result.id} for ${slot.platform}`);
+
+              // Instagram posts need media — generate an image immediately
+              if (slot.platform === "instagram" && result.id) {
+                try {
+                  console.log(`[auto-fill] 🎨 Generating image for IG post ${result.id}...`);
+                  const imageUrl = await generateImage(content);
+                  await sql`
+                    UPDATE scheduled_posts
+                    SET media_urls = ${JSON.stringify([imageUrl])}::jsonb
+                    WHERE id = ${result.id}
+                  `;
+                  console.log(`[auto-fill] 🖼️ Image generated and linked to ${result.id}: ${imageUrl}`);
+                } catch (imgErr: any) {
+                  console.error(
+                    `[auto-fill] ⚠️ Image generation failed for ${result.id}: ${imgErr.message}. Post will be published without media.`,
+                  );
+                  // Don't fail the whole slot — post exists, cron will skip it as skipped_no_media
+                }
+              }
             } else {
               errors.push({
                 platform: slot.platform,
