@@ -222,21 +222,32 @@ function FreeAudit() {
     }
   };
 
+  // Refs that always point to the latest values — resolves the stale-closure
+  // bug where the native event listener captured old state from render time.
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+  const submittingRef = useRef(false);
+
   // Native submit fallback — ensures the form works even if React's synthetic
   // event delegation fails to intercept the submit event on the client.
+  // Uses an empty dependency array so the listener is attached once and stable;
+  // refs always point to the latest values regardless of closure.
   useEffect(() => {
     const formEl = formRef.current;
     if (!formEl) return;
 
     const nativeHandler = (e: Event) => {
       e.preventDefault();
-      if (status === "submitting") return;
-      handleSubmit(e as unknown as FormEvent);
+      if (submittingRef.current) return;
+      submittingRef.current = true;
+      handleSubmitRef.current(e as unknown as FormEvent).finally(() => {
+        submittingRef.current = false;
+      });
     };
 
     formEl.addEventListener("submit", nativeHandler);
     return () => formEl.removeEventListener("submit", nativeHandler);
-  }, [status]);
+  }, []);
 
   const inputClass =
     "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
