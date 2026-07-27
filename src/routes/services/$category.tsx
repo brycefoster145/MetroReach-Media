@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShoppingCart, ArrowLeft, Check, CreditCard } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
-import { SectionHeading } from "~/components/SectionHeading";
 import { subServices } from "~/data/pages";
 import { useCart, type CartItem } from "~/context/CartContext";
+import { paymentLinks } from "~/lib/payment-links";
 import { useState } from "react";
 
 const categoryDisplayNames: Record<string, string> = {
@@ -22,8 +22,6 @@ function ServiceCategory() {
   const { category } = Route.useParams();
   const { addItem, items } = useCart();
   const [addedSlug, setAddedSlug] = useState<string | null>(null);
-  const [checkingOut, setCheckingOut] = useState<string | null>(null);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const displayName = categoryDisplayNames[category];
   const categoryServices = subServices.filter((s) => s.category === category);
@@ -58,33 +56,13 @@ function ServiceCategory() {
     setTimeout(() => setAddedSlug(null), 2000);
   }
 
-  /** Direct Stripe checkout */
-  async function handleBuyNow(slug: string) {
-    setCheckoutError(null);
-    setCheckingOut(slug);
-
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (err: any) {
-      setCheckoutError(err.message || "Something went wrong. Please try again.");
-      setCheckingOut(null);
+  /** Direct Stripe checkout via payment links — no API dependency */
+  function handleBuyNow(slug: string) {
+    const link = paymentLinks[slug];
+    if (link) {
+      window.location.href = link;
+    } else {
+      window.location.href = `/checkout?service=${encodeURIComponent(slug)}`;
     }
   }
 
@@ -117,23 +95,6 @@ function ServiceCategory() {
         </Container>
       </section>
 
-      {/* Checkout error banner */}
-      {checkoutError && (
-        <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-4">
-          <Container>
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm text-red-400">{checkoutError}</p>
-              <button
-                onClick={() => setCheckoutError(null)}
-                className="text-red-400 hover:text-red-300 text-sm font-medium flex-shrink-0"
-              >
-                Dismiss
-              </button>
-            </div>
-          </Container>
-        </div>
-      )}
-
       {/* Sub-Services Grid */}
       <section className="py-20 bg-bg-surface">
         <Container>
@@ -142,7 +103,6 @@ function ServiceCategory() {
               const isCartReady = ["verified", "production-proven", "optimized"].includes(svc.pipelineStatus);
               const isInCart = items.some((i) => i.slug === svc.slug);
               const justAdded = addedSlug === svc.slug;
-              const isCheckingOut = checkingOut === svc.slug;
 
               return (
                 <div
@@ -195,15 +155,10 @@ function ServiceCategory() {
                         {/* Buy Now — Primary */}
                         <button
                           onClick={() => handleBuyNow(svc.slug)}
-                          disabled={isCheckingOut}
-                          className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
-                            isCheckingOut
-                              ? "bg-brand-primary/70 text-text-primary cursor-wait"
-                              : "bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)]"
-                          }`}
+                          className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)]"
                         >
                           <CreditCard size={16} weight="bold" />
-                          {isCheckingOut ? "Redirecting..." : "Buy Now"}
+                          Buy Now
                         </button>
                       </div>
                     ) : (
