@@ -38,6 +38,7 @@ export const Route = createFileRoute("/api/force-migrate")({
               due_at TIMESTAMPTZ NOT NULL,
               status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media', 'missed')),
               meta_post_id TEXT,
+              utm_link TEXT,
               created_at TIMESTAMPTZ DEFAULT NOW(),
               posted_at TIMESTAMPTZ
             )
@@ -49,6 +50,14 @@ export const Route = createFileRoute("/api/force-migrate")({
 
           await n`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
           results.push("✓ idx_scheduled_posts_client index ready");
+
+          // ── Add utm_link column (for click tracking) ──
+          try {
+            await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS utm_link TEXT`;
+            results.push("✓ utm_link column ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ utm_link migration: ${fixErr.message}`);
+          }
 
           // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
           try {
