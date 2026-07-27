@@ -21,6 +21,7 @@ import { createOrder } from "~/lib/order-router";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
+import { generatePortalToken } from "~/lib/portal-auth";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -63,6 +64,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }
 
   const clientId = `client-${randomBytes(8).toString("hex")}`;
+  const portalToken = generatePortalToken();
   const company = session.metadata?.company || "";
 
   // Insert client record
@@ -71,12 +73,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       INSERT INTO clients (
         id, email, name, company, service, service_slug,
         status, stripe_customer_id, stripe_subscription_id,
-        pipeline_status, created_at, updated_at
+        pipeline_status, portal_token, created_at, updated_at
       ) VALUES (
         ${clientId}, ${customerEmail}, ${customerName}, ${company || null},
         ${serviceName}, ${serviceSlug},
         'onboarding', ${customerId || null}, ${session.subscription as string || null},
-        'pending', NOW(), NOW()
+        'pending', ${portalToken}, NOW(), NOW()
       )
     `;
   } catch (err: any) {
@@ -161,7 +163,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     `Service: ${serviceName}`,
     `Status: Onboarding`,
     "",
-    `<a href="https://metroreachagency.com/dashboard?client=${clientId}">View Client →</a>`,
+    `<a href="https://metroreachagency.com/portal?token=${portalToken}">View Client →</a>`,
   ];
   sendTelegramMessage(tgLines.join("\n")).catch(() => {});
 
