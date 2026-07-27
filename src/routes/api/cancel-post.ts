@@ -55,8 +55,7 @@ export const Route = createFileRoute("/api/cancel-post")({
           }
 
           await sql`
-            UPDATE scheduled_posts
-            SET status = 'cancelled', posted_at = NOW()
+            DELETE FROM scheduled_posts
             WHERE id = ${post_id}
           `;
 
