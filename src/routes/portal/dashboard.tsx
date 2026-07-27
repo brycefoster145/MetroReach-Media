@@ -26,9 +26,11 @@ import {
   UserCircle,
   BellRinging,
   ArrowUpRight,
+  ArrowRight,
   NotePencil,
   CalendarBlank,
   GlobeHemisphereWest,
+  ClipboardText,
 } from "@phosphor-icons/react";
 
 interface DashboardData {

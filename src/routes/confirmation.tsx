@@ -7,7 +7,7 @@
  * MetroReach Media — Premium Social Media Marketing Agency
  */
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   CheckCircle,

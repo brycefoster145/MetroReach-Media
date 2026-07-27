@@ -24,7 +24,6 @@ import {
   ClipboardText,
   UploadSimple,
   X,
-  Image,
 } from "@phosphor-icons/react";
 
 // ── Industry options ──
