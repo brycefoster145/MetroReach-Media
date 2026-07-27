@@ -354,7 +354,7 @@ async function migrate() {
       media_urls JSONB DEFAULT '[]',
       hashtags TEXT DEFAULT '#MetroReachMedia',
       due_at TIMESTAMPTZ NOT NULL,
-      status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed')),
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed', 'missed')),
       meta_post_id TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       posted_at TIMESTAMPTZ
