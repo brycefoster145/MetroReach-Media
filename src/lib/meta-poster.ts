@@ -182,6 +182,14 @@ export async function postToInstagram(
     image_url: mediaUrls[0],
   };
 
+  const container = await graphApiRequest<{ id: string }>(
+    "POST",
+    `/${igUserId}/media`,
+    undefined,
+    mediaBody,
+    pageToken,
+  );
+
   // Step 2: Publish the container
   const publishResult = await graphApiRequest<{ id: string }>(
     "POST",
