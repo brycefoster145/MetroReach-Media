@@ -345,6 +345,99 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC)`;
   console.log("[migration] ✓ orders table ready");
 
+  // ══════════════════════════════════════════════════════════════════
+  // ── ANALYTICS METRICS TABLES ──
+  // ── Transparent, auditable metrics for agency + client dashboards
+  // ══════════════════════════════════════════════════════════════════
+
+  // ── post_performance ──
+  // Per-post metrics pulled from Meta (Facebook + Instagram).
+  // One row per post per day — deduplicated by (post_id, fetched_at::date).
+  // Feeds the post-level performance charts in the client portal.
+  await sql`
+    CREATE TABLE IF NOT EXISTS post_performance (
+      id SERIAL PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES clients(id),
+      platform TEXT NOT NULL CHECK (platform IN ('facebook', 'instagram')),
+      post_id TEXT NOT NULL,
+      posted_at TIMESTAMPTZ,
+      impressions INTEGER DEFAULT 0,
+      reach INTEGER DEFAULT 0,
+      engagement INTEGER DEFAULT 0,
+      clicks INTEGER DEFAULT 0,
+      fetched_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_performance_client ON post_performance(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_performance_post ON post_performance(post_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_performance_posted ON post_performance(posted_at DESC)`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_post_performance_unique
+    ON post_performance (post_id, (fetched_at::date))
+  `;
+  console.log("[migration] ✓ post_performance table ready");
+
+  // ── daily_kpi_snapshot ──
+  // Aggregate daily KPIs per client — one row per client per day.
+  // Computed from post_performance + conversion_events rollups.
+  // Powers the daily trend charts and KPI scorecards in both the agency
+  // dashboard and the client portal.
+  // cpl_cents and roas_basis_points are computed fields (stored for
+  // fast querying, recomputed on each snapshot refresh).
+  await sql`
+    CREATE TABLE IF NOT EXISTS daily_kpi_snapshot (
+      id SERIAL PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES clients(id),
+      snapshot_date DATE NOT NULL,
+      total_impressions INTEGER DEFAULT 0,
+      total_reach INTEGER DEFAULT 0,
+      total_engagement INTEGER DEFAULT 0,
+      total_clicks INTEGER DEFAULT 0,
+      total_leads INTEGER DEFAULT 0,
+      total_conversions INTEGER DEFAULT 0,
+      ad_spend_cents INTEGER DEFAULT 0,
+      cpl_cents INTEGER,
+      roas_basis_points INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_kpi_snapshot_client ON daily_kpi_snapshot(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_kpi_snapshot_date ON daily_kpi_snapshot(snapshot_date DESC)`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_kpi_snapshot_unique
+    ON daily_kpi_snapshot (client_id, snapshot_date)
+  `;
+  console.log("[migration] ✓ daily_kpi_snapshot table ready");
+
+  // ── conversion_events ──
+  // Individual conversion/lead events with full attribution tracking.
+  // Every lead, call, booking, or sale is logged with source attribution
+  // (which post/ad/platform drove it) so both the agency and client can
+  // trace every conversion back to the original touchpoint.
+  // Commission is tracked per-event for commission-based deal transparency.
+  await sql`
+    CREATE TABLE IF NOT EXISTS conversion_events (
+      id SERIAL PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES clients(id),
+      source_type TEXT NOT NULL CHECK (source_type IN ('post', 'ad', 'profile', 'direct')),
+      source_platform TEXT CHECK (source_platform IN ('facebook', 'instagram')),
+      source_post_id TEXT,
+      lead_name TEXT,
+      lead_email TEXT,
+      lead_phone TEXT,
+      conversion_type TEXT DEFAULT 'lead' CHECK (conversion_type IN ('lead', 'call', 'booking', 'sale', 'other')),
+      conversion_value_cents INTEGER,
+      commission_cents INTEGER,
+      attributed_at TIMESTAMPTZ DEFAULT NOW(),
+      notes TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_conversion_events_client ON conversion_events(client_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_conversion_events_source ON conversion_events(source_post_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_conversion_events_attributed ON conversion_events(attributed_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_conversion_events_type ON conversion_events(client_id, conversion_type)`;
+  console.log("[migration] ✓ conversion_events table ready");
+
   // ── Ensure generated image directory exists ──
   const generatedDir = join(process.cwd(), "public", "social", "generated");
   if (!existsSync(generatedDir)) {
