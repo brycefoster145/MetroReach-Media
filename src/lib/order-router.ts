@@ -82,6 +82,12 @@ const SERVICE_TEAM_MAP: Record<string, TeamKey[]> = {
   "platform-setup-community": ["engineer"],
   "social-inbox-management": ["contentStrategist"],
   "social-inbox-design": ["designer"],
+
+  // ── VIP Daily ($8,500/mo) ──
+  "vip-daily": ["contentStrategist", "copywriter", "qaEngineer"],
+
+  // ── Premium Audit ──
+  "premium-audit": ["contentStrategist", "analyticsWatchdog"],
 };
 
 // ── Deliverable descriptions ──

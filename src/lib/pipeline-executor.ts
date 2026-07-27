@@ -291,6 +291,20 @@ export const PIPELINE_MAP: Record<string, PipelineDefinition[]> = {
   "social-inbox-design": [
     { file: "social-inbox-design.md", steps: ["research", "create", "review", "deliver"], label: "Social Inbox Design", recurring: false },
   ],
+
+  // ── VIP Daily ($8,500/mo) ──
+  "vip-daily": [
+    { file: "daily-engagement.md", steps: ["setup", "monitor", "engage"], label: "Daily Engagement", recurring: true, intervalHours: 24 },
+    { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Content Calendar", recurring: true, intervalHours: 720 },
+    { file: "review-and-dm-templates.md", steps: ["research", "create", "review", "deliver"], label: "Review & DM Templates", recurring: false },
+  ],
+
+  // ── Premium Audit ──
+  "premium-audit": [
+    { file: "social-media-audit.md", steps: ["research", "create", "review", "deliver"], label: "Premium Growth Audit", recurring: false },
+    { file: "competitor-analysis.md", steps: ["research", "create", "review", "deliver"], label: "Competitor Analysis", recurring: false },
+    { file: "content-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Content Strategy", recurring: false },
+  ],
 };
 
 // ── Time estimates per step (hours) ──
@@ -365,6 +379,21 @@ async function executeSinglePipeline(
 ): Promise<void> {
   const pipelineKey = pipeline.file.replace(".md", "");
   console.log(`  → Executing pipeline: ${pipeline.label} (${pipelineKey})`);
+
+  // Validate that the pipeline file actually exists on disk
+  const pipelinePath = `/home/team/shared/pipelines/${pipeline.file}`;
+  try {
+    const fs = await import("node:fs");
+    if (!fs.existsSync(pipelinePath)) {
+      console.error(`  ✗ Pipeline file MISSING: ${pipelinePath} — marking as failed`);
+      await markStepCompleted(client.id, `${pipelineKey}:setup`, JSON.stringify({ error: `Pipeline file not found: ${pipelinePath}`, status: "failed" }));
+      return;
+    }
+  } catch (err: any) {
+    console.error(`  ✗ Pipeline file check error: ${pipelinePath} — ${err.message}`);
+    await markStepCompleted(client.id, `${pipelineKey}:setup`, JSON.stringify({ error: `Pipeline file check failed: ${err.message}`, status: "failed" }));
+    return;
+  }
 
   for (let i = 0; i < pipeline.steps.length; i++) {
     const step = pipeline.steps[i];

@@ -21,15 +21,57 @@ import { Container } from "~/components/Container";
 
 // ── Service display names (fallback if slug not in product map) ──
 const SERVICE_DISPLAY_NAMES: Record<string, string> = {
+  // Organic Content
   "social-media-audit": "Social Media Audit",
   "monthly-content-calendar": "Monthly Content Calendar",
   "caption-writing": "Caption Writing",
   "hashtag-research": "Hashtag Research",
-  "premium-audit": "Premium Marketing Audit",
-  "social-media-management": "Social Media Management",
-  "paid-ads-management": "Paid Ads Management",
-  "content-creation": "Content Creation",
-  "brand-strategy": "Brand Strategy Session",
+  "brand-voice-development": "Brand Voice Development",
+  "posting-schedule-optimization": "Posting Schedule Optimization",
+  "trend-research": "Trend Research",
+  "daily-engagement": "Daily Engagement",
+  "dm-management": "DM Management",
+  "social-listening": "Social Listening",
+  "single-platform-management": "Single-Platform Management",
+  "multi-platform-management": "Multi-Platform Management",
+  "platform-setup-optimization": "Platform Setup & Optimization",
+  "profile-bio-optimization": "Profile/Bio Optimization",
+  // Paid Advertising
+  "meta-ads-management": "Meta Ads Management",
+  "ad-account-setup": "Ad Account Setup",
+  "ad-creative-package": "Ad Creative Package",
+  "ab-testing-optimization": "A/B Testing & Optimization",
+  "pixel-conversion-tracking": "Pixel & Conversion Tracking",
+  "landing-page-review": "Landing Page Review",
+  // Social Strategy
+  "social-media-audit-strategy": "Social Media Audit",
+  "competitor-analysis": "Competitor Analysis",
+  "social-media-strategy": "Social Media Strategy",
+  "content-strategy": "Content Strategy",
+  "campaign-strategy": "Campaign Strategy",
+  "audience-research": "Audience Research",
+  "organic-growth-strategy": "Organic Growth Strategy",
+  "monthly-strategy-reviews": "Monthly Strategy Reviews",
+  // Analytics & Reporting
+  "monthly-performance-reports": "Monthly Performance Reports",
+  "weekly-performance-summaries": "Weekly Performance Summaries",
+  "kpi-dashboard-setup": "KPI Dashboard Setup",
+  "executive-reports": "Executive Reports",
+  "competitor-benchmarking": "Competitor Benchmarking",
+  // Community Management
+  "community-management": "Community Management",
+  "daily-monitoring-engagement": "Daily Monitoring & Engagement",
+  "comment-dm-response": "Comment & DM Response",
+  "review-management": "Review Management",
+  "social-listening-community": "Social Listening",
+  "influencer-research": "Influencer Research",
+  "community-engagement-templates": "Community Engagement Templates",
+  "platform-setup-community": "Platform Setup & Optimization",
+  "social-inbox-management": "Social Inbox Management",
+  "social-inbox-design": "Social Inbox Design",
+  // VIP
+  "vip-daily": "Aggressive Daily Organic — VIP",
+  "premium-audit": "Premium Growth Audit",
 };
 
 function getServiceDisplayName(slug: string): string {
