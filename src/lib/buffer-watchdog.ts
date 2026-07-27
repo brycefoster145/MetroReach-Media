@@ -19,6 +19,9 @@ import { sendTelegramMessage } from "~/lib/telegram";
 // CONFIG
 // ═══════════════════════════════════════════════════════════════════
 
+/** Only monitor platforms that are live and deliverable */
+const ACTIVE_PLATFORMS = ["facebook", "instagram", "x"];
+
 interface PlatformWatchConfig {
   postsPerDay: number;
   weekdayOnly: boolean;
@@ -67,6 +70,11 @@ export async function runBufferWatchdog(): Promise<WatchdogReport> {
   let alertsSent = 0;
 
   for (const [platform, config] of Object.entries(WATCH_CONFIG)) {
+    // Skip platforms that are not live/deliverable
+    if (!ACTIVE_PLATFORMS.includes(platform)) {
+      continue;
+    }
+
     try {
       const rows = await sql`
         SELECT COUNT(*)::int AS count

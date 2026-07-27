@@ -63,7 +63,7 @@ export const FLAGGED_REPLACEMENTS: Replacement[] = [
 
   // FB-13 — Behind the scenes, how we onboard
   {
-    matchPattern: "deep-dive strategy session, competitive audit, audience research",
+    matchPattern: "deep-dive strategy session, competitive audit, audience research, and paid",
     platform: "facebook",
     replacement:
       "New client onboarding at MetroReach isn't a form and a handoff.\n\nWeek one: deep-dive strategy session, competitive audit, audience research, platform access setup. Week two: content calendar built, everything reviewed internally before you see it.\n\nYou don't wait six weeks to see work. You see it in days.\n\n#MetroReachMedia #ClientExperience",
@@ -127,7 +127,7 @@ export const FLAGGED_REPLACEMENTS: Replacement[] = [
 
   // FB-24 — Campaign win, real estate team
   {
-    matchPattern: "real estate team came to us with decent brand awareness",
+    matchPattern: "real estate team came to us with decent brand awareness but zero leads",
     platform: "facebook",
     replacement:
       "A real estate team came to us with decent brand awareness but low engagement. People knew them. Nobody was reaching out.\n\nWe built a lead magnet — a neighborhood pricing report updated monthly — and featured it consistently in their content.\n\nFirst 30 days: qualified seller inquiries started coming in. From people who already knew the brand but hadn't been given a reason to act.\n\nSometimes the audience is right. The offer needs work.\n\n#MetroReachMedia #ContentStrategy",
@@ -185,7 +185,7 @@ export const FLAGGED_REPLACEMENTS: Replacement[] = [
 
   // IG-11 — Client story, salon owner
   {
-    matchPattern: "salon owner came to us frustrated",
+    matchPattern: "salon owner came to us frustrated with her ads",
     platform: "instagram",
     replacement:
       "A salon owner came to us frustrated. She was posting every day — herself — and getting nothing back but likes from friends and family.\n\nWe built her a content strategy around her actual services, refined her messaging to speak to local clients, and established a consistent publishing schedule.\n\nWithin 60 days: new client bookings were coming directly from Instagram. From a platform she was about to abandon.\n\n#MetroReachMedia #ClientSuccess #SmallBusinessMarketing #InstagramMarketing #RealResults",
