@@ -18,6 +18,14 @@
     {
       "path": "/api/cron/auto-fill",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/buffer-watchdog",
+      "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/post-verifier",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
