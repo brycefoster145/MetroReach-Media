@@ -455,6 +455,44 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_conversion_events_type ON conversion_events(client_id, conversion_type)`;
   console.log("[migration] ✓ conversion_events table ready");
 
+  // ── C2: Expand conversion_type CHECK to include Phase 2 types ──
+  // Phase 2 adds: purchase, onboarding_complete, lead_submitted
+  try {
+    await sql`
+      ALTER TABLE conversion_events
+      DROP CONSTRAINT IF EXISTS conversion_events_conversion_type_check
+    `.catch(() => {});
+    await sql`
+      ALTER TABLE conversion_events
+      ADD CONSTRAINT conversion_events_conversion_type_check
+      CHECK (conversion_type IN (
+        'lead', 'call', 'booking', 'sale', 'other',
+        'purchase', 'onboarding_complete', 'lead_submitted'
+      ))
+    `.catch(() => {});
+    console.log("[migration] ✓ conversion_events.conversion_type CHECK expanded");
+  } catch (err: any) {
+    console.log(`[migration] ℹ conversion_type CHECK migration skipped: ${err.message}`);
+  }
+
+  // ── C3: Expand source_platform CHECK to include X/Twitter ──
+  try {
+    await sql`
+      ALTER TABLE conversion_events
+      DROP CONSTRAINT IF EXISTS conversion_events_source_platform_check
+    `.catch(() => {});
+    await sql`
+      ALTER TABLE conversion_events
+      ADD CONSTRAINT conversion_events_source_platform_check
+      CHECK (source_platform IN (
+        'facebook', 'instagram', 'x', 'linkedin', 'tiktok', 'google'
+      ))
+    `.catch(() => {});
+    console.log("[migration] ✓ conversion_events.source_platform CHECK expanded");
+  } catch (err: any) {
+    console.log(`[migration] ℹ source_platform CHECK migration skipped: ${err.message}`);
+  }
+
   // ── Ensure generated image directory exists ──
   const generatedDir = join(process.cwd(), "public", "social", "generated");
   if (!existsSync(generatedDir)) {

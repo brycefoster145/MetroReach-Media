@@ -22,6 +22,7 @@ import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
 import { generatePortalToken } from "~/lib/portal-auth";
+import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -32,7 +33,7 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request: Request): Promise<void> {
   const customerEmail = session.customer_details?.email || session.customer_email;
   const customerName = session.customer_details?.name || "Valued Client";
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
@@ -173,6 +174,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     console.error("Pipeline execution failed:", e.message),
   );
 
+  // ── 6. Write conversion event with attribution (fire-and-forget) ──
+  resolveAttribution(request)
+    .then((attribution) => {
+      // Override client_id to the one we just created/updated
+      attribution.client_id = clientId;
+      return writeConversionEvent(
+        attribution,
+        "purchase",
+        session.amount_total || 0,
+        customerName,
+        customerEmail,
+      );
+    })
+    .catch((e) => console.error("Conversion event write failed:", e.message));
+
   console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
 }
 
@@ -232,7 +248,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             case "checkout.session.completed": {
               const session = event.data.object as Stripe.Checkout.Session;
               // Process async — acknowledge webhook immediately
-              handleCheckoutCompleted(session).catch((err) =>
+              handleCheckoutCompleted(session, request).catch((err) =>
                 console.error("handleCheckoutCompleted failed:", err.message),
               );
               break;

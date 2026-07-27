@@ -8,6 +8,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getClientFromRequest } from "~/lib/client-auth";
 import { sql } from "~/lib/db";
 import { sendEmail } from "~/lib/email";
+import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 
 export const Route = createFileRoute("/api/client/onboarding")({
   server: {
@@ -54,6 +55,22 @@ export const Route = createFileRoute("/api/client/onboarding")({
         `;
 
         const clientName = (existing[0]?.name as string) || "Client";
+
+        // ── Write conversion event if this is the FIRST onboarding submission ──
+        const isFirstSubmission = !current || Object.keys(current).length === 0;
+        if (isFirstSubmission) {
+          resolveAttribution(request)
+            .then((attribution) => {
+              attribution.client_id = client.sub;
+              return writeConversionEvent(
+                attribution,
+                "onboarding_complete",
+              );
+            })
+            .catch((e) =>
+              console.error("Onboarding conversion event write failed:", e.message),
+            );
+        }
 
         // Notify team
         sendEmail({
