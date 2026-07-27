@@ -2,8 +2,10 @@
  * GET /api/cron/refresh-tokens
  *
  * Nightly cron (midnight UTC) that refreshes Meta long-lived tokens
- * 7 days before they expire. Calls Meta's fb_exchange_token endpoint
- * to get a fresh 60-day token.
+ * and X (Twitter) OAuth 2.0 tokens before they expire.
+ *
+ * Meta: Calls fb_exchange_token endpoint to get a fresh 60-day token.
+ * X: Calls OAuth 2.0 token endpoint with grant_type=refresh_token.
  *
  * MetroReach Media — Premium Social Media Marketing Agency
  */
@@ -12,6 +14,7 @@ import { sql } from "~/lib/db";
 
 const META_APP_ID = "1210460348820936";
 const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
+const X_API_BASE = "https://api.x.com";
 
 function getAppSecret(): string {
   return process.env.META_APP_SECRET || process.env.META_ACCESS_TOKEN || "";
@@ -42,6 +45,52 @@ async function refreshMetaToken(
 
   const json = await res.json();
   return json as MetaRefreshResponse;
+}
+
+// ── H3: X (Twitter) OAuth 2.0 token refresh ──
+
+interface XRefreshResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  error?: string;
+  error_description?: string;
+}
+
+async function refreshXToken(
+  refreshToken: string,
+): Promise<XRefreshResponse> {
+  const clientId = process.env.X_CLIENT_ID || "";
+  const clientSecret = process.env.X_CLIENT_SECRET || "";
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+
+  const params = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+
+  const res = await fetch(`${X_API_BASE}/2/oauth2/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${basicAuth}`,
+    },
+    body: params.toString(),
+  });
+
+  const json = await res.json();
+
+  if (json.error) {
+    throw new Error(
+      `X token refresh failed: ${json.error_description || json.error}`,
+    );
+  }
+
+  return {
+    access_token: json.access_token,
+    refresh_token: json.refresh_token ?? refreshToken,
+    expires_in: json.expires_in ?? 7200,
+  };
 }
 
 async function refreshTokens(): Promise<Response> {
@@ -128,6 +177,72 @@ async function refreshTokens(): Promise<Response> {
         });
       }
     }
+
+    // ── H3: Refresh X (Twitter) tokens expiring within 1 hour ──
+    const xTokens = await sql`
+      SELECT id, client_id, platform, access_token, refresh_token, page_id, account_name, expires_at
+      FROM client_platform_tokens
+      WHERE token_status = 'active'
+        AND platform = 'x'
+        AND expires_at IS NOT NULL
+        AND expires_at < NOW() + INTERVAL '1 hour'
+        AND refresh_token IS NOT NULL
+      ORDER BY expires_at ASC
+    `;
+
+    if (xTokens.length > 0) {
+      console.log(
+        `[refresh-tokens] Found ${xTokens.length} X token(s) expiring within 1 hour`,
+      );
+
+      for (const token of xTokens) {
+        const tokenId = token.id as string;
+        const accountName = (token.account_name as string) || tokenId;
+        const storedRefreshToken = token.refresh_token as string;
+
+        try {
+          const xResult = await refreshXToken(storedRefreshToken);
+
+          const newExpiresAt = new Date(
+            Date.now() + xResult.expires_in * 1000,
+          );
+
+          await sql`
+            UPDATE client_platform_tokens
+            SET access_token = ${xResult.access_token},
+                refresh_token = ${xResult.refresh_token},
+                expires_at = ${newExpiresAt.toISOString()},
+                token_status = 'active'
+            WHERE id = ${tokenId}
+          `;
+
+          console.log(
+            `[refresh-tokens] Refreshed X token ${tokenId} (${accountName}) — new expiry: ${newExpiresAt.toISOString()}`,
+          );
+          results.push({
+            id: tokenId,
+            status: "refreshed",
+            new_expires: newExpiresAt.toISOString(),
+          });
+        } catch (err: any) {
+          console.error(
+            `[refresh-tokens] Error refreshing X token ${tokenId} (${accountName}):`,
+            err.message,
+          );
+          await sql`
+            UPDATE client_platform_tokens
+            SET token_status = 'needs_reauth'
+            WHERE id = ${tokenId}
+          `;
+          results.push({
+            id: tokenId,
+            status: "needs_reauth",
+            error: err.message,
+          });
+        }
+      }
+    }
+
   } catch (err: any) {
     console.error("[refresh-tokens] Query error:", err.message);
     return new Response(

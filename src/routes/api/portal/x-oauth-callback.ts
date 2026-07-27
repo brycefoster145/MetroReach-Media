@@ -195,19 +195,20 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
 
           const effectiveClientId = isAdminFlow ? "metroreach" : (client?.sub || "unknown");
 
-          // Insert if not exists
+          // Insert if not exists (with refresh_token)
           await sql`
-            INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at)
-            VALUES (${effectiveClientId}, 'x', ${tokenData.access_token}, ${userInfo.id}, ${accountName}, ${
+            INSERT INTO client_platform_tokens (client_id, platform, access_token, refresh_token, page_id, account_name, expires_at)
+            VALUES (${effectiveClientId}, 'x', ${tokenData.access_token}, ${tokenData.refresh_token}, ${userInfo.id}, ${accountName}, ${
               expiresAt?.toISOString() ?? null
             })
             ON CONFLICT DO NOTHING
           `.catch(() => {});
 
-          // Update if already exists
+          // Update if already exists (with refresh_token)
           await sql`
             UPDATE client_platform_tokens
             SET access_token = ${tokenData.access_token},
+                refresh_token = ${tokenData.refresh_token},
                 account_name = ${accountName},
                 expires_at = ${expiresAt?.toISOString() ?? null}
             WHERE client_id = ${effectiveClientId}
