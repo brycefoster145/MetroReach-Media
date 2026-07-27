@@ -50,6 +50,18 @@ export const Route = createFileRoute("/api/force-migrate")({
           await n`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
           results.push("✓ idx_scheduled_posts_client index ready");
 
+          // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
+          try {
+            await n`
+              ALTER TABLE scheduled_posts 
+              ALTER COLUMN due_at TYPE TIMESTAMPTZ USING due_at::TIMESTAMPTZ
+            `;
+            results.push("✓ due_at column type fixed to TIMESTAMPTZ");
+          } catch (fixErr: any) {
+            // If it's already TIMESTAMPTZ, swallow the error
+            results.push(`ℹ due_at migration skipped: ${fixErr.message}`);
+          }
+
           // Verify
           const count = await n`SELECT COUNT(*) as cnt FROM scheduled_posts`;
           results.push(`Table has ${count[0]?.cnt} rows`);

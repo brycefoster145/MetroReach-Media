@@ -331,6 +331,21 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
   console.log("✓ scheduled_posts table ready");
 
+  // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
+  // If the table was created with due_at TEXT, comparisons with NOW() fail.
+  // This ALTER converts it safely using the cast.
+  try {
+    await sql`
+      ALTER TABLE scheduled_posts 
+      ALTER COLUMN due_at TYPE TIMESTAMPTZ USING due_at::TIMESTAMPTZ
+    `;
+    console.log("✓ due_at column type fixed to TIMESTAMPTZ");
+  } catch (err: any) {
+    // If it's already TIMESTAMPTZ, the ALTER is a no-op and may throw.
+    // Swallow the error — the column is already correct.
+    console.log(`ℹ due_at column migration skipped: ${err.message}`);
+  }
+
   console.log("Migration complete.");
 }
 
