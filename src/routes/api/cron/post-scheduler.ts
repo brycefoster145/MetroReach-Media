@@ -12,6 +12,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { publishPost, NoMediaError } from "~/lib/meta-poster";
+import { publishToX } from "~/lib/x-poster";
 
 export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
@@ -88,6 +89,83 @@ async function processDuePosts(): Promise<Response> {
           continue;
         }
 
+        const fullText = post.hashtags
+          ? `${post.content}\n\n${post.hashtags}`
+          : post.content;
+
+        // ── X (Twitter) ──
+        if (platform === "x") {
+          const xUserId = (post.page_id as string) || "";
+          if (!xUserId) {
+            console.log(
+              `[cron]   → X post ${postId} has no page_id (X user ID) — skipping`,
+            );
+            await sql`
+              UPDATE scheduled_posts
+              SET status = 'failed', posted_at = NOW()
+              WHERE id = ${postId}
+            `;
+            results.push({
+              id: postId,
+              platform,
+              status: "failed",
+              error: "No page_id (X user ID) configured",
+            });
+            postsFailed++;
+            postsProcessed++;
+            continue;
+          }
+
+          console.log(
+            `[cron]   → Publishing to X: userId=${xUserId} text_length=${(fullText as string).length}`,
+          );
+
+          try {
+            const result = await publishToX(
+              (post.client_id as string) || "metroreach",
+              xUserId,
+              fullText as string,
+            );
+
+            console.log(
+              `[cron]   ✅ PUBLISHED: X post ${postId} → Tweet ID: ${result.post_id}`,
+            );
+
+            await sql`
+              UPDATE scheduled_posts
+              SET status = 'posted', posted_at = NOW()
+              WHERE id = ${postId}
+            `;
+
+            results.push({
+              id: postId,
+              platform,
+              status: "posted",
+              post_id: result.post_id,
+            });
+            postsSucceeded++;
+            postsProcessed++;
+          } catch (xErr: any) {
+            console.error(
+              `[cron]   ❌ FAILED to publish X post ${postId}: ${xErr.message}`,
+            );
+            await sql`
+              UPDATE scheduled_posts
+              SET status = 'failed', posted_at = NOW()
+              WHERE id = ${postId}
+            `;
+            results.push({
+              id: postId,
+              platform,
+              status: "failed",
+              error: xErr.message,
+            });
+            postsFailed++;
+            postsProcessed++;
+          }
+          continue;
+        }
+
         // Only Facebook and Instagram supported for now
         if (platform !== "facebook" && platform !== "instagram") {
           console.log(
@@ -101,10 +179,6 @@ async function processDuePosts(): Promise<Response> {
         const mediaUrls = Array.isArray(post.media_urls)
           ? (post.media_urls as string[])
           : [];
-
-        const fullText = post.hashtags
-          ? `${post.content}\n\n${post.hashtags}`
-          : post.content;
 
         // ── PRE-FLIGHT: Instagram requires an image ──
         // Image generation happens at SCHEDULE time, not here.
