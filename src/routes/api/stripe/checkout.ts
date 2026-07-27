@@ -1,5 +1,5 @@
 /**
- * Stripe Checkout Session API — MetroReach Digital
+ * Stripe Checkout Session API — MetroReach Media
  *
  * POST /api/stripe/checkout
  * Creates a Stripe Checkout session for a single service purchase.
@@ -9,7 +9,7 @@
  * One-time services → payment mode
  * Monthly services    → subscription mode
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

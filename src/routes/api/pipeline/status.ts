@@ -1,5 +1,5 @@
 /**
- * Pipeline Status API — MetroReach Digital
+ * Pipeline Status API — MetroReach Media
  *
  * Returns the current delivery pipeline status for a client by ID.
  * Includes detailed progress: which step, what was completed,

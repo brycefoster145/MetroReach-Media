@@ -1,6 +1,6 @@
 /**
  * Lead Store — PostgreSQL-backed persistent storage.
- * MetroReach Digital
+ * MetroReach Media
  *
  * All leads and audit results are stored in Neon Postgres.
  * This ensures reports are accessible from any browser, any device,

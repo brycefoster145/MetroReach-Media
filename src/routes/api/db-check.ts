@@ -407,7 +407,7 @@ async function handleCleanupOldName(): Promise<Response> {
     `;
     report.after_fb_ig_count = Number(afterCount[0]?.cnt);
 
-    // Verify zero "MetroReach Digital" posts remain
+    // Verify zero "MetroReach Media" posts remain
     const oldNameCheck = await pg`
       SELECT COUNT(*) as cnt FROM scheduled_posts
       WHERE LOWER(content) LIKE '%metroreach digital%'

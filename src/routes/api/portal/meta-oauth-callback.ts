@@ -5,7 +5,7 @@
  * Exchanges the authorization code for a long-lived page access token,
  * then stores it in client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

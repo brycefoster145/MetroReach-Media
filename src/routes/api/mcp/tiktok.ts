@@ -4,7 +4,7 @@
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/tiktok.
  * Wraps the TikTok Content Posting API for direct video publishing.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  *
  * Tools exposed:
  *   tiktok_list_accounts  — list connected TikTok accounts

@@ -1,6 +1,6 @@
 /**
  * Database client — Neon Postgres via @neondatabase/serverless.
- * MetroReach Digital
+ * MetroReach Media
  *
  * Creates a `sql` tagged-template client connected to DATABASE_URL.
  * Uses HTTP-based queries (fetch API) — compatible with Vite SSR and edge runtimes.

@@ -1,6 +1,6 @@
 /**
- * Automated email sequences for MetroReach Digital client delivery pipeline.
- * MetroReach Digital
+ * Automated email sequences for MetroReach Media client delivery pipeline.
+ * MetroReach Media
  *
  * Uses the existing sendEmail() from ~/lib/email (SendGrid primary, Graph API fallback).
  * All templates are premium, human-crafted — no AI/automation language in client-facing copy.
@@ -57,7 +57,7 @@ function emailShell(title: string, content: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
     <tr>
       <td style="padding:32px 32px 8px;">
-        <p style="font-size:13px;font-weight:600;color:#7c3aed;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Digital</p>
+        <p style="font-size:13px;font-weight:600;color:#7c3aed;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Media</p>
       </td>
     </tr>
     <tr>
@@ -68,7 +68,7 @@ function emailShell(title: string, content: string): string {
     </tr>
     <tr>
       <td style="padding:20px 32px;background:#f5f3ff;font-size:13px;color:#6b7280;border-top:1px solid #e5e0f0;">
-        <p style="margin:0 0 4px;">MetroReach Digital — Premium Social Media Marketing</p>
+        <p style="margin:0 0 4px;">MetroReach Media — Premium Social Media Marketing</p>
         <p style="margin:0;">Need help? Reply to this email or reach us at ${SUPPORT_ADDRESS}</p>
       </td>
     </tr>
@@ -85,7 +85,7 @@ export async function sendWelcomeEmail(client: Client): Promise<void> {
   Hi ${escapeHtml(client.name)},
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-  Welcome to MetroReach Digital. Your ${escapeHtml(client.service)} package is now active, and our team is preparing your account for onboarding.
+  Welcome to MetroReach Media. Your ${escapeHtml(client.service)} package is now active, and our team is preparing your account for onboarding.
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Here's what happens next:
@@ -199,7 +199,7 @@ export async function sendDeliverableReady(
   Hi ${escapeHtml(client.name)},
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-  Your latest deliverable from MetroReach Digital is ready for review.
+  Your latest deliverable from MetroReach Media is ready for review.
 </p>
 ${descriptionHtml}
 <div style="text-align:center;margin:24px 0;">

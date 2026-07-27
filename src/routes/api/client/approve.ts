@@ -1,7 +1,7 @@
 /**
  * POST /api/client/approve — Approve or request changes on a deliverable
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -20,7 +20,7 @@ function approvalNotificationHtml(clientName: string, title: string, approved: b
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
     <tr>
       <td style="padding:32px 32px 8px;">
-        <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Digital</p>
+        <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Media</p>
       </td>
     </tr>
     <tr>
@@ -38,7 +38,7 @@ function approvalNotificationHtml(clientName: string, title: string, approved: b
     </tr>
     <tr>
       <td style="padding:20px 32px;background:#0D1117;font-size:13px;color:#94A3B8;border-top:1px solid #1E293B;">
-        <p style="margin:0;">MetroReach Digital — Premium Social Media Marketing</p>
+        <p style="margin:0;">MetroReach Media — Premium Social Media Marketing</p>
       </td>
     </tr>
   </table>

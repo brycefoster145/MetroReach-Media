@@ -1,7 +1,7 @@
 /**
  * /client/dashboard — Redirects to new Client Portal
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

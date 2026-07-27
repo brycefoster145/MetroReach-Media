@@ -1,7 +1,7 @@
 /**
  * GET /api/client/verify — Validate magic link token, set cookie, redirect to dashboard
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

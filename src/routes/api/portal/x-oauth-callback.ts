@@ -6,7 +6,7 @@
  * access token, fetches the user's X account info, and stores tokens in
  * client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -223,7 +223,7 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
 
           if (isAdminFlow) {
             return new Response(
-              `<h1>✅ X Connected!</h1><p>${userInfo.name} (@${userInfo.username}) — your X account is now connected to MetroReach Digital.</p><p><a href="/">Back to site</a></p>`,
+              `<h1>✅ X Connected!</h1><p>${userInfo.name} (@${userInfo.username}) — your X account is now connected to MetroReach Media.</p><p><a href="/">Back to site</a></p>`,
               {
                 status: 200,
                 headers: {

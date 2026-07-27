@@ -4,7 +4,7 @@
  * Client enters their email address. If found, a new portal_token is
  * generated and returned. In production, this would be emailed.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

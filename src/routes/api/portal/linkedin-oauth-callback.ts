@@ -6,7 +6,7 @@
  * user's company pages via organizationAcls, and stores tokens in
  * client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

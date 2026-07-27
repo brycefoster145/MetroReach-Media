@@ -5,7 +5,7 @@
  * via Meta OAuth. After authorization, we exchange the code for
  * a long-lived page access token and store it in client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -118,8 +118,8 @@ interface ConnectedAccount {
 export const Route = createFileRoute("/portal/connect")({
   head: () => ({
     meta: [
-      { title: "Connect Accounts — MetroReach Digital Portal" },
-      { name: "description", content: "Connect your social media accounts to MetroReach Digital." },
+      { title: "Connect Accounts — MetroReach Media Portal" },
+      { name: "description", content: "Connect your social media accounts to MetroReach Media." },
     ],
   }),
   component: PortalConnect,
@@ -733,7 +733,7 @@ function PortalConnect() {
       <footer className="border-t border-border-subtle py-5 mt-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-xs text-text-muted">
-            &copy; {new Date().getFullYear()} MetroReach Digital. Premium Social Media Marketing.
+            &copy; {new Date().getFullYear()} MetroReach Media. Premium Social Media Marketing.
           </p>
         </div>
       </footer>

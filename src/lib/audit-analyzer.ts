@@ -1,6 +1,6 @@
 /**
  * Free Social Media Audit — Analysis Engine
- * MetroReach Digital
+ * MetroReach Media
  *
  * Analyzes a business's online presence across 10 categories.
  * Every score connects to evidence found. No invented data.

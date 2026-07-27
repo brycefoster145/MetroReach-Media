@@ -1,7 +1,7 @@
 /**
  * /client/submit — Redirects to new Client Portal
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -10,10 +10,10 @@ import { useEffect } from "react";
 export const Route = createFileRoute("/client/submit")({
   head: () => ({
     meta: [
-      { title: "Client Portal — MetroReach Digital" },
+      { title: "Client Portal — MetroReach Media" },
       {
         name: "description",
-        content: "Submit content through the MetroReach Digital client portal.",
+        content: "Submit content through the MetroReach Media client portal.",
       },
     ],
   }),

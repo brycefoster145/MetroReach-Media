@@ -5,7 +5,7 @@
  * 7 days before they expire. Calls Meta's fb_exchange_token endpoint
  * to get a fresh 60-day token.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";

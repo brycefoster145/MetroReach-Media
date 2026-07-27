@@ -1,10 +1,10 @@
 /**
- * Stripe Webhook Handler — MetroReach Digital
+ * Stripe Webhook Handler — MetroReach Media
  *
  * Receives Stripe webhook events, verifies signatures, and triggers the
  * automated client delivery pipeline on checkout.session.completed.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -153,7 +153,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   // 4. Telegram notification
   const tgLines = [
-    "🎉 <b>New Client — MetroReach Digital</b>",
+    "🎉 <b>New Client — MetroReach Media</b>",
     "",
     `Name: ${customerName}`,
     `Email: ${customerEmail}`,

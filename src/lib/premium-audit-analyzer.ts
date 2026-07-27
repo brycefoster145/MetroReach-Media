@@ -1,6 +1,6 @@
 /**
  * Premium Growth Audit — Analysis Engine
- * MetroReach Digital
+ * MetroReach Media
  *
  * Analyzes a business's online presence across 12 premium categories.
  * Every score connects to evidence found. No invented data.

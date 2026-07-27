@@ -6,7 +6,7 @@
  * PATCH  /api/client/leads                         — Update lead (mark converted, add notes)
  * DELETE /api/client/leads?id=XXX                  — Delete a lead
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

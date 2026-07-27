@@ -1,12 +1,12 @@
 /**
- * Pipeline Executor — MetroReach Digital
+ * Pipeline Executor — MetroReach Media
  *
  * Automatically executes service delivery pipelines when a client pays.
  * Maps service slugs to pipeline files and execution steps.
  * Each step triggers automated actions: research, create, review, deliver.
  * Progress is tracked via the client's pipeline_status DB field.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { sql } from "~/lib/db";

@@ -5,7 +5,7 @@
  * Validates against the clients table, sets a JWT cookie,
  * returns client info for the dashboard.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

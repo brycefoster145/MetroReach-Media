@@ -4,7 +4,7 @@
  * Records the click in click_tracking, then redirects to client's landing page.
  * Accepts ?ref= for UTM-style campaign tracking.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

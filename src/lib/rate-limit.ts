@@ -1,6 +1,6 @@
 /**
  * Rate Limiter — Simple in-memory rate limiter.
- * MetroReach Digital
+ * MetroReach Media
  *
  * Uses a Map to track request counts per IP within sliding windows.
  * Not distributed — each serverless instance has its own state.

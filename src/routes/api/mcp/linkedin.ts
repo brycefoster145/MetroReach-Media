@@ -4,7 +4,7 @@
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/linkedin.
  * Wraps the LinkedIn REST API for organization/page management and posting.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  *
  * Tools exposed:
  *   linkedin_list_organizations  — list connected company pages

@@ -5,7 +5,7 @@
  * client onboarding_data. Files themselves are base64-encoded and stored
  * in the JSON blob for simplicity (files under 10MB).
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

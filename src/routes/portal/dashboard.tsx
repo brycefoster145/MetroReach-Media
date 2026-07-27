@@ -4,7 +4,7 @@
  * Clean, simple dashboard: approvals, messages, upload, activity.
  * Think: Basecamp meets Slack but simpler.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -111,8 +111,8 @@ function typeIcon(type: string) {
 export const Route = createFileRoute("/portal/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — MetroReach Digital Portal" },
-      { name: "description", content: "Your MetroReach Digital marketing dashboard." },
+      { title: "Dashboard — MetroReach Media Portal" },
+      { name: "description", content: "Your MetroReach Media marketing dashboard." },
     ],
   }),
   component: PortalDashboard,
@@ -722,7 +722,7 @@ function PortalDashboard() {
       <footer className="border-t border-border-subtle py-5 mt-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-xs text-text-muted">
-            &copy; {new Date().getFullYear()} MetroReach Digital. Premium Social Media Marketing.
+            &copy; {new Date().getFullYear()} MetroReach Media. Premium Social Media Marketing.
           </p>
         </div>
       </footer>

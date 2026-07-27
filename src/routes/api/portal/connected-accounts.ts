@@ -4,7 +4,7 @@
  * Returns all connected social media accounts for the authenticated client.
  * Used by /portal/connect to display connection status.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

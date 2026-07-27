@@ -1,5 +1,5 @@
 /**
- * Client Portal Authentication — MetroReach Digital
+ * Client Portal Authentication — MetroReach Media
  *
  * Magic-link login for client portal. Uses HMAC-SHA256 JWTs signed with
  * a secret derived from environment variables. Tokens expire in 1 hour.

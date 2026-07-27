@@ -1,7 +1,7 @@
 /**
  * GET /api/portal/dashboard — Returns dashboard data for authenticated portal client
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

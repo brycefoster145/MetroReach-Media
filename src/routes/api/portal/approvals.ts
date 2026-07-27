@@ -2,7 +2,7 @@
  * GET /api/portal/approvals — Fetch content approvals
  * PATCH /api/portal/approvals — Update approval status (approve / request changes)
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
