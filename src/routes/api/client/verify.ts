@@ -6,6 +6,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { verifyClientToken, setTokenCookie } from "~/lib/client-auth";
+import { getSiteUrl } from "~/lib/site-url";
 
 export const Route = createFileRoute("/api/client/verify")({
   server: {
@@ -24,9 +25,7 @@ export const Route = createFileRoute("/api/client/verify")({
         const payload = verifyClientToken(token);
         if (!payload) {
           // Token invalid or expired — redirect to login with error
-          const baseUrl = process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : "https://metroreachagency.com";
+          const baseUrl = getSiteUrl();
           return new Response(null, {
             status: 302,
             headers: {
@@ -36,9 +35,7 @@ export const Route = createFileRoute("/api/client/verify")({
         }
 
         // Valid token — set cookie and redirect to dashboard
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : "https://metroreachagency.com";
+        const baseUrl = getSiteUrl();
 
         return new Response(null, {
           status: 302,

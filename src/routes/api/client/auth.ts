@@ -14,6 +14,7 @@ import { createClientToken } from "~/lib/client-auth";
 import { sendEmail } from "~/lib/email";
 import { sql } from "~/lib/db";
 import { rateLimit, getClientIp } from "~/lib/rate-limit";
+import { getSiteUrl } from "~/lib/site-url";
 
 function magicLinkEmail(clientName: string, magicUrl: string): string {
   return `
@@ -110,9 +111,7 @@ export const Route = createFileRoute("/api/client/auth")({
 
         const client = rows[0];
         const token = createClientToken(client.id as string, client.email as string);
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : "https://metroreachagency.com";
+        const baseUrl = getSiteUrl();
         const magicUrl = `${baseUrl}/api/client/verify?token=${encodeURIComponent(token)}`;
 
         // Send magic link email (non-blocking)

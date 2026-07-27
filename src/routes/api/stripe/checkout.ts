@@ -15,6 +15,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
 import { getMappingBySlug } from "~/lib/stripe-product-map";
+import { getSiteUrl } from "~/lib/site-url";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -23,20 +24,6 @@ function getStripe(): Stripe {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
   return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
-}
-
-// ── Determine the site's public URL ──
-function getSiteUrl(): string {
-  // Production: always use the custom domain
-  if (process.env.VERCEL_ENV === "production") {
-    return "https://metroreachagency.com";
-  }
-  // Preview/staging: Vercel provides the preview URL at build time
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // Fallback for local dev
-  return process.env.SITE_URL || "http://localhost:3000";
 }
 
 export const Route = createFileRoute("/api/stripe/checkout")({
