@@ -8,6 +8,15 @@
 //
 // Bundled (with its deps + the SSR handler's dynamic ./assets chunks) into
 // .vercel/output/functions/render.func/index.mjs by build-vercel.sh.
+//
+// ── Self-healing cron kicker ──
+// Vercel Cron Jobs (vercel.json) are the PRIMARY scheduler trigger. But serverless
+// cold starts and cron execution delays can cause missed windows. As a fallback,
+// this module starts a keep-alive interval that fires every 62 seconds and kicks
+// the cron route internally. While the function stays warm, this guarantees at
+// least one scheduling pass per minute. When the function goes cold, the next
+// request restarts the interval. Combined with Vercel's own cron, we get
+// overlapping coverage — posts WILL go out.
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import handler from "./dist/server/server.js";
@@ -55,6 +64,63 @@ const toWebRequest = (req: IncomingMessage): Request => {
       : {}),
   } as RequestInit);
 };
+
+// ── Self-healing cron kicker ──
+// Kicks the cron route every 62 seconds as long as the function stays warm.
+// This is a FALLBACK — Vercel Cron Jobs (vercel.json) are the primary trigger.
+// The interval is 62 seconds (not 60) to avoid racing with Vercel's own cron.
+
+let cronKickerInterval: ReturnType<typeof setInterval> | null = null;
+
+function startCronKicker(): void {
+  if (cronKickerInterval) return; // Already running
+
+  console.log("[cron-kicker] Starting self-healing cron kicker (every 62s)");
+
+  // Fire once on startup (with a 5s delay to let the module settle)
+  setTimeout(() => {
+    kickCron().catch((err) =>
+      console.error("[cron-kicker] Initial kick failed:", err.message),
+    );
+  }, 5000);
+
+  // Then every 62 seconds
+  cronKickerInterval = setInterval(() => {
+    kickCron().catch((err) =>
+      console.error("[cron-kicker] Interval kick failed:", err.message),
+    );
+  }, 62_000);
+
+  // Keep the event loop alive — unref would let Node exit between requests
+  cronKickerInterval.unref();
+}
+
+async function kickCron(): Promise<void> {
+  try {
+    console.log("[cron-kicker] 🔄 Kicking cron scheduler...");
+    const res = await fetchHandler.fetch(
+      new Request("http://localhost/api/cron/post-scheduler", { method: "GET" }),
+    );
+    if (!res.ok) {
+      console.error(
+        `[cron-kicker] Cron kick returned ${res.status}: ${res.statusText}`,
+      );
+    } else {
+      const body = await res.text();
+      // Truncate log — full body is in the cron route's own logs
+      console.log(
+        `[cron-kicker] ✅ Cron kick OK (${res.status}) — ${body.substring(0, 200)}`,
+      );
+    }
+  } catch (err: any) {
+    console.error(`[cron-kicker] ❌ Kick error: ${err.message}`);
+  }
+}
+
+// Start the kicker on module load
+startCronKicker();
+
+// ── Main handler ──
 
 export default async function vercelHandler(
   req: IncomingMessage,

@@ -311,6 +311,22 @@ async function migrate() {
   await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS token_status TEXT DEFAULT 'active'`;
   console.log("✓ client_platform_tokens table ready");
 
+  // ── cron_runs table (tracks every cron execution for health monitoring) ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS cron_runs (
+      id SERIAL PRIMARY KEY,
+      run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      posts_found INTEGER DEFAULT 0,
+      posts_processed INTEGER DEFAULT 0,
+      posts_succeeded INTEGER DEFAULT 0,
+      posts_failed INTEGER DEFAULT 0,
+      elapsed_ms INTEGER DEFAULT 0,
+      error TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_cron_runs_run_at ON cron_runs(run_at DESC)`;
+  console.log("✓ cron_runs table ready");
+
   // ── scheduled_posts table ──
   await sql`
     CREATE TABLE IF NOT EXISTS scheduled_posts (
