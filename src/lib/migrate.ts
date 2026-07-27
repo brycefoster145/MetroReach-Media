@@ -101,6 +101,21 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_contact_leads_created_at ON contact_leads(created_at DESC)`;
   console.log("✓ contact_leads table ready");
 
+  // ── cron_runs table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS cron_runs (
+      id SERIAL PRIMARY KEY,
+      run_at TIMESTAMPTZ DEFAULT NOW(),
+      posts_found INTEGER DEFAULT 0,
+      posts_processed INTEGER DEFAULT 0,
+      posts_succeeded INTEGER DEFAULT 0,
+      posts_failed INTEGER DEFAULT 0,
+      elapsed_ms INTEGER DEFAULT 0,
+      error TEXT
+    )
+  `;
+  console.log("✓ cron_runs table ready");
+
   // ── pipeline_log table ──
   await sql`
     CREATE TABLE IF NOT EXISTS pipeline_log (
