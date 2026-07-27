@@ -8,6 +8,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { publishPost } from "~/lib/meta-poster";
+import { publishToGoogle } from "~/lib/google-poster";
 
 export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
@@ -59,6 +60,41 @@ async function processDuePosts(): Promise<Response> {
             id: postId,
             platform,
             status: "scheduled_linkedin",
+          });
+          continue;
+        }
+
+        // Google: GMB + YouTube posts via Google OAuth
+        if (platform === "google") {
+          const googleMediaUrls = Array.isArray(post.media_urls)
+            ? (post.media_urls as string[])
+            : [];
+
+          const googleFullText = post.hashtags
+            ? `${post.content}\n\n${post.hashtags}`
+            : post.content;
+
+          const googleResult = await publishToGoogle(
+            (post.client_id as string) || "metroreach",
+            post.page_id as string,
+            googleFullText as string,
+            googleMediaUrls.length > 0 ? googleMediaUrls : undefined,
+          );
+
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'posted', meta_post_id = ${googleResult.post_id}, posted_at = NOW()
+            WHERE id = ${postId}
+          `;
+
+          console.log(
+            `[post-scheduler] Published google post ${postId} → ${googleResult.platform} ID ${googleResult.post_id}`,
+          );
+          results.push({
+            id: postId,
+            platform: googleResult.platform,
+            status: "posted",
+            post_id: googleResult.post_id,
           });
           continue;
         }
