@@ -27,22 +27,22 @@ const features = [
   {
     icon: Camera,
     label: "Facebook + Instagram",
-    detail: "Full management across both platforms",
+    detail: "Full management across both platforms — 3 posts each, every day",
   },
   {
     icon: CalendarCheck,
-    label: "2–3 Posts / Day",
-    detail: "~60–90 original posts every month",
+    label: "6 Posts / Day",
+    detail: "3 Facebook + 3 Instagram — ~180 original posts every month",
   },
   {
     icon: Sparkle,
     label: "Custom Graphics",
-    detail: "Premium, original visuals for every post",
+    detail: "Premium, original visuals for every single post",
   },
   {
     icon: PenNib,
     label: "Professional Copywriting",
-    detail: "Conversion-focused captions and hooks",
+    detail: "Conversion-focused captions and hooks for every post",
   },
   {
     icon: UsersThree,
@@ -51,8 +51,8 @@ const features = [
   },
   {
     icon: ChatCircleDots,
-    label: "Daily Engagement",
-    detail: "Active community management on every post",
+    label: "Worldwide Time Zone Coverage",
+    detail: "Posts at 8am, 1pm, and 8pm EST — reaching every market",
   },
   {
     icon: ChartLine,
@@ -110,11 +110,11 @@ function VipPage() {
             Exclusive Package
           </p>
           <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary mb-3">
-            Premium Daily Management
+            Aggressive Daily Organic
           </h1>
           <p className="text-text-secondary text-base leading-relaxed max-w-md mx-auto">
-            Full-service social media management designed for brands that demand
-            daily presence and premium execution.
+            6 posts every day across Facebook and Instagram — built for brands
+            that want to dominate every time zone, every market.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ function VipPage() {
         <div className="rounded-2xl bg-bg-surface-raised border border-border-emphasis p-6 text-center">
           <p className="text-sm text-text-muted mb-1">Investment</p>
           <p className="text-3xl font-bold font-heading text-text-primary mb-1">
-            $6,000<span className="text-lg text-text-muted font-normal">/mo</span>
+            $8,500<span className="text-lg text-text-muted font-normal">/mo</span>
           </p>
           <p className="text-xs text-text-muted mb-6">
             Month-to-month. Pause or cancel anytime.
