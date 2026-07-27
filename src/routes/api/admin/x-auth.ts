@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import crypto from "node:crypto";
 
 const X_CLIENT_ID = process.env.X_CLIENT_ID || "";
-const REDIRECT_URI = "https://metroreachagency.com/api/admin/x-callback";
+const REDIRECT_URI = "https://metroreachagency.com/api/portal/x-oauth-callback";
 
 export const Route = createFileRoute("/api/admin/x-auth")({
   server: {
