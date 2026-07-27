@@ -9,11 +9,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
 import { generateImage } from "~/lib/generate-image";
+import { getNextAvailableSlot } from "~/lib/slot-assigner";
 
 export const Route = createFileRoute("/api/schedule-post")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ── Check for autoSlot query parameter ──
+        const url = new URL(request.url);
+        const autoSlot = url.searchParams.get("autoSlot") === "true";
+
         let body: Record<string, unknown>;
         try {
           body = await request.json();
@@ -44,33 +49,61 @@ export const Route = createFileRoute("/api/schedule-post")({
           due_at?: string;
         };
 
-        // Validate required fields
-        if (!platform || !page_id || !content || !due_at) {
+        // Validate required fields (due_at is optional when autoSlot=true)
+        const requiredFields = autoSlot
+          ? { missing: !platform || !page_id || !content }
+          : { missing: !platform || !page_id || !content || !due_at };
+
+        if (requiredFields.missing) {
+          const fields = autoSlot
+            ? "platform, page_id, content"
+            : "platform, page_id, content, due_at";
           return new Response(
             JSON.stringify({
-              error: "Missing required fields: platform, page_id, content, due_at",
+              error: `Missing required fields: ${fields}`,
+              hint: autoSlot
+                ? "Use ?autoSlot=true to auto-assign the next available slot"
+                : undefined,
             }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
 
-        // ── Validate due_at is in the future ──
-        const dueAtDate = new Date(due_at);
-        if (isNaN(dueAtDate.getTime())) {
-          return new Response(
-            JSON.stringify({
-              error: "Invalid due_at: must be a valid ISO-8601 datetime string",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        if (dueAtDate.getTime() <= Date.now()) {
-          return new Response(
-            JSON.stringify({
-              error: "due_at must be in the future — cannot schedule posts for a past time",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
+        // ── Resolve due_at ──
+        let resolvedDueAt: string;
+
+        if (autoSlot) {
+          // Auto-assign next available slot
+          const slot = await getNextAvailableSlot(platform as string);
+          if (!slot) {
+            return new Response(
+              JSON.stringify({
+                error: `No available slots for ${platform} in the next 30 days`,
+              }),
+              { status: 409, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          resolvedDueAt = slot.utcTimestamp;
+        } else {
+          // ── Validate due_at is in the future ──
+          const dueAtDate = new Date(due_at as string);
+          if (isNaN(dueAtDate.getTime())) {
+            return new Response(
+              JSON.stringify({
+                error: "Invalid due_at: must be a valid ISO-8601 datetime string",
+              }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          if (dueAtDate.getTime() <= Date.now()) {
+            return new Response(
+              JSON.stringify({
+                error: "due_at must be in the future — cannot schedule posts for a past time",
+              }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          resolvedDueAt = due_at as string;
         }
 
         const validPlatforms = [
@@ -121,7 +154,7 @@ export const Route = createFileRoute("/api/schedule-post")({
           const existing = await sql`
             SELECT id FROM scheduled_posts
             WHERE platform = ${platform}
-              AND due_at = ${due_at}::timestamptz
+              AND due_at = ${resolvedDueAt}::timestamptz
               AND status = 'pending'
             LIMIT 1
           `;
@@ -130,7 +163,7 @@ export const Route = createFileRoute("/api/schedule-post")({
             return new Response(
               JSON.stringify({
                 error: "Duplicate time slot",
-                detail: `A pending post already exists for ${platform} at ${due_at}. Cancel it first or pick a different time.`,
+                detail: `A pending post already exists for ${platform} at ${resolvedDueAt}. Cancel it first or pick a different time.`,
                 existingPostId: existing[0].id,
               }),
               { status: 409, headers: { "Content-Type": "application/json" } },
@@ -150,7 +183,7 @@ export const Route = createFileRoute("/api/schedule-post")({
               ${content as string},
               ${JSON.stringify(finalMediaUrls)}::jsonb,
               ${hashtags as string},
-              ${due_at}::timestamptz,
+              ${resolvedDueAt}::timestamptz,
               'pending'
             )
           `;
@@ -160,8 +193,8 @@ export const Route = createFileRoute("/api/schedule-post")({
               success: true,
               id,
               platform,
-              due_at,
-              message: `Post scheduled for ${due_at}`,
+              due_at: resolvedDueAt,
+              message: `Post scheduled for ${resolvedDueAt}${autoSlot ? " (auto-assigned slot)" : ""}`,
             }),
             { status: 201, headers: { "Content-Type": "application/json" } },
           );
