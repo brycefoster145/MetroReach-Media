@@ -213,6 +213,9 @@ export const Route = createFileRoute("/api/db-check")({
         if (action === "reset-failed") {
           return handleResetFailed();
         }
+        if (action === "cleanup-old-name") {
+          return handleCleanupOldName();
+        }
         return handleCleanup();
       },
     },
@@ -343,6 +346,73 @@ async function handleCleanup(): Promise<Response> {
     report.deleted_count = deletedIds.length;
     report.deleted_ids = deletedIds;
     report.kept_ids = keptIds;
+
+    await pg.end();
+    report.success = true;
+  } catch (err: any) {
+    report.success = false;
+    report.error = err.message;
+  }
+
+  return new Response(JSON.stringify(report, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function handleCleanupOldName(): Promise<Response> {
+  const report: Record<string, unknown> = { action: "cleanup-old-name" };
+  try {
+    if (!url) throw new Error("DATABASE_URL not set");
+    const pg = postgres(url, {
+      max: 1,
+      idle_timeout: 5,
+      connect_timeout: 10,
+      ssl: "require",
+    });
+
+    // Find all Facebook + Instagram posts matching cleanup criteria
+    const candidates = await pg`
+      SELECT id, platform, status, content, due_at, created_at
+      FROM scheduled_posts
+      WHERE platform IN ('facebook', 'instagram')
+        AND (
+          LOWER(content) LIKE '%metroreach digital%'
+          OR created_at < '2026-07-26T00:00:00Z'::timestamptz
+          OR (status = 'pending' AND due_at < NOW())
+        )
+    `;
+
+    report.found_count = candidates.length;
+    report.deleted_ids = candidates.map((r: any) => r.id);
+    report.deleted_details = candidates.map((r: any) => ({
+      id: r.id,
+      platform: r.platform,
+      status: r.status,
+      due_at: String(r.due_at),
+      content_preview: (r.content as string).substring(0, 60),
+    }));
+
+    if (candidates.length > 0) {
+      const ids = candidates.map((r: any) => r.id);
+      await pg`
+        DELETE FROM scheduled_posts WHERE id = ANY(${ids}::text[])
+      `;
+    }
+
+    // Verify remaining FB+IG count
+    const afterCount = await pg`
+      SELECT COUNT(*) as cnt FROM scheduled_posts
+      WHERE platform IN ('facebook', 'instagram')
+    `;
+    report.after_fb_ig_count = Number(afterCount[0]?.cnt);
+
+    // Verify zero "MetroReach Digital" posts remain
+    const oldNameCheck = await pg`
+      SELECT COUNT(*) as cnt FROM scheduled_posts
+      WHERE LOWER(content) LIKE '%metroreach digital%'
+    `;
+    report.old_name_remaining = Number(oldNameCheck[0]?.cnt);
 
     await pg.end();
     report.success = true;
