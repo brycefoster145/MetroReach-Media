@@ -114,12 +114,19 @@ async function processDuePosts(): Promise<Response> {
           console.log(
             `[cron]   → Instagram post ${postId} has no media_urls — skipping (needs image generation first)`,
           );
+          // Use 'failed' status with a clear skip message until DB constraint
+          // is updated to support 'skipped_no_media' status.
           await sql`
             UPDATE scheduled_posts
-            SET status = 'skipped_no_media', posted_at = NOW()
+            SET status = 'failed', posted_at = NOW()
             WHERE id = ${postId}
           `;
-          results.push({ id: postId, platform, status: "skipped_no_media" });
+          results.push({
+            id: postId,
+            platform,
+            status: "skipped_no_media",
+            error: "No media_urls — needs image generation. Run POST /api/generate-images with postId to fix.",
+          });
           postsProcessed++;
           continue;
         }
@@ -157,17 +164,23 @@ async function processDuePosts(): Promise<Response> {
         postsSucceeded++;
         postsProcessed++;
       } catch (err: any) {
-        // NoMediaError = post has no image. Mark as skipped, not failed.
+        // NoMediaError = post has no image. Mark as failed with a clear message.
+        // (DB constraint doesn't support 'skipped_no_media' yet — fix pending)
         if (err.name === "NoMediaError" || err instanceof NoMediaError) {
           console.warn(
             `[cron]   ⚠️ SKIPPED (no media): ${postId} (${platform}): ${err.message}`,
           );
           await sql`
             UPDATE scheduled_posts
-            SET status = 'skipped_no_media', posted_at = NOW()
+            SET status = 'failed', posted_at = NOW()
             WHERE id = ${postId}
           `;
-          results.push({ id: postId, platform, status: "skipped_no_media" });
+          results.push({
+            id: postId,
+            platform,
+            status: "skipped_no_media",
+            error: "No media_urls — needs image generation. Run POST /api/generate-images with postId to fix.",
+          });
           postsProcessed++;
           continue;
         }

@@ -36,7 +36,7 @@ export const Route = createFileRoute("/api/force-migrate")({
               media_urls JSONB DEFAULT '[]',
               hashtags TEXT DEFAULT '#MetroReachMedia',
               due_at TIMESTAMPTZ NOT NULL,
-              status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed')),
+              status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media')),
               meta_post_id TEXT,
               created_at TIMESTAMPTZ DEFAULT NOW(),
               posted_at TIMESTAMPTZ
@@ -60,6 +60,22 @@ export const Route = createFileRoute("/api/force-migrate")({
           } catch (fixErr: any) {
             // If it's already TIMESTAMPTZ, swallow the error
             results.push(`ℹ due_at migration skipped: ${fixErr.message}`);
+          }
+
+          // ── Fix status check constraint to include 'skipped_no_media' ──
+          try {
+            await n`
+              ALTER TABLE scheduled_posts 
+              DROP CONSTRAINT IF EXISTS scheduled_posts_status_check
+            `;
+            await n`
+              ALTER TABLE scheduled_posts 
+              ADD CONSTRAINT scheduled_posts_status_check 
+              CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media'))
+            `;
+            results.push("✓ status check constraint updated (includes skipped_no_media)");
+          } catch (fixErr: any) {
+            results.push(`ℹ status constraint migration: ${fixErr.message}`);
           }
 
           // Verify
