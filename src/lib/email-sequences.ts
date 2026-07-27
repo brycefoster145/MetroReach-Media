@@ -21,6 +21,7 @@ export interface Client {
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
   pipeline_status: string;
+  portal_token?: string;
   onboarding_data?: Record<string, unknown>;
 }
 
@@ -114,7 +115,9 @@ export async function sendWelcomeEmail(client: Client): Promise<void> {
 // ── Sequence 2: Onboarding Request ──
 
 export async function sendOnboardingRequest(client: Client): Promise<void> {
-  const onboardingUrl = `https://metroreachagency.com/onboarding?id=${client.id}`;
+  const onboardingUrl = client.portal_token
+    ? `https://metroreachagency.com/portal?token=${client.portal_token}`
+    : `https://metroreachagency.com/portal`;
 
   const content = `
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
@@ -275,7 +278,8 @@ export async function sendInternalNewClientAlert(client: Client): Promise<void> 
     <tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Status</td><td>${escapeHtml(client.status)}</td></tr>
   </table>
 </div>
-<p style="font-size:14px;color:#6b7280;margin:8px 0 0;">Client ID: ${escapeHtml(client.id)}</p>`;
+<p style="font-size:14px;color:#6b7280;margin:8px 0 0;">Client ID: ${escapeHtml(client.id)}</p>
+${client.portal_token ? `<p style="font-size:14px;color:#6b7280;margin:8px 0 0;"><a href="https://metroreachagency.com/portal?token=${escapeHtml(client.portal_token)}">View Client Portal →</a></p>` : ""}`;
 
   await sendEmail({
     to: "bryce@metroreachagency.com",

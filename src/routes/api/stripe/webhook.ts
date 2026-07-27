@@ -116,6 +116,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     stripe_customer_id: customerId || undefined,
     stripe_subscription_id: (session.subscription as string) || undefined,
     pipeline_status: "pending",
+    portal_token: portalToken,
   };
 
   // ── Trigger delivery pipeline (non-blocking, fire-and-forget) ──
