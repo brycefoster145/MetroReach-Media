@@ -220,6 +220,47 @@ ${descriptionHtml}
   });
 }
 
+// ── Purchase confirmation (sent immediately after payment) ──
+
+export async function sendPurchaseConfirmation(client: Client, amountCents: number): Promise<void> {
+  const amountDisplay = `${(amountCents / 100).toFixed(2)}`;
+  const orderDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Thank you for your purchase. Your order for <strong>${escapeHtml(client.service)}</strong> has been received and is now being processed.
+</p>
+<div style="background:#f5f3ff;border-radius:12px;padding:20px;margin:16px 0;">
+  <table style="font-size:14px;color:#374151;border-collapse:collapse;width:100%;">
+    <tr><td style="padding:4px 0;font-weight:600;color:#6b7280;width:100px;">Service</td><td>${escapeHtml(client.service)}</td></tr>
+    <tr><td style="padding:4px 0;font-weight:600;color:#6b7280;">Amount</td><td>${amountDisplay}</td></tr>
+    <tr><td style="padding:4px 0;font-weight:600;color:#6b7280;">Date</td><td>${orderDate}</td></tr>
+    <tr><td style="padding:4px 0;font-weight:600;color:#6b7280;">Order ID</td><td style="font-family:monospace;">${escapeHtml(client.id)}</td></tr>
+  </table>
+</div>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Our team will reach out within the next hour with your onboarding details. You'll receive a separate email with next steps shortly.
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  If you have any questions in the meantime, reply to this email and we'll get back to you right away.
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: FROM_ADDRESS,
+    subject: `Purchase confirmed: ${client.service} — MetroReach`,
+    body: emailShell(`Your purchase is confirmed`, content),
+  });
+}
+
 // ── Internal notification: new client alert ──
 
 export async function sendInternalNewClientAlert(client: Client): Promise<void> {

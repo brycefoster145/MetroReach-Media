@@ -351,6 +351,29 @@ async function migrate() {
     console.log(`ℹ due_at column migration skipped: ${err.message}`);
     }
 
+    // ── orders table ──
+    await sql`
+      CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        client_email TEXT NOT NULL,
+        client_name TEXT,
+        service_name TEXT NOT NULL,
+        service_slug TEXT NOT NULL,
+        amount_cents INTEGER NOT NULL,
+        stripe_session_id TEXT,
+        assigned_team_members JSONB DEFAULT '[]',
+        status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'delivered')),
+        deadline TIMESTAMPTZ,
+        deliverable_description TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_orders_client_email ON orders(client_email)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC)`;
+    console.log("✓ orders table ready");
+
     // ── Ensure generated image directory exists ──
     const generatedDir = join(process.cwd(), "public", "social", "generated");
     if (!existsSync(generatedDir)) {
