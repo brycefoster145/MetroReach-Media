@@ -22,7 +22,7 @@ const CLIENT_DIR = `${import.meta.dir}/dist/client`;
 // ── Security headers applied to every response ──
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://api.buffer.com https://api.sendgrid.com;",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://api.sendgrid.com;",
   "strict-transport-security":
     "max-age=31536000; includeSubDomains",
   "x-frame-options": "DENY",
