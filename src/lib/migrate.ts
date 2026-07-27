@@ -7,6 +7,8 @@
  * Run with: DATABASE_URL=... bun run src/lib/migrate.ts
  */
 import { neon } from "@neondatabase/serverless";
+import { mkdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -98,6 +100,21 @@ async function migrate() {
   // Index on created_at for sorted queries
   await sql`CREATE INDEX IF NOT EXISTS idx_contact_leads_created_at ON contact_leads(created_at DESC)`;
   console.log("✓ contact_leads table ready");
+
+  // ── cron_runs table ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS cron_runs (
+      id SERIAL PRIMARY KEY,
+      run_at TIMESTAMPTZ DEFAULT NOW(),
+      posts_found INTEGER DEFAULT 0,
+      posts_processed INTEGER DEFAULT 0,
+      posts_succeeded INTEGER DEFAULT 0,
+      posts_failed INTEGER DEFAULT 0,
+      elapsed_ms INTEGER DEFAULT 0,
+      error TEXT
+    )
+  `;
+  console.log("✓ cron_runs table ready");
 
   // ── pipeline_log table ──
   await sql`
@@ -309,6 +326,22 @@ async function migrate() {
   await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS token_status TEXT DEFAULT 'active'`;
   console.log("✓ client_platform_tokens table ready");
 
+  // ── cron_runs table (tracks every cron execution for health monitoring) ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS cron_runs (
+      id SERIAL PRIMARY KEY,
+      run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      posts_found INTEGER DEFAULT 0,
+      posts_processed INTEGER DEFAULT 0,
+      posts_succeeded INTEGER DEFAULT 0,
+      posts_failed INTEGER DEFAULT 0,
+      elapsed_ms INTEGER DEFAULT 0,
+      error TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_cron_runs_run_at ON cron_runs(run_at DESC)`;
+  console.log("✓ cron_runs table ready");
+
   // ── scheduled_posts table ──
   await sql`
     CREATE TABLE IF NOT EXISTS scheduled_posts (
@@ -331,8 +364,36 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
   console.log("✓ scheduled_posts table ready");
 
-  console.log("Migration complete.");
-}
+  // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
+  // If the table was created with due_at TEXT, comparisons with NOW() fail.
+  // This ALTER converts it safely using the cast.
+  try {
+    await sql`
+      ALTER TABLE scheduled_posts 
+      ALTER COLUMN due_at TYPE TIMESTAMPTZ USING due_at::TIMESTAMPTZ
+    `;
+    console.log("✓ due_at column type fixed to TIMESTAMPTZ");
+  } catch (err: any) {
+    // If it's already TIMESTAMPTZ, the ALTER is a no-op and may throw.
+    // Swallow the error — the column is already correct.
+    console.log(`ℹ due_at column migration skipped: ${err.message}`);
+    }
+
+    // ── Ensure generated image directory exists ──
+    const generatedDir = join(process.cwd(), "public", "social", "generated");
+    if (!existsSync(generatedDir)) {
+    try {
+      mkdirSync(generatedDir, { recursive: true });
+      console.log("✓ public/social/generated/ directory created");
+    } catch (err2: any) {
+      console.log(`ℹ generated directory creation skipped: ${err2.message}`);
+    }
+    } else {
+    console.log("✓ public/social/generated/ directory exists");
+    }
+
+    console.log("Migration complete.");
+    }
 
 migrate().catch((err) => {
   console.error("Migration failed (non-fatal during build):", err.message);

@@ -1,39 +1,58 @@
 /**
- * Post Scheduler Cron Route — POST /api/cron/post-scheduler
+ * Post Scheduler Cron Route — GET|POST /api/cron/post-scheduler
  *
  * Called by Vercel Cron Job every minute.
  * Queries for pending posts where due_at <= NOW(), publishes them
- * via the Meta Graph API, and updates their status.
+ * via the Meta Graph API, updates their status, and records the
+ * run in the cron_runs table for health monitoring.
+ *
+ * CRITICAL: This is the beating heart of MetroReach's posting
+ * infrastructure. Posts MUST go out on time. Every run is logged.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
-import { publishPost } from "~/lib/meta-poster";
+import { publishPost, NoMediaError } from "~/lib/meta-poster";
+import { publishToX } from "~/lib/x-poster";
 import { publishToGoogle } from "~/lib/google-poster";
 
 export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
     handlers: {
       GET: async () => {
+        console.log("[cron] ⏰ GET /api/cron/post-scheduler — triggered");
         return processDuePosts();
       },
       POST: async () => {
+        console.log("[cron] ⏰ POST /api/cron/post-scheduler — triggered");
         return processDuePosts();
       },
     },
   },
 });
 
+interface PostResult {
+  id: string;
+  platform: string;
+  status: string;
+  post_id?: string;
+  error?: string;
+}
+
 async function processDuePosts(): Promise<Response> {
-  const results: Array<{
-    id: string;
-    platform: string;
-    status: string;
-    post_id?: string;
-    error?: string;
-  }> = [];
+  const startTime = Date.now();
+  const results: PostResult[] = [];
+  let postsFound = 0;
+  let postsProcessed = 0;
+  let postsSucceeded = 0;
+  let postsFailed = 0;
+  let runError: string | null = null;
+
+  console.log("[cron] ======== POST SCHEDULER RUN START ========");
+  console.log(`[cron] Server time: ${new Date().toISOString()}`);
 
   try {
-    // Query for all pending posts where due_at <= NOW()
+    // ── STEP 1: Query for due posts ──
+    console.log("[cron] STEP 1: Querying for due posts...");
     const duePosts = await sql`
       SELECT id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at
       FROM scheduled_posts
@@ -42,42 +61,122 @@ async function processDuePosts(): Promise<Response> {
       LIMIT 25
     `;
 
-    console.log(`[post-scheduler] Found ${duePosts.length} due posts`);
+    postsFound = duePosts.length;
+    console.log(`[cron] STEP 1 RESULT: Found ${postsFound} due posts`);
 
-    for (const post of duePosts) {
+    if (postsFound === 0) {
+      console.log("[cron] No due posts — nothing to publish. Run complete.");
+    }
+
+    // ── STEP 2: Process each post ──
+    for (let i = 0; i < duePosts.length; i++) {
+      const post = duePosts[i];
       const postId = post.id as string;
       const platform = post.platform as string;
+      const dueAt = post.due_at as Date;
+
+      console.log(
+        `[cron] STEP 2 [${i + 1}/${postsFound}]: Processing post ${postId} — platform=${platform} due_at=${dueAt?.toISOString?.() ?? dueAt}`,
+      );
 
       try {
-        // LinkedIn: OAuth credentials pending from owner.
-        // Posts are scheduled but actual publishing will be enabled once
-        // LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET are available.
+        // LinkedIn: OAuth credentials pending from owner
         if (platform === "linkedin") {
           console.log(
-            `[post-scheduler] LinkedIn post ${postId} — OAuth not yet configured, skipping publish`,
+            `[cron]   → LinkedIn post ${postId} — OAuth not configured, skipping`,
           );
-          results.push({
-            id: postId,
-            platform,
-            status: "scheduled_linkedin",
-          });
+          results.push({ id: postId, platform, status: "skipped_linkedin" });
+          postsProcessed++;
           continue;
         }
 
-        // Google: GMB + YouTube posts via Google OAuth
+        const fullText = post.hashtags
+          ? `${post.content}\n\n${post.hashtags}`
+          : post.content;
+
+        // ── X (Twitter) ──
+        if (platform === "x") {
+          const xUserId = (post.page_id as string) || "";
+          if (!xUserId) {
+            console.log(
+              `[cron]   → X post ${postId} has no page_id (X user ID) — skipping`,
+            );
+            await sql`
+              UPDATE scheduled_posts
+              SET status = 'failed', posted_at = NOW()
+              WHERE id = ${postId}
+            `;
+            results.push({
+              id: postId,
+              platform,
+              status: "failed",
+              error: "No page_id (X user ID) configured",
+            });
+            postsFailed++;
+            postsProcessed++;
+            continue;
+          }
+
+          console.log(
+            `[cron]   → Publishing to X: userId=${xUserId} text_length=${(fullText as string).length}`,
+          );
+
+          try {
+            const result = await publishToX(
+              (post.client_id as string) || "metroreach",
+              xUserId,
+              fullText as string,
+            );
+
+            console.log(
+              `[cron]   ✅ PUBLISHED: X post ${postId} → Tweet ID: ${result.post_id}`,
+            );
+
+            await sql`
+              UPDATE scheduled_posts
+              SET status = 'posted', posted_at = NOW()
+              WHERE id = ${postId}
+            `;
+
+            results.push({
+              id: postId,
+              platform,
+              status: "posted",
+              post_id: result.post_id,
+            });
+            postsSucceeded++;
+            postsProcessed++;
+          } catch (xErr: any) {
+            console.error(
+              `[cron]   ❌ FAILED to publish X post ${postId}: ${xErr.message}`,
+            );
+            await sql`
+              UPDATE scheduled_posts
+              SET status = 'failed', posted_at = NOW()
+              WHERE id = ${postId}
+            `;
+            results.push({
+              id: postId,
+              platform,
+              status: "failed",
+              error: xErr.message,
+            });
+            postsFailed++;
+            postsProcessed++;
+          }
+          continue;
+        }
+
+        // ── Google (GMB + YouTube) ──
         if (platform === "google") {
           const googleMediaUrls = Array.isArray(post.media_urls)
             ? (post.media_urls as string[])
             : [];
 
-          const googleFullText = post.hashtags
-            ? `${post.content}\n\n${post.hashtags}`
-            : post.content;
-
           const googleResult = await publishToGoogle(
             (post.client_id as string) || "metroreach",
             post.page_id as string,
-            googleFullText as string,
+            fullText as string,
             googleMediaUrls.length > 0 ? googleMediaUrls : undefined,
           );
 
@@ -99,12 +198,13 @@ async function processDuePosts(): Promise<Response> {
           continue;
         }
 
-        // Only Facebook and Instagram are supported for now
+        // Only Facebook and Instagram supported for now
         if (platform !== "facebook" && platform !== "instagram") {
           console.log(
-            `[post-scheduler] Skipping post ${postId} — platform "${platform}" not yet supported`,
+            `[cron]   → Skipping ${postId} — platform "${platform}" not yet supported`,
           );
-          results.push({ id: postId, platform, status: "skipped" });
+          results.push({ id: postId, platform, status: "skipped_unsupported" });
+          postsProcessed++;
           continue;
         }
 
@@ -112,10 +212,36 @@ async function processDuePosts(): Promise<Response> {
           ? (post.media_urls as string[])
           : [];
 
-        const fullText = post.hashtags
-          ? `${post.content}\n\n${post.hashtags}`
-          : post.content;
+        // ── PRE-FLIGHT: Instagram requires an image ──
+        // Image generation happens at SCHEDULE time, not here.
+        // If a post was scheduled without media_urls (generation failed/timed out),
+        // skip it now rather than failing at the Meta API.
+        if (platform === "instagram" && mediaUrls.length === 0) {
+          console.log(
+            `[cron]   → Instagram post ${postId} has no media_urls — skipping (needs image generation first)`,
+          );
+          // Use 'failed' status with a clear skip message until DB constraint
+          // is updated to support 'skipped_no_media' status.
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'failed', posted_at = NOW()
+            WHERE id = ${postId}
+          `;
+          results.push({
+            id: postId,
+            platform,
+            status: "skipped_no_media",
+            error: "No media_urls — needs image generation. Run POST /api/generate-images with postId to fix.",
+          });
+          postsProcessed++;
+          continue;
+        }
 
+        console.log(
+          `[cron]   → Publishing to ${platform}: pageId=${post.page_id} igUserId=${post.ig_user_id || "N/A"} text_length=${(fullText as string).length} media_count=${mediaUrls.length}`,
+        );
+
+        // ── STEP 3: Publish via Meta Graph API ──
         const result = await publishPost({
           platform: platform as "facebook" | "instagram",
           pageId: post.page_id as string,
@@ -124,27 +250,53 @@ async function processDuePosts(): Promise<Response> {
           mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
         });
 
-        // Mark as posted
+        console.log(
+          `[cron]   ✅ PUBLISHED: ${platform} post ${postId} → Meta ID: ${result.post_id} status: ${result.status}`,
+        );
+
+        // ── STEP 4: Mark as posted ──
         await sql`
           UPDATE scheduled_posts
           SET status = 'posted', meta_post_id = ${result.post_id}, posted_at = NOW()
           WHERE id = ${postId}
         `;
 
-        console.log(
-          `[post-scheduler] Published ${platform} post ${postId} → Meta ID ${result.post_id}`,
-        );
         results.push({
           id: postId,
           platform,
           status: "posted",
           post_id: result.post_id,
         });
+        postsSucceeded++;
+        postsProcessed++;
       } catch (err: any) {
+        // NoMediaError = post has no image. Mark as failed with a clear message.
+        // (DB constraint doesn't support 'skipped_no_media' yet — fix pending)
+        if (err.name === "NoMediaError" || err instanceof NoMediaError) {
+          console.warn(
+            `[cron]   ⚠️ SKIPPED (no media): ${postId} (${platform}): ${err.message}`,
+          );
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'failed', posted_at = NOW()
+            WHERE id = ${postId}
+          `;
+          results.push({
+            id: postId,
+            platform,
+            status: "skipped_no_media",
+            error: "No media_urls — needs image generation. Run POST /api/generate-images with postId to fix.",
+          });
+          postsProcessed++;
+          continue;
+        }
+
         console.error(
-          `[post-scheduler] Failed to publish post ${postId}:`,
-          err.message,
+          `[cron]   ❌ FAILED to publish ${postId} (${platform}): ${err.message}`,
         );
+        if (err.stack) {
+          console.error(`[cron]   Stack: ${err.stack.split("\n").slice(0, 3).join(" | ")}`);
+        }
 
         // Mark as failed
         await sql`
@@ -159,21 +311,49 @@ async function processDuePosts(): Promise<Response> {
           status: "failed",
           error: err.message,
         });
+        postsFailed++;
+        postsProcessed++;
       }
     }
   } catch (err: any) {
-    console.error("[post-scheduler] Query error:", err.message);
-    return new Response(
-      JSON.stringify({ error: err.message, results }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    console.error(`[cron] ❌ QUERY ERROR: ${err.message}`);
+    if (err.stack) console.error(`[cron] Stack: ${err.stack}`);
+    runError = err.message;
   }
 
-  return new Response(JSON.stringify({ results, count: results.length }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+  // ── STEP 5: Record this run in cron_runs ──
+  const elapsedMs = Date.now() - startTime;
+  console.log(
+    `[cron] ======== RUN COMPLETE: found=${postsFound} processed=${postsProcessed} succeeded=${postsSucceeded} failed=${postsFailed} elapsed=${elapsedMs}ms ========`,
+  );
+
+  try {
+    await sql`
+      INSERT INTO cron_runs (run_at, posts_found, posts_processed, posts_succeeded, posts_failed, elapsed_ms, error)
+      VALUES (NOW(), ${postsFound}, ${postsProcessed}, ${postsSucceeded}, ${postsFailed}, ${elapsedMs}, ${runError})
+    `;
+    console.log("[cron] ✅ Run recorded in cron_runs table");
+  } catch (logErr: any) {
+    console.error(`[cron] ⚠️ Failed to record run in cron_runs: ${logErr.message}`);
+  }
+
+  const statusCode = runError ? 500 : 200;
+  return new Response(
+    JSON.stringify({
+      results,
+      summary: {
+        found: postsFound,
+        processed: postsProcessed,
+        succeeded: postsSucceeded,
+        failed: postsFailed,
+        elapsed_ms: elapsedMs,
+        error: runError,
+        server_time: new Date().toISOString(),
+      },
+    }),
+    {
+      status: statusCode,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }

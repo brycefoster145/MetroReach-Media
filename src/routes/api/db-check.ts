@@ -4,6 +4,10 @@
  * Tests the database connection using BOTH the `postgres` package (TCP, used by
  * the cron scheduler) and `@neondatabase/serverless` (HTTP, serverless-native).
  * Reports table existence, row counts, sample pending posts, and timezone info.
+ *
+ * POST actions:
+ *   {"action": "cleanup"} — deduplicate pending posts (default)
+ *   {"action": "reset-failed"} — reset failed IG posts to pending
  */
 import { createFileRoute } from "@tanstack/react-router";
 import postgres from "postgres";
@@ -67,6 +71,35 @@ export const Route = createFileRoute("/api/db-check")({
               due_at: String(r.due_at),
               server_time: String(r.server_time),
               server_time_utc: String(r.server_time_utc),
+            }));
+
+            // Failed Instagram posts from 2026-07-26+
+            const failedIG = await n`
+              SELECT id, status, due_at, meta_post_id, posted_at,
+                LEFT(content, 80) as content_preview
+              FROM scheduled_posts
+              WHERE platform = 'instagram' AND status = 'failed' AND due_at >= '2026-07-26'
+              ORDER BY due_at ASC
+            `;
+            report.neon.failed_instagram = failedIG.map((r: any) => ({
+              ...r,
+              due_at: String(r.due_at),
+              posted_at: r.posted_at ? String(r.posted_at) : null,
+            }));
+
+            // Instagram posts with status='posted' from yesterday that may be false positives
+            const suspectIG = await n`
+              SELECT id, status, due_at, meta_post_id, posted_at,
+                LEFT(content, 80) as content_preview
+              FROM scheduled_posts
+              WHERE platform = 'instagram' AND status = 'posted' AND due_at >= '2026-07-26'
+                AND (meta_post_id IS NULL OR meta_post_id = '')
+              ORDER BY due_at ASC
+            `;
+            report.neon.suspect_instagram = suspectIG.map((r: any) => ({
+              ...r,
+              due_at: String(r.due_at),
+              posted_at: r.posted_at ? String(r.posted_at) : null,
             }));
 
             // Timezone diagnostic
@@ -133,6 +166,159 @@ export const Route = createFileRoute("/api/db-check")({
           headers: { "Content-Type": "application/json" },
         });
       },
+
+      // ── POST: Cleanup duplicates OR reset failed IG posts ──
+      POST: async ({ request }) => {
+        let body: { action?: string } = {};
+        try {
+          body = await request.json();
+        } catch { /* no body, default to cleanup */ }
+
+        const action = body.action || "cleanup";
+
+        if (action === "reset-failed") {
+          return handleResetFailed();
+        }
+        return handleCleanup();
+      },
     },
   },
 });
+
+async function handleResetFailed(): Promise<Response> {
+  const report: Record<string, unknown> = { action: "reset-failed" };
+  try {
+    if (!url) throw new Error("DATABASE_URL not set");
+    const pg = postgres(url, {
+      max: 1,
+      idle_timeout: 5,
+      connect_timeout: 10,
+      ssl: "require",
+    });
+
+    // Find failed Instagram posts from 2026-07-26+
+    const failed = await pg`
+      SELECT id, platform, due_at, status
+      FROM scheduled_posts
+      WHERE platform = 'instagram' AND status = 'failed' AND due_at >= '2026-07-26'
+    `;
+
+    report.failed_count = failed.length;
+    report.failed_ids = failed.map((r: any) => r.id);
+
+    if (failed.length > 0) {
+      const ids = failed.map((r: any) => r.id);
+      await pg`
+        UPDATE scheduled_posts
+        SET status = 'pending', meta_post_id = NULL, posted_at = NULL
+        WHERE id = ANY(${ids}::text[])
+      `;
+
+      // Also check for suspect posted IG posts without meta_post_id
+      await pg`
+        UPDATE scheduled_posts
+        SET status = 'pending', meta_post_id = NULL, posted_at = NULL
+        WHERE platform = 'instagram'
+          AND status = 'posted'
+          AND due_at >= '2026-07-26'
+          AND (meta_post_id IS NULL OR meta_post_id = '')
+      `;
+    }
+
+    // Verify after reset
+    const dueNow = await pg`
+      SELECT COUNT(*) as cnt FROM scheduled_posts
+      WHERE status = 'pending' AND due_at <= NOW()
+    `;
+    report.due_pending_count = Number(dueNow[0]?.cnt);
+
+    await pg.end();
+    report.success = true;
+  } catch (err: any) {
+    report.success = false;
+    report.error = err.message;
+  }
+
+  return new Response(JSON.stringify(report, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function handleCleanup(): Promise<Response> {
+  const report: Record<string, unknown> = { action: "cleanup" };
+  try {
+    if (!url) throw new Error("DATABASE_URL not set");
+    const pg = postgres(url, {
+      max: 1,
+      idle_timeout: 5,
+      connect_timeout: 10,
+      ssl: "require",
+    });
+
+    // Find duplicate groups (platform + due_at, pending, count > 1)
+    const dupGroups = await pg`
+      SELECT platform, due_at, COUNT(*) as cnt
+      FROM scheduled_posts
+      WHERE status = 'pending'
+      GROUP BY platform, due_at
+      HAVING COUNT(*) > 1
+      ORDER BY due_at ASC
+    `;
+    report.duplicate_groups = dupGroups.map((r: any) => ({
+      platform: r.platform,
+      due_at: String(r.due_at),
+      count: Number(r.cnt),
+    }));
+
+    const deletedIds: string[] = [];
+    const keptIds: string[] = [];
+
+    for (const group of dupGroups) {
+      const platform = group.platform as string;
+      const dueAt = group.due_at as Date;
+
+      const candidates = await pg`
+        SELECT id, content, media_urls
+        FROM scheduled_posts
+        WHERE platform = ${platform}
+          AND due_at = ${dueAt}::timestamptz
+          AND status = 'pending'
+        ORDER BY 
+          CASE WHEN media_urls IS NOT NULL AND jsonb_typeof(media_urls) = 'array' AND jsonb_array_length(media_urls) > 0 THEN 1 ELSE 0 END DESC,
+          LENGTH(content) DESC
+      `;
+
+      const keep = candidates[0];
+      keptIds.push(keep.id as string);
+
+      for (let i = 1; i < candidates.length; i++) {
+        deletedIds.push(candidates[i].id as string);
+      }
+    }
+
+    if (deletedIds.length > 0) {
+      await pg`
+        DELETE FROM scheduled_posts WHERE id = ANY(${deletedIds}::text[])
+      `;
+    }
+
+    const afterCount = await pg`SELECT COUNT(*) as cnt FROM scheduled_posts`;
+    report.before_count = Number(afterCount[0]?.cnt) + deletedIds.length;
+    report.after_count = Number(afterCount[0]?.cnt);
+    report.deleted_count = deletedIds.length;
+    report.deleted_ids = deletedIds;
+    report.kept_ids = keptIds;
+
+    await pg.end();
+    report.success = true;
+  } catch (err: any) {
+    report.success = false;
+    report.error = err.message;
+  }
+
+  return new Response(JSON.stringify(report, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}

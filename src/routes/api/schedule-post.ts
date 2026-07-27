@@ -8,6 +8,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
+import { generateImage } from "~/lib/generate-image";
 
 export const Route = createFileRoute("/api/schedule-post")({
   server: {
@@ -70,9 +71,71 @@ export const Route = createFileRoute("/api/schedule-post")({
           );
         }
 
-        const id = `post-${randomBytes(8).toString("hex")}`;
+        // ── Auto-generate image for Instagram posts without media ──
+        // Instagram REQUIRES images — never let a text-only IG post through.
+        // Facebook posts without images pass through (FB supports text-only).
+        let finalMediaUrls: string[] = (media_urls || []) as string[];
+        if (platform === "instagram" && finalMediaUrls.length === 0) {
+          try {
+            const generatedUrl = await generateImage(content as string);
+            finalMediaUrls = [generatedUrl];
+          } catch (imgErr: any) {
+            return new Response(
+              JSON.stringify({
+                error:
+                  "Instagram posts require an image, and auto-generation failed. Provide media_urls or try again.",
+                detail: imgErr.message,
+              }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
+          }
+        }
 
         try {
+          // ── Dedup check: upsert by platform + due_at ──
+          // If a pending post already exists for this platform + time slot,
+          // update it instead of creating a duplicate.
+          const existing = await sql`
+            SELECT id FROM scheduled_posts
+            WHERE platform = ${platform}
+              AND due_at = ${due_at}::timestamptz
+              AND status = 'pending'
+            LIMIT 1
+          `;
+
+          if (existing.length > 0) {
+            // Update the existing post
+            const existingId = existing[0].id as string;
+            await sql`
+              UPDATE scheduled_posts
+              SET
+                client_id = ${client_id as string},
+                page_id = ${page_id as string},
+                ig_user_id = ${ig_user_id ? (ig_user_id as string) : null},
+                content = ${content as string},
+                media_urls = ${sql.json(finalMediaUrls)},
+                hashtags = ${hashtags as string}
+              WHERE id = ${existingId}
+            `;
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                id: existingId,
+                platform,
+                due_at,
+                updated: true,
+                message: `Post updated for ${due_at} (existing post replaced)`,
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
+          const id = `post-${randomBytes(8).toString("hex")}`;
+
           await sql`
             INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
             VALUES (
@@ -82,7 +145,7 @@ export const Route = createFileRoute("/api/schedule-post")({
               ${page_id as string},
               ${ig_user_id ? (ig_user_id as string) : null},
               ${content as string},
-              ${JSON.stringify(media_urls || [])}::jsonb,
+              ${sql.json(finalMediaUrls)},
               ${hashtags as string},
               ${due_at}::timestamptz,
               'pending'

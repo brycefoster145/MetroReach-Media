@@ -36,7 +36,7 @@ export const Route = createFileRoute("/api/force-migrate")({
               media_urls JSONB DEFAULT '[]',
               hashtags TEXT DEFAULT '#MetroReachMedia',
               due_at TIMESTAMPTZ NOT NULL,
-              status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed')),
+              status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media')),
               meta_post_id TEXT,
               created_at TIMESTAMPTZ DEFAULT NOW(),
               posted_at TIMESTAMPTZ
@@ -50,6 +50,34 @@ export const Route = createFileRoute("/api/force-migrate")({
           await n`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
           results.push("✓ idx_scheduled_posts_client index ready");
 
+          // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
+          try {
+            await n`
+              ALTER TABLE scheduled_posts 
+              ALTER COLUMN due_at TYPE TIMESTAMPTZ USING due_at::TIMESTAMPTZ
+            `;
+            results.push("✓ due_at column type fixed to TIMESTAMPTZ");
+          } catch (fixErr: any) {
+            // If it's already TIMESTAMPTZ, swallow the error
+            results.push(`ℹ due_at migration skipped: ${fixErr.message}`);
+          }
+
+          // ── Fix status check constraint to include 'skipped_no_media' ──
+          try {
+            await n`
+              ALTER TABLE scheduled_posts 
+              DROP CONSTRAINT IF EXISTS scheduled_posts_status_check
+            `;
+            await n`
+              ALTER TABLE scheduled_posts 
+              ADD CONSTRAINT scheduled_posts_status_check 
+              CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media'))
+            `;
+            results.push("✓ status check constraint updated (includes skipped_no_media)");
+          } catch (fixErr: any) {
+            results.push(`ℹ status constraint migration: ${fixErr.message}`);
+          }
+
           // Verify
           const count = await n`SELECT COUNT(*) as cnt FROM scheduled_posts`;
           results.push(`Table has ${count[0]?.cnt} rows`);
@@ -60,6 +88,21 @@ export const Route = createFileRoute("/api/force-migrate")({
             WHERE status = 'pending' AND due_at <= NOW()
           `;
           results.push(`Pending+due posts: ${dueCount[0]?.cnt}`);
+
+          // ── cron_runs table ──
+          await n`
+            CREATE TABLE IF NOT EXISTS cron_runs (
+              id SERIAL PRIMARY KEY,
+              run_at TIMESTAMPTZ DEFAULT NOW(),
+              posts_found INTEGER DEFAULT 0,
+              posts_processed INTEGER DEFAULT 0,
+              posts_succeeded INTEGER DEFAULT 0,
+              posts_failed INTEGER DEFAULT 0,
+              elapsed_ms INTEGER DEFAULT 0,
+              error TEXT
+            )
+          `;
+          results.push("✓ cron_runs table ready");
 
           return new Response(
             JSON.stringify({ success: true, results }),

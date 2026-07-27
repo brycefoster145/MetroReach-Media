@@ -135,52 +135,51 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
         const codeVerifierMatch = cookies.match(/(?:^|;\s*)x_code_verifier=([^;]*)/);
         const codeVerifier = codeVerifierMatch ? decodeURIComponent(codeVerifierMatch[1]) : "";
 
-        // Get the authenticated client
+        // Get the authenticated client (may be null for admin flow)
         const client = getClientFromRequest(request);
 
-        // If user denied or an error occurred, redirect back with error
+        // Check for admin PKCE cookie as fallback
+        const adminVerifierMatch = cookies.match(/(?:^|;\s*)admin_x_verifier=([^;]*)/);
+        const adminCodeVerifier = adminVerifierMatch ? decodeURIComponent(adminVerifierMatch[1]) : "";
+        const isAdminFlow = !!adminCodeVerifier;
+
+        const effectiveVerifier = codeVerifier || adminCodeVerifier;
+
+        // If user denied or an error occurred
         if (error || !code) {
+          if (isAdminFlow) {
+            return new Response(`<h1>X Auth Failed</h1><p>${errorDescription || error || "Authorization cancelled."}</p>`, {
+              status: 400, headers: { "Content-Type": "text/html" },
+            });
+          }
           const redirectUrl = new URL("https://metroreachagency.com/portal/connect");
           redirectUrl.searchParams.set("oauth_result", "error");
-          redirectUrl.searchParams.set(
-            "error_msg",
-            errorDescription || error || "Authorization was cancelled or failed.",
-          );
-          return new Response(null, {
-            status: 302,
-            headers: { Location: redirectUrl.toString() },
-          });
+          redirectUrl.searchParams.set("error_msg", errorDescription || error || "Authorization was cancelled or failed.");
+          return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
         }
 
-        if (!codeVerifier) {
+        if (!effectiveVerifier) {
+          if (isAdminFlow) {
+            return new Response("<h1>Session expired</h1><p>Try again</p>", {
+              status: 400, headers: { "Content-Type": "text/html" },
+            });
+          }
           const redirectUrl = new URL("https://metroreachagency.com/portal/connect");
           redirectUrl.searchParams.set("oauth_result", "error");
-          redirectUrl.searchParams.set(
-            "error_msg",
-            "PKCE session expired. Please try connecting again.",
-          );
-          return new Response(null, {
-            status: 302,
-            headers: { Location: redirectUrl.toString() },
-          });
+          redirectUrl.searchParams.set("error_msg", "PKCE session expired.");
+          return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
         }
 
-        if (!client) {
+        if (!client && !isAdminFlow) {
           const redirectUrl = new URL("https://metroreachagency.com/portal/connect");
           redirectUrl.searchParams.set("oauth_result", "error");
-          redirectUrl.searchParams.set(
-            "error_msg",
-            "Your portal session expired. Please log in first, then reconnect.",
-          );
-          return new Response(null, {
-            status: 302,
-            headers: { Location: redirectUrl.toString() },
-          });
+          redirectUrl.searchParams.set("error_msg", "Your portal session expired.");
+          return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
         }
 
         try {
           // Step 1: Exchange code + code_verifier for access token
-          const tokenData = await exchangeCodeForToken(code, codeVerifier);
+          const tokenData = await exchangeCodeForToken(code, effectiveVerifier);
 
           // Step 2: Fetch X user info
           const userInfo = await getUserInfo(tokenData.access_token);
@@ -194,10 +193,12 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
             ? `${userInfo.name} (@${userInfo.username})`
             : `@${userInfo.username}`;
 
+          const effectiveClientId = isAdminFlow ? "metroreach" : (client?.sub || "unknown");
+
           // Insert if not exists
           await sql`
             INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at)
-            VALUES (${client.sub}, 'x', ${tokenData.access_token}, ${userInfo.id}, ${accountName}, ${
+            VALUES (${effectiveClientId}, 'x', ${tokenData.access_token}, ${userInfo.id}, ${accountName}, ${
               expiresAt?.toISOString() ?? null
             })
             ON CONFLICT DO NOTHING
@@ -209,14 +210,29 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
             SET access_token = ${tokenData.access_token},
                 account_name = ${accountName},
                 expires_at = ${expiresAt?.toISOString() ?? null}
-            WHERE client_id = ${client.sub}
+            WHERE client_id = ${effectiveClientId}
               AND platform = 'x'
               AND page_id = ${userInfo.id}
           `;
 
-          // Clear the PKCE cookie
-          const clearCookie =
-            "x_code_verifier=; path=/; max-age=0; SameSite=Lax; Secure";
+          // Clear the PKCE cookies
+          const clearCookies = [
+            "x_code_verifier=; path=/; max-age=0; SameSite=Lax; Secure",
+            "admin_x_verifier=; path=/; max-age=0; SameSite=Lax; Secure",
+          ];
+
+          if (isAdminFlow) {
+            return new Response(
+              `<h1>✅ X Connected!</h1><p>${userInfo.name} (@${userInfo.username}) — your X account is now connected to MetroReach Digital.</p><p><a href="/">Back to site</a></p>`,
+              {
+                status: 200,
+                headers: {
+                  "Content-Type": "text/html",
+                  "Set-Cookie": clearCookies.join(", "),
+                },
+              },
+            );
+          }
 
           // Redirect back to connect page with success
           const redirectUrl = new URL("https://metroreachagency.com/portal/connect");
@@ -225,10 +241,15 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
             status: 302,
             headers: {
               Location: redirectUrl.toString(),
-              "Set-Cookie": clearCookie,
+              "Set-Cookie": clearCookies.join(", "),
             },
           });
         } catch (err: any) {
+          if (isAdminFlow) {
+            return new Response(`<h1>Error</h1><p>${err.message}</p>`, {
+              status: 500, headers: { "Content-Type": "text/html" },
+            });
+          }
           console.error("X OAuth callback error:", err.message);
           const redirectUrl = new URL("https://metroreachagency.com/portal/connect");
           redirectUrl.searchParams.set("oauth_result", "error");
