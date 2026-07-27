@@ -17,6 +17,12 @@
 // least one scheduling pass per minute. When the function goes cold, the next
 // request restarts the interval. Combined with Vercel's own cron, we get
 // overlapping coverage — posts WILL go out.
+//
+// ── Cold-start guard ──
+// On every deployment cold start, the cron kicker waits STARTUP_DELAY_MS before
+// its first kick. This prevents burst-publishing that would otherwise fire
+// immediately on deploy (the old 5-second delay was too short to let the scheduler
+// stabilize).
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import handler from "./dist/server/server.js";
@@ -29,7 +35,7 @@ const fetchHandler = handler as {
 
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://api.buffer.com https://api.sendgrid.com;",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://api.sendgrid.com;",
   "strict-transport-security":
     "max-age=31536000; includeSubDomains",
   "x-frame-options": "DENY",
@@ -70,19 +76,23 @@ const toWebRequest = (req: IncomingMessage): Request => {
 // This is a FALLBACK — Vercel Cron Jobs (vercel.json) are the primary trigger.
 // The interval is 62 seconds (not 60) to avoid racing with Vercel's own cron.
 
+const STARTUP_DELAY_MS = 60_000; // 60-second cold-start guard to prevent burst-publishing
+
 let cronKickerInterval: ReturnType<typeof setInterval> | null = null;
 
 function startCronKicker(): void {
   if (cronKickerInterval) return; // Already running
 
-  console.log("[cron-kicker] Starting self-healing cron kicker (every 62s)");
+  console.log(
+    `[cron-kicker] Starting self-healing cron kicker (every 62s, first kick in ${STARTUP_DELAY_MS / 1000}s)`,
+  );
 
-  // Fire once on startup (with a 5s delay to let the module settle)
+  // Fire once on startup after the cold-start guard delay
   setTimeout(() => {
     kickCron().catch((err) =>
       console.error("[cron-kicker] Initial kick failed:", err.message),
     );
-  }, 5000);
+  }, STARTUP_DELAY_MS);
 
   // Then every 62 seconds
   cronKickerInterval = setInterval(() => {
