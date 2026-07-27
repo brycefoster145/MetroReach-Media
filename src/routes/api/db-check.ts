@@ -133,6 +133,85 @@ export const Route = createFileRoute("/api/db-check")({
           headers: { "Content-Type": "application/json" },
         });
       },
+
+      // ── POST: Cleanup duplicates ──
+      POST: async () => {
+        const report: Record<string, unknown> = { action: "cleanup" };
+        try {
+          if (!url) throw new Error("DATABASE_URL not set");
+          const pg = postgres(url, {
+            max: 1,
+            idle_timeout: 5,
+            connect_timeout: 10,
+            ssl: "require",
+          });
+
+          // Find duplicate groups (platform + due_at, pending, count > 1)
+          const dupGroups = await pg`
+            SELECT platform, due_at, COUNT(*) as cnt
+            FROM scheduled_posts
+            WHERE status = 'pending'
+            GROUP BY platform, due_at
+            HAVING COUNT(*) > 1
+            ORDER BY due_at ASC
+          `;
+          report.duplicate_groups = dupGroups.map((r: any) => ({
+            platform: r.platform,
+            due_at: String(r.due_at),
+            count: Number(r.cnt),
+          }));
+
+          const deletedIds: string[] = [];
+          const keptIds: string[] = [];
+
+          for (const group of dupGroups) {
+            const platform = group.platform as string;
+            const dueAt = group.due_at as Date;
+
+            const candidates = await pg`
+              SELECT id, content, media_urls
+              FROM scheduled_posts
+              WHERE platform = ${platform}
+                AND due_at = ${dueAt}::timestamptz
+                AND status = 'pending'
+              ORDER BY 
+                CASE WHEN media_urls IS NOT NULL AND jsonb_array_length(media_urls) > 0 THEN 1 ELSE 0 END DESC,
+                LENGTH(content) DESC
+            `;
+
+            const keep = candidates[0];
+            keptIds.push(keep.id as string);
+
+            for (let i = 1; i < candidates.length; i++) {
+              deletedIds.push(candidates[i].id as string);
+            }
+          }
+
+          if (deletedIds.length > 0) {
+            await pg`
+              DELETE FROM scheduled_posts WHERE id = ANY(${deletedIds}::text[])
+            `;
+          }
+
+          const afterCount = await pg`SELECT COUNT(*) as cnt FROM scheduled_posts`;
+          report.before_count = Number(afterCount[0]?.cnt) + deletedIds.length;
+          report.after_count = Number(afterCount[0]?.cnt);
+          report.deleted_count = deletedIds.length;
+          report.deleted_ids = deletedIds;
+          report.kept_ids = keptIds;
+
+          await pg.end();
+          report.success = true;
+        } catch (err: any) {
+          report.success = false;
+          report.error = err.message;
+        }
+
+        return new Response(JSON.stringify(report, null, 2), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
     },
   },
 });
