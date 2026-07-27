@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   Article,
   Target,
@@ -24,6 +25,14 @@ const iconColorMap: Record<string, string> = {
   Brain: "text-brand-gold",
   ChartLineUp: "text-brand-primary-glow",
   ChatCircleText: "text-brand-teal",
+};
+
+const serviceCategoryMap: Record<string, string> = {
+  "Organic Content Management": "/services/organic-content",
+  "Paid Advertising": "/services/paid-advertising",
+  "Social Strategy": "/services/social-strategy",
+  "Analytics & Reporting": "/services/analytics-reporting",
+  "Community Management": "/services/community-management",
 };
 
 export function ServicesSection() {
@@ -65,45 +74,50 @@ export function ServicesSection() {
             const iconColor = iconColorMap[svc.icon] || "text-brand-primary";
 
             return (
-              <div
+              <Link
                 key={svc.name}
-                className={`glass-card p-10 lg:p-12 service-card-hover transition-all duration-500 ${
-                  visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-                }`}
-                style={{
-                  transitionDelay: `${i * 100}ms`,
-                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
+                to={serviceCategoryMap[svc.name] || "/services"}
+                className="block"
               >
-                {/* Icon */}
-                <div className={`${iconColor} mb-5`}>
-                  <Icon size={48} weight="duotone" />
+                <div
+                  className={`glass-card p-10 lg:p-12 service-card-hover transition-all duration-500 ${
+                    visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                  }`}
+                  style={{
+                    transitionDelay: `${i * 100}ms`,
+                    transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                >
+                  {/* Icon */}
+                  <div className={`${iconColor} mb-5`}>
+                    <Icon size={48} weight="duotone" />
+                  </div>
+
+                  {/* Tagline */}
+                  <p className="text-sm font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
+                    {svc.tagline}
+                  </p>
+
+                  {/* Name */}
+                  <h3 className="text-2xl font-bold font-heading text-text-primary mb-4">
+                    {svc.name}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-base text-text-primary-light leading-loose mb-6">
+                    {svc.description}
+                  </p>
+
+                  {/* Feature pills */}
+                  <div className="flex flex-wrap gap-2.5">
+                    {svc.features.map((f, j) => (
+                      <span key={j} className="feature-pill">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-
-                {/* Tagline */}
-                <p className="text-sm font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
-                  {svc.tagline}
-                </p>
-
-                {/* Name */}
-                <h3 className="text-2xl font-bold font-heading text-text-primary mb-4">
-                  {svc.name}
-                </h3>
-
-                {/* Description */}
-                <p className="text-base text-text-primary-light leading-loose mb-6">
-                  {svc.description}
-                </p>
-
-                {/* Feature pills */}
-                <div className="flex flex-wrap gap-2.5">
-                  {svc.features.map((f, j) => (
-                    <span key={j} className="feature-pill">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -115,45 +129,50 @@ export function ServicesSection() {
             const iconColor = iconColorMap[svc.icon] || "text-brand-primary";
 
             return (
-              <div
+              <Link
                 key={svc.name}
-                className={`glass-card p-8 service-card-hover transition-all duration-500 ${
-                  visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-                }`}
-                style={{
-                  transitionDelay: `${300 + i * 100}ms`,
-                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
+                to={serviceCategoryMap[svc.name] || "/services"}
+                className="block"
               >
-                {/* Icon */}
-                <div className={`${iconColor} mb-4`}>
-                  <Icon size={38} weight="duotone" />
+                <div
+                  className={`glass-card p-8 service-card-hover transition-all duration-500 ${
+                    visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                  }`}
+                  style={{
+                    transitionDelay: `${300 + i * 100}ms`,
+                    transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                >
+                  {/* Icon */}
+                  <div className={`${iconColor} mb-4`}>
+                    <Icon size={38} weight="duotone" />
+                  </div>
+
+                  {/* Tagline */}
+                  <p className="text-xs font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
+                    {svc.tagline}
+                  </p>
+
+                  {/* Name */}
+                  <h3 className="text-lg font-bold font-heading text-text-primary mb-3">
+                    {svc.name}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-sm text-text-primary-light leading-loose mb-5">
+                    {svc.description}
+                  </p>
+
+                  {/* Feature pills */}
+                  <div className="flex flex-wrap gap-2">
+                    {svc.features.map((f, j) => (
+                      <span key={j} className="feature-pill text-xs">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-
-                {/* Tagline */}
-                <p className="text-xs font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
-                  {svc.tagline}
-                </p>
-
-                {/* Name */}
-                <h3 className="text-lg font-bold font-heading text-text-primary mb-3">
-                  {svc.name}
-                </h3>
-
-                {/* Description */}
-                <p className="text-sm text-text-primary-light leading-loose mb-5">
-                  {svc.description}
-                </p>
-
-                {/* Feature pills */}
-                <div className="flex flex-wrap gap-2">
-                  {svc.features.map((f, j) => (
-                    <span key={j} className="feature-pill text-xs">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>

@@ -405,7 +405,7 @@ export function PortfolioSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-32 lg:py-40 bg-bg-surface relative overflow-hidden">
+    <section id="portfolio" ref={ref} className="py-32 lg:py-40 bg-bg-surface relative overflow-hidden">
       <Container>
         <SectionHeading
           headline={portfolio.headline}

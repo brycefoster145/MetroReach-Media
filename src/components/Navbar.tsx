@@ -7,6 +7,7 @@ const links = [
   { label: "Case Studies", href: "/case-studies" },
   { label: "Packages", href: "/pricing" },
   { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
   { label: "Client Portal", href: "/portal" },
 ];
 
@@ -108,6 +109,21 @@ export function Navbar() {
                 {l.label}
               </a>
             ))}
+            <div className="flex items-center gap-4 mt-4">
+              <a
+                href="/cart"
+                onClick={close}
+                className="relative p-2 text-text-secondary hover:text-brand-primary transition-colors"
+                aria-label="View cart"
+              >
+                <ShoppingCart size={24} weight="regular" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-5 h-5 text-[11px] font-bold text-text-primary bg-brand-primary rounded-full">
+                    {itemCount}
+                  </span>
+                )}
+              </a>
+            </div>
             <div className="mt-6">
               <a
                 href="/free-audit"

@@ -144,6 +144,7 @@ export const pricingPage = {
   headline: "One retainer. Full team. Clear results.",
   subheadline:
     "Every package includes strategy, creative, posting, optimization, and reporting.",
+  addonNote: "",
   tiers: [
     {
       name: "Starter",
@@ -177,7 +178,7 @@ export const pricingPage = {
       ],
       bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
       featured: true,
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+      paymentLink: "",
     },
     {
       name: "Scale",
@@ -197,7 +198,7 @@ export const pricingPage = {
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
       featured: false,
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+      paymentLink: "",
     },
   ],
   noLockPledge:

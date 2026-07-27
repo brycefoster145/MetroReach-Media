@@ -15,6 +15,12 @@ const socialIconMap: Record<string, React.ComponentType<{ size?: number; weight?
   XLogo,
 };
 
+const serviceLinkMap: Record<string, string> = {
+  "Organic Social": "/services/organic-content",
+  "Paid Ads": "/services/paid-advertising",
+  "Strategy & Creative": "/services/social-strategy",
+};
+
 export function Footer() {
   return (
     <footer className="border-t border-border-subtle bg-bg-root">
@@ -63,7 +69,7 @@ export function Footer() {
               {footer.services.map((s) => (
                 <li key={s}>
                   <a
-                    href="/services"
+                    href={serviceLinkMap[s] || "/services"}
                     className="text-sm text-text-muted hover:text-text-secondary transition-colors"
                   >
                     {s}
@@ -88,7 +94,7 @@ export function Footer() {
             <h4 className="text-sm font-semibold text-text-primary mb-3 font-heading">
               Legal
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2 mb-6">
               {footer.legal.map((l) => (
                 <li key={l.href}>
                   <a
@@ -99,6 +105,14 @@ export function Footer() {
                   </a>
                 </li>
               ))}
+              <li>
+                <a
+                  href="/faq"
+                  className="text-sm text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  FAQ
+                </a>
+              </li>
             </ul>
           </div>
         </div>
