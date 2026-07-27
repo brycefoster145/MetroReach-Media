@@ -15,7 +15,9 @@ import {
   sendWelcomeEmail,
   sendOnboardingRequest,
   sendInternalNewClientAlert,
+  sendPurchaseConfirmation,
 } from "~/lib/email-sequences";
+import { createOrder } from "~/lib/order-router";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
@@ -116,20 +118,37 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   // ── Trigger delivery pipeline (non-blocking, fire-and-forget) ──
 
-  // 1. Welcome email
+  // 1. Purchase confirmation email
+  sendPurchaseConfirmation(client, session.amount_total || 0).catch((e) =>
+    console.error("Purchase confirmation email failed:", e.message),
+  );
+
+  // 2. Welcome email
   sendWelcomeEmail(client).catch((e) =>
     console.error("Welcome email failed:", e.message),
   );
 
-  // 2. Onboarding request (sent after a short delay — ideally queued,
-  //    but for now we send it immediately as part of the webhook)
+  // 3. Onboarding request
   sendOnboardingRequest(client).catch((e) =>
     console.error("Onboarding email failed:", e.message),
   );
 
-  // 3. Internal notification
+  // 4. Internal notification
   sendInternalNewClientAlert(client).catch((e) =>
     console.error("Internal alert failed:", e.message),
+  );
+
+  // 5. Create order record (DB + shared file)
+  createOrder({
+    clientEmail: customerEmail,
+    clientName: customerName,
+    serviceName,
+    serviceSlug,
+    amountCents: session.amount_total || 0,
+    recurring: session.mode === "subscription",
+    stripeSessionId: session.id,
+  }).catch((e) =>
+    console.error("Order creation failed:", e.message),
   );
 
   // 4. Telegram notification
