@@ -27,6 +27,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import handler from "./dist/server/server.js";
 
+// ── Auto-migration on cold start ──
+// Runs BEFORE the cron kicker so the orders table (and all others) exist
+// before any API handler tries to use them. Idempotent — safe every deploy.
+import { migrate } from "./src/lib/migrate.js";
+migrate().catch((err) => {
+  console.error("[migration] Startup migration failed (non-fatal):", err.message);
+});
+
 const fetchHandler = handler as {
   fetch: (request: Request) => Response | Promise<Response>;
 };
