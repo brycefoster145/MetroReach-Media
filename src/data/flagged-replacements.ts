@@ -149,6 +149,46 @@ export const FLAGGED_REPLACEMENTS: Replacement[] = [
       "When you sign with MetroReach, you get: a dedicated team of specialists, content that publishes on schedule every single day, accounts that are actively managed — not \"set and forget,\" regular reporting on real numbers, and an agency that treats your business like it's our own.\n\nThat's the whole promise. No filler. No hidden fees. No surprises.\n\n#MetroReachMedia #MarketingPartner",
   },
 
+  // FB-1 — 47 booked jobs this month
+  {
+    matchPattern: "47 booked jobs this month",
+    platform: "facebook",
+    replacement:
+      "Most businesses chase the wrong number.\n\nA plumbing company with a modest following but a full appointment book is winning. A med spa with a massive audience and a dead calendar is not.\n\nWe optimize for revenue. Everything else is vanity.\n\n#MetroReachMedia #SocialMediaStrategy #RealResults",
+  },
+
+  // FB-6 — media buying
+  {
+    matchPattern: "media buying",
+    platform: "facebook",
+    replacement:
+      "Every week, our entire team reviews every client account. Strategy. Copy. Creative. Analytics. Community management. All of it.\n\nNo account gets \"set and forget.\" No content runs unexamined for weeks. Every account gets fresh eyes, consistently.\n\nThat's the difference between managing accounts and running a real marketing operation.\n\n#MetroReachMedia #AgencyLife #TeamProcess",
+  },
+
+  // FB-7 — Paid ads generate leads
+  {
+    matchPattern: "Paid ads generate leads",
+    platform: "facebook",
+    replacement:
+      "Organic content builds trust. Consistent publishing builds momentum. You need both — but most businesses get the balance wrong.\n\nIf nobody knows you exist, showing up consistently is your foundation. If people know you but aren't converting, sharper messaging is your closer.\n\nSmart marketers invest in quality content that works across every channel. It all feeds the same engine.\n\n#MetroReachMedia #MarketingStrategy #OrganicGrowth",
+  },
+
+  // FB-8 — 3x more inbound leads
+  {
+    matchPattern: "3x more inbound leads",
+    platform: "facebook",
+    replacement:
+      "Local service businesses that respond to reviews and comments quickly generate significantly more inbound inquiries than those who don't.\n\nNot more content. Not more budget. Just answering people who already engaged with your business.\n\nSpeed of response is a growth lever hiding in plain sight. We make sure our clients never miss an opportunity.\n\n#MetroReachMedia #LocalMarketing #CustomerEngagement",
+  },
+
+  // FB-18 — 3x the inbound leads
+  {
+    matchPattern: "3x the inbound leads",
+    platform: "facebook",
+    replacement:
+      "Accounts that post consistently — week after week, on schedule — generate significantly more inbound interest than accounts that post sporadically. Same industry. Same type of content.\n\nThe variable? Publication consistency.\n\nThe algorithm rewards accounts that show up reliably. It penalizes accounts that disappear for days.\n\nShow up or get shown out.\n\n#MetroReachMedia #SocialMediaGrowth #Consistency",
+  },
+
   // ── INSTAGRAM (18) ──
 
   // IG-2 — Client result, roofing contractor
@@ -383,5 +423,45 @@ export const FLAGGED_REPLACEMENTS: Replacement[] = [
     platform: "x",
     replacement:
       "Client was getting leads — wrong ones. We rebuilt their content strategy to attract serious buyers. Lead volume stayed steady. Lead quality transformed. Results don't come from platforms. They come from execution.\n\n#MetroReachMedia",
+  },
+
+  // X-8 — Perfect ad. Great hook. Strong creative. Terrible landing page.
+  {
+    matchPattern: "Perfect ad. Great hook. Strong creative. Terrible landing page. Campaign fails.",
+    platform: "x",
+    replacement:
+      "Great content can still lose. Strong hook, sharp creative, perfect timing — and it flops. Why? The follow-through doesn't match. When your post promises one thing and your link delivers another, trust breaks. One disconnect kills everything. Align content with what comes next.\n\n#MetroReachMedia",
+  },
+
+  // X-11 — generate 3x more inbound leads
+  {
+    matchPattern: "generate 3x more inbound leads",
+    platform: "x",
+    replacement:
+      "Local service businesses that respond to reviews quickly generate significantly more inbound leads than those who don't. Not more content. Not bigger budgets. Just answering people who already bought from you. Speed is a growth lever hiding in plain sight.\n\n#MetroReachMedia",
+  },
+
+  // X-17 — convert at nearly double the rate
+  {
+    matchPattern: "convert at nearly double the rate",
+    platform: "x",
+    replacement:
+      "Businesses that respond to DMs quickly convert at a significantly higher rate than those who wait. Social media is a conversation, not a broadcast. Speed is the competitive advantage hiding in plain sight.\n\n#MetroReachMedia",
+  },
+
+  // X-23 — 60% of your potential audience. Reels, TikToks, Shorts
+  {
+    matchPattern: "60% of your potential audience. Reels, TikToks, Shorts",
+    platform: "x",
+    replacement:
+      "If your strategy doesn't include short-form video, you're leaving reach on the table. Reels and video content are being pushed hard by platforms — and accounts embracing it are seeing results. You don't need a studio. You need a strategy.\n\n#MetroReachMedia",
+  },
+
+  // X-26 — Local service ads are more competitive than ever
+  {
+    matchPattern: "Local service ads are more competitive than ever — but creative quality hasn't improved. Most ads look like 2019.",
+    platform: "x",
+    replacement:
+      "Local service content is more competitive than ever — but quality hasn't kept up. Most posts still look like 2019. The accounts winning right now invest in fresh creative: real photos, vertical video, specific offers. The bar is low. That's an opportunity.\n\n#MetroReachMedia",
   },
 ];
