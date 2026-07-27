@@ -452,13 +452,13 @@ export const STRIPE_PRODUCT_MAP: StripeProductMapping[] = [
   },
   {
     slug: "vip-daily",
-    stripePriceId: "price_1TxK7NDGk9TbScamrFcsm8I1",
+    stripePriceId: "price_1Txrn51v80UmMrLIol8Tln4b",
     stripeProductId: "prod_UxEawjHXDUZA8g",
-    name: "Starter Daily — Facebook + Instagram (2 posts/day)",
+    name: "Aggressive Daily Organic — VIP",
     category: "organic-content",
-    amount: 600000,
+    amount: 850000,
     recurring: true,
-    priceLabel: "From $6,000/month",
+    priceLabel: "$8,500/month",
   },
 ];
 
@@ -517,5 +517,5 @@ export const PRICE_TO_SERVICE: Record<string, { name: string; slug: string }> = 
   "price_1TwsEB1v80UmMrLI6PY5T1Bi": { name: "Platform Setup & Optimization", slug: "platform-setup-community" },
   "price_1TwsEC1v80UmMrLIUqPV21WV": { name: "Social Inbox Management", slug: "social-inbox-management" },
   "price_1TwsEC1v80UmMrLIU8rpLrcd": { name: "Social Inbox Design", slug: "social-inbox-design" },
-  "price_1TxK7NDGk9TbScamrFcsm8I1": { name: "Starter Daily — Facebook + Instagram (2 posts/day)", slug: "vip-daily" },
+  "price_1Txrn51v80UmMrLIol8Tln4b": { name: "Aggressive Daily Organic — VIP", slug: "vip-daily" },
 };
