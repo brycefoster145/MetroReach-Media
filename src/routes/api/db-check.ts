@@ -18,7 +18,41 @@ const url = process.env.DATABASE_URL;
 export const Route = createFileRoute("/api/db-check")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const reqUrl = new URL(request.url);
+        const listParam = reqUrl.searchParams.get("list");
+
+        // ── Full listing mode: ?list=fb,ig returns all Facebook + Instagram posts ──
+        if (listParam) {
+          const platforms = listParam.split(",").map(s => s.trim());
+          const validPlatforms = platforms.filter(p => ["fb", "ig", "facebook", "instagram"].includes(p));
+          if (validPlatforms.length === 0) {
+            return new Response(JSON.stringify({ error: "Use ?list=fb,ig" }), { status: 400, headers: { "Content-Type": "application/json" } });
+          }
+          try {
+            if (!url) throw new Error("DATABASE_URL not set");
+            const n = neon(url);
+            const dbPlatforms = validPlatforms.map(p => p === "fb" ? "facebook" : p === "ig" ? "instagram" : p);
+            const posts = await n`
+              SELECT id, platform, status, due_at, created_at, posted_at, content
+              FROM scheduled_posts
+              WHERE platform = ANY(${dbPlatforms}::text[])
+              ORDER BY platform, status, due_at ASC
+            `;
+            return new Response(JSON.stringify({
+              total: posts.length,
+              posts: posts.map((p: any) => ({
+                ...p,
+                due_at: String(p.due_at),
+                created_at: p.created_at ? String(p.created_at) : null,
+                posted_at: p.posted_at ? String(p.posted_at) : null,
+              })),
+            }), { status: 200, headers: { "Content-Type": "application/json" } });
+          } catch (err: any) {
+            return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+          }
+        }
+
         const report: Record<string, unknown> = {
           has_db_url: !!url,
           timestamp: new Date().toISOString(),
