@@ -21,7 +21,7 @@ const jsonLd = {
   url: "https://metroreachagency.com",
   contactPoint: {
     "@type": "ContactPoint",
-    email: "hello@metroreachagency.com",
+    email: "welcome@metroreachagency.com",
     contactType: "sales",
   },
 };

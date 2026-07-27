@@ -189,7 +189,7 @@ function Book() {
               {status === "error" && (
                 <div className="flex items-center gap-2 text-sm text-error bg-error/10 rounded-lg px-4 py-3">
                   <WarningCircle size={18} />
-                  Something went wrong. Please try again or email us at hello@metroreachagency.com.
+                  Something went wrong. Please try again or email us at welcome@metroreachagency.com.
                 </div>
               )}
 

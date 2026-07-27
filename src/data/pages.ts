@@ -198,7 +198,7 @@ export const contactPage = {
   subheadline:
     "Tell us about your business and what you need. We'll tell you honestly whether we can help — and exactly how.",
   contactInfo: {
-    email: "hello@metroreachagency.com",
+    email: "welcome@metroreachagency.com",
     phone: "",
     location: "Austin, TX — serving clients nationwide",
   },
@@ -446,11 +446,11 @@ export const privacyPage = {
     },
     {
       heading: "Your Rights",
-      text: "You can request access to, correction of, or deletion of your personal data at any time by contacting us at hello@metroreachagency.com.",
+      text: "You can request access to, correction of, or deletion of your personal data at any time by contacting us at welcome@metroreachagency.com.",
     },
     {
       heading: "Contact",
-      text: "For privacy-related questions, reach us at hello@metroreachagency.com.",
+      text: "For privacy-related questions, reach us at welcome@metroreachagency.com.",
     },
   ],
 };
@@ -485,7 +485,7 @@ export const termsPage = {
     },
     {
       heading: "Contact",
-      text: "For questions about these terms, contact us at hello@metroreachagency.com.",
+      text: "For questions about these terms, contact us at welcome@metroreachagency.com.",
     },
   ],
 };
@@ -597,7 +597,7 @@ export const cookiePolicyPage = {
     },
     {
       heading: "Contact",
-      text: "If you have questions about this policy, contact us at hello@metroreachagency.com.",
+      text: "If you have questions about this policy, contact us at welcome@metroreachagency.com.",
     },
   ],
 };
