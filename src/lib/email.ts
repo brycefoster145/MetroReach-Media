@@ -8,6 +8,7 @@ const ALLOWED_FROM: ReadonlySet<string> = new Set([
   "ads@metroreachagency.com",
   "reports@metroreachagency.com",
   "support@metroreachagency.com",
+  "contact@metroreachagency.com",
 ]);
 
 const SENDGRID_DEFAULT_FROM = "bryce@metroreachagency.com";

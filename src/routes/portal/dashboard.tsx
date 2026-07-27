@@ -26,9 +26,11 @@ import {
   UserCircle,
   BellRinging,
   ArrowUpRight,
+  ArrowRight,
   NotePencil,
   CalendarBlank,
   GlobeHemisphereWest,
+  ClipboardText,
 } from "@phosphor-icons/react";
 
 interface DashboardData {
@@ -40,6 +42,7 @@ interface DashboardData {
     service: string;
     status: string;
     pipeline_status: string;
+    onboarding_data: Record<string, unknown> | null;
     created_at: string;
   };
   approvals: Approval[];
@@ -139,8 +142,20 @@ function PortalDashboard() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Onboarding success toast
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+
   // Active section
   const [section, setSection] = useState<"activity" | "approvals" | "messages" | "upload">("activity");
+
+  // Check for onboarding=complete query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("onboarding") === "complete") {
+      setOnboardingComplete(true);
+      window.history.replaceState(null, "", "/portal/dashboard");
+    }
+  }, []);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -407,6 +422,45 @@ function PortalDashboard() {
             )}
           </div>
         </div>
+
+        {/* ── Onboarding Success Toast ── */}
+        {onboardingComplete && (
+          <div className="mb-6 p-4 rounded-xl bg-success/10 border border-success/20 flex items-start gap-3 animate-fade-in">
+            <CheckCircle size={20} className="text-success flex-shrink-0 mt-0.5" weight="fill" />
+            <div>
+              <p className="text-sm font-semibold text-success">Onboarding complete!</p>
+              <p className="text-xs text-text-secondary mt-1">
+                Your information has been submitted. Our team will review everything and reach out within 24 hours to kick off your strategy.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Onboarding Nudge Banner ── */}
+        {!profile.onboarding_data && !onboardingComplete && (
+          <div className="mb-6 p-5 rounded-2xl bg-brand-primary/5 border border-brand-primary/15 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-brand-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <ClipboardText size={18} className="text-brand-primary" weight="fill" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text-primary">
+                  Complete your onboarding to get started
+                </p>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  Tell us about your business, goals, and social media accounts so our team can build your custom strategy.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/portal/onboarding"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 whitespace-nowrap flex-shrink-0"
+            >
+              Start Onboarding
+              <ArrowRight size={16} weight="bold" />
+            </a>
+          </div>
+        )}
 
         {/* ── Nav tabs ── */}
         <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1 portal-tabs">

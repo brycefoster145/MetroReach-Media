@@ -240,6 +240,20 @@ function PortalConnect() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        {/* ── Onboarding nudge ── */}
+        <div className="mb-6 p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/15 flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm text-text-secondary">
+            Haven't completed onboarding yet? Set up your business profile, share your goals, and tell us about your brand.
+          </p>
+          <a
+            href="/portal/onboarding"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 whitespace-nowrap"
+          >
+            Start Onboarding
+            <ArrowRight size={14} weight="bold" />
+          </a>
+        </div>
+
         {/* OAuth success banner */}
         {oauthStatus === "success" && (
           <div className="mb-6 p-4 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-start gap-3 animate-fade-in">
