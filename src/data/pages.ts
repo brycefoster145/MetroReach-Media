@@ -152,8 +152,7 @@ export const pricingPage = {
       period: "/month",
       description: "For businesses ready to establish their social presence and start generating leads.",
       features: [
-        "Facebook + Instagram (organic)",
-        "X/Twitter (organic)",
+        "Up to 2 platforms (organic)",
         "12 original posts per month",
         "Monthly strategy report + performance review",
         "Live dashboard access on day one",
