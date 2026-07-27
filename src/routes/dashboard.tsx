@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowUp,
   ArrowDown,
@@ -398,6 +399,8 @@ function ActivityFeed() {
 // ── Main component ─────────────────────────────────────────────────────
 
 function Dashboard() {
+  const [showMonthMsg, setShowMonthMsg] = useState(false);
+
   return (
     <main className="min-h-dvh bg-bg-root">
       <Container className="py-10">
@@ -424,13 +427,20 @@ function Dashboard() {
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={() => setShowMonthMsg((v) => !v)}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-text-secondary border border-border-subtle rounded-xl bg-bg-surface hover:border-border-emphasis transition-colors"
             >
               {dashboardPage.month}
               <CaretDown size={14} />
             </button>
+            {showMonthMsg && (
+              <span className="text-xs text-text-muted absolute mt-12 bg-bg-surface border border-border-subtle rounded-lg px-3 py-1.5 shadow-lg z-10">
+                Historical reports coming soon
+              </span>
+            )}
             <button
               type="button"
+              onClick={() => window.print()}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-text-primary bg-brand-primary rounded-xl hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
             >
               <DownloadSimple size={16} />
