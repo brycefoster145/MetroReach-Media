@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShoppingCart, ArrowLeft, Check, CreditCard } from "@phosphor-icons/react";
+import { ShoppingCart, ArrowLeft, Check, CreditCard, Spinner, WarningCircle } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { subServices } from "~/data/pages";
 import { useCart, type CartItem } from "~/context/CartContext";
-import { paymentLinks } from "~/lib/payment-links";
 import { useState } from "react";
 
 const categoryDisplayNames: Record<string, string> = {
@@ -22,6 +21,8 @@ function ServiceCategory() {
   const { category } = Route.useParams();
   const { addItem, items } = useCart();
   const [addedSlug, setAddedSlug] = useState<string | null>(null);
+  const [checkoutSlug, setCheckoutSlug] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const displayName = categoryDisplayNames[category];
   const categoryServices = subServices.filter((s) => s.category === category);
@@ -56,13 +57,34 @@ function ServiceCategory() {
     setTimeout(() => setAddedSlug(null), 2000);
   }
 
-  /** Direct Stripe checkout via payment links — no API dependency */
-  function handleBuyNow(slug: string) {
-    const link = paymentLinks[slug];
-    if (link) {
-      window.location.href = link;
-    } else {
-      window.location.href = `/checkout?service=${encodeURIComponent(slug)}`;
+  /** Stripe checkout via API — supports promo codes */
+  async function handleBuyNow(slug: string) {
+    setCheckoutSlug(slug);
+    setCheckoutError(null);
+
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to create checkout session. Please try again.");
+      }
+
+      const { url } = await res.json();
+
+      if (!url) {
+        throw new Error("No checkout URL returned. Please try again.");
+      }
+
+      // Redirect to Stripe-hosted checkout (promo code field visible)
+      window.location.href = url;
+    } catch (err: any) {
+      setCheckoutError(err.message || "Something went wrong. Please try again.");
+      setCheckoutSlug(null);
     }
   }
 
@@ -98,6 +120,13 @@ function ServiceCategory() {
       {/* Sub-Services Grid */}
       <section className="py-20 bg-bg-surface">
         <Container>
+          {/* Checkout error banner */}
+          {checkoutError && (
+            <div className="flex items-start gap-2 rounded-xl bg-red-500/10 border border-red-500/20 p-3 mb-6 max-w-4xl mx-auto">
+              <WarningCircle size={18} weight="fill" className="text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400">{checkoutError}</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {categoryServices.map((svc) => {
               const isCartReady = ["verified", "production-proven", "optimized"].includes(svc.pipelineStatus);
@@ -155,10 +184,20 @@ function ServiceCategory() {
                         {/* Buy Now — Primary */}
                         <button
                           onClick={() => handleBuyNow(svc.slug)}
-                          className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)]"
+                          disabled={checkoutSlug === svc.slug}
+                          className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 bg-brand-primary text-text-primary hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <CreditCard size={16} weight="bold" />
-                          Buy Now
+                          {checkoutSlug === svc.slug ? (
+                            <>
+                              <Spinner size={16} weight="bold" className="animate-spin" />
+                              Redirecting...
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard size={16} weight="bold" />
+                              Buy Now
+                            </>
+                          )}
                         </button>
                       </div>
                     ) : (
