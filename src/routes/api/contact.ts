@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { sendEmail } from "~/lib/email";
 import { rateLimit, getClientIp } from "~/lib/rate-limit";
+import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 
 function confirmationEmail(name: string): string {
   return `
@@ -131,6 +132,23 @@ export const Route = createFileRoute("/api/contact")({
         }).catch(() => {
           // Silently ignore email failures so the form still succeeds
         });
+
+        // ── Write conversion event with attribution (fire-and-forget) ──
+        resolveAttribution(request)
+          .then((attribution) =>
+            writeConversionEvent(
+              attribution,
+              "lead_submitted",
+              undefined, // no monetary value
+              name,
+              email,
+              body.phone || undefined,
+              `Company: ${company}, Industry: ${industry}, Message: ${message.slice(0, 200)}`,
+            ),
+          )
+          .catch((e) =>
+            console.error("Contact conversion event write failed:", e.message),
+          );
 
         return json({ success: true });
       },

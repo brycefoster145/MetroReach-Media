@@ -468,12 +468,9 @@ const packages: Record<string, PackageDefinition> = {
       "Opportunity to capture market leadership",
     ],
     deliverables: [
-      "Up to 7 platforms (organic on all, paid on up to 4)",
+      "Up to 7 platforms — organic on all",
       "30+ organic posts/month",
-      "Unlimited paid campaigns, continuously optimized",
-      "Advanced A/B testing and funnel optimization",
       "Short-form video scripts (TikTok, Reels, YouTube Shorts)",
-      "Bi-weekly strategy calls",
       "Live dashboard + custom reporting",
     ],
     estimatedTimeline: "Immediate amplification of existing efforts. New campaigns rolled out within 2 weeks.",
