@@ -11,6 +11,7 @@ export const paymentLinks: Record<string, string> = {
   "trend-research": "https://buy.stripe.com/dRm6oH9Hm7Hw5567NP1ck1L",
   "daily-engagement": "https://buy.stripe.com/aFa8wP9Hmd1QgNO7NP1ck1M",
   "social-listening": "https://buy.stripe.com/28E6oHdXCd1Q7ded891ck1N",
+  "dm-management": "https://buy.stripe.com/4gM5kD06MaTIbtugkl1ck2b",
   "single-platform-management": "https://buy.stripe.com/8x200jaLq2nc0OQgkl1ck1F",
   "multi-platform-management": "https://buy.stripe.com/aFaaEX06M6Ds8hi2tv1ck1G",
   "platform-setup-optimization": "https://buy.stripe.com/4gM6oH1aQ0f4cxyb011ck1O",
@@ -42,6 +43,11 @@ export const paymentLinks: Record<string, string> = {
   "competitor-benchmarking": "https://buy.stripe.com/9B6bJ11aQ3rgapq4BD1ck26",
 
   // Community Management
+  "comment-dm-response": "https://buy.stripe.com/dRm14n1aQ5zoapq1pr1ck2c",
+  "review-management": "https://buy.stripe.com/9B6cN506MaTIcxy7NP1ck2d",
+  "social-listening-community": "https://buy.stripe.com/7sYcN506M0f4556gkl1ck2e",
+  "platform-setup-community": "https://buy.stripe.com/6oUdR9g5Ke5U9lm8RT1ck2f",
+  "social-inbox-management": "https://buy.stripe.com/fZu28r8Di3rg8hi0ln1ck2g",
   "influencer-research": "https://buy.stripe.com/8x2eVd9HmbXM0OQfgh1ck27",
   "community-engagement-templates": "https://buy.stripe.com/eVq28r1aQ9PEdBC7NP1ck28",
   "social-inbox-design": "https://buy.stripe.com/3cI14naLq4vk2WY2tv1ck29",
