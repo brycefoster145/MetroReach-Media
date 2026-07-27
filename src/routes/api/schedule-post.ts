@@ -197,22 +197,47 @@ export const Route = createFileRoute("/api/schedule-post")({
             );
           }
 
-          await sql`
-            INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status, utm_link)
-            VALUES (
-              ${id},
-              ${client_id as string},
-              ${platform},
-              ${page_id as string},
-              ${ig_user_id ? (ig_user_id as string) : null},
-              ${content as string},
-              ${JSON.stringify(finalMediaUrls)}::jsonb,
-              ${hashtags as string},
-              ${resolvedDueAt}::timestamptz,
-              'pending',
-              ${utmLink || null}
-            )
-          `;
+          // Generate the INSERT with utm_link only if the column exists
+          let insertResult;
+          try {
+            insertResult = await sql`
+              INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status, utm_link)
+              VALUES (
+                ${id},
+                ${client_id as string},
+                ${platform},
+                ${page_id as string},
+                ${ig_user_id ? (ig_user_id as string) : null},
+                ${content as string},
+                ${JSON.stringify(finalMediaUrls)}::jsonb,
+                ${hashtags as string},
+                ${resolvedDueAt}::timestamptz,
+                'pending',
+                ${utmLink || null}
+              )
+            `;
+          } catch (insertErr: any) {
+            // If utm_link column doesn't exist, fall back to insert without it
+            if (insertErr.message?.includes('utm_link')) {
+              insertResult = await sql`
+                INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
+                VALUES (
+                  ${id},
+                  ${client_id as string},
+                  ${platform},
+                  ${page_id as string},
+                  ${ig_user_id ? (ig_user_id as string) : null},
+                  ${content as string},
+                  ${JSON.stringify(finalMediaUrls)}::jsonb,
+                  ${hashtags as string},
+                  ${resolvedDueAt}::timestamptz,
+                  'pending'
+                )
+              `;
+            } else {
+              throw insertErr;
+            }
+          }
 
           return new Response(
             JSON.stringify({
