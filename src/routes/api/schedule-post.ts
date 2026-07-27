@@ -51,14 +51,16 @@ export const Route = createFileRoute("/api/schedule-post")({
         };
 
         // Validate required fields (due_at is optional when autoSlot=true)
+        // page_id is only required for Facebook and Instagram — X/Twitter uses OAuth directly
+        const needsPageId = platform && ["facebook", "instagram", "fb", "ig"].includes(platform.toLowerCase());
         const requiredFields = autoSlot
-          ? { missing: !platform || !page_id || !content }
-          : { missing: !platform || !page_id || !content || !due_at };
+          ? { missing: !platform || (needsPageId && !page_id) || !content }
+          : { missing: !platform || (needsPageId && !page_id) || !content || !due_at };
 
         if (requiredFields.missing) {
-          const fields = autoSlot
-            ? "platform, page_id, content"
-            : "platform, page_id, content, due_at";
+          const fields = needsPageId
+            ? (autoSlot ? "platform, page_id, content" : "platform, page_id, content, due_at")
+            : (autoSlot ? "platform, content" : "platform, content, due_at");
           return new Response(
             JSON.stringify({
               error: `Missing required fields: ${fields}`,
