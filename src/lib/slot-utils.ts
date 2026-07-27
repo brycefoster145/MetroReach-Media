@@ -32,8 +32,11 @@ export const DAY_NAMES = [
 ];
 
 /** Grace window in minutes: the cron will publish a slot's post if it
- * fires within this many minutes after the top of the hour. */
-export const SLOT_GRACE_MINUTES = 2;
+ * fires within this many minutes after the top of the hour.
+ *
+ * Set to 15 so the every-60s cron gets ~15 attempts per slot.
+ * Vercel cold starts can easily miss a 2-minute window. */
+export const SLOT_GRACE_MINUTES = 15;
 
 /** Missed threshold: pending posts whose due_at is this many minutes
  * in the past are marked 'missed' rather than published late. */

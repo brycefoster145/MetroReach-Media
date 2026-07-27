@@ -83,20 +83,31 @@ interface RunStats {
 // H2: isRunning guard — prevents concurrent execution
 // ═══════════════════════════════════════════════════════════════════
 let isProcessing = false;
+let processingSince = 0; // epoch ms when isProcessing was set
 
 async function processSlotRun(): Promise<Response> {
   // SCHEDULER_PAUSED: env-var kill switch — removed 2026-07-27 to unblock posting
   // (was stuck paused for days, causing all IG/FB/X slots to be missed)
 
   // H2: Guard against concurrent runs (Vercel self-healing kicker + cron overlap)
+  // H2-FIX: If isProcessing has been stuck for >5 minutes, reset it.
+  // This happens when Vercel 60s timeout kills the function before finally runs.
   if (isProcessing) {
-    console.log("[cron] ⚠️ Already processing — skipping duplicate run");
-    return new Response(
-      JSON.stringify({ message: "Already processing — skipping duplicate run" }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
+    const stuckMs = Date.now() - processingSince;
+    if (stuckMs > 5 * 60 * 1000) {
+      console.log(`[cron] ⚠️ isProcessing stuck for ${Math.round(stuckMs / 1000)}s — force-resetting`);
+      isProcessing = false;
+      processingSince = 0;
+    } else {
+      console.log("[cron] ⚠️ Already processing — skipping duplicate run");
+      return new Response(
+        JSON.stringify({ message: "Already processing — skipping duplicate run" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
   isProcessing = true;
+  processingSince = Date.now();
 
   try {
     const startTime = Date.now();
@@ -229,6 +240,45 @@ async function processSlotRun(): Promise<Response> {
       }
     }
 
+    // ── H3: Missed-post recovery ──
+    // Posts whose slot was missed but are still within the 15-minute recovery
+    // window get published now (one per platform max). This catches posts that
+    // slipped through because of cold starts or the old 2-minute grace window.
+    try {
+      const recoveryRows = await sql`
+        SELECT id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at
+        FROM scheduled_posts
+        WHERE status = 'pending'
+          AND retry_count = 0
+          AND due_at < NOW()
+          AND due_at > NOW() - INTERVAL '15 minutes'
+        ORDER BY due_at ASC
+      `;
+
+      if (recoveryRows.length > 0) {
+        console.log(
+          `[cron] 🔄 Recovery sweep: found ${recoveryRows.length} missed post(s) within 15-min window`,
+        );
+        // One per platform max
+        const seenPlatforms = new Set<string>();
+        for (const post of recoveryRows) {
+          const plat = post.platform as string;
+          if (seenPlatforms.has(plat)) continue;
+          seenPlatforms.add(plat);
+
+          stats.found++;
+          console.log(
+            `[cron]   → Recovering missed ${plat} post ${post.id} (due_at=${(post.due_at as Date).toISOString()})`,
+          );
+          await publishOnePost(post, results, stats);
+        }
+      }
+    } catch (recoveryErr: any) {
+      console.error(
+        `[cron] ❌ Error during missed-post recovery: ${recoveryErr.message}`,
+      );
+    }
+
     // ── C1: Retry sweep — retry failed posts with exponential backoff ──
     // Posts that errored on first attempt get retried: 1min → 5min → 15min
     // Only marks 'failed' after 3 failed attempts.
@@ -347,6 +397,7 @@ async function processSlotRun(): Promise<Response> {
   );
   } finally {
     isProcessing = false;
+    processingSince = 0;
   }
 }
 
