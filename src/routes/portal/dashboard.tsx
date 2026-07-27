@@ -27,10 +27,14 @@ import {
   BellRinging,
   ArrowUpRight,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   NotePencil,
   CalendarBlank,
   GlobeHemisphereWest,
   ClipboardText,
+  ChartBar,
+  TrendUp,
 } from "@phosphor-icons/react";
 
 interface DashboardData {
@@ -80,6 +84,52 @@ interface Deliverable {
   created_at: string;
 }
 
+interface AnalyticsData {
+  kpiSummary: {
+    totalImpressions: number;
+    totalReach: number;
+    totalEngagement: number;
+    totalClicks: number;
+    totalLeads: number;
+    totalConversions: number;
+    adSpendCents: number;
+    cplCents: number | null;
+    roasBasisPoints: number | null;
+  };
+  dailySnapshots: Array<{
+    snapshot_date: string;
+    total_impressions: number;
+    total_reach: number;
+    total_engagement: number;
+    total_clicks: number;
+    total_leads: number;
+    total_conversions: number;
+  }>;
+  topPosts: Array<{
+    post_id: string;
+    platform: string;
+    content_preview: string;
+    impressions: number;
+    engagement: number;
+    clicks: number;
+  }>;
+  platformBreakdown: Array<{
+    platform: string;
+    impressions: number;
+    engagement: number;
+  }>;
+  periodComparison: {
+    current: { impressions: number; engagement: number; leads: number; conversions: number };
+    previous: { impressions: number; engagement: number; leads: number; conversions: number };
+    changes: {
+      impressions: number | null;
+      engagement: number | null;
+      leads: number | null;
+      conversions: number | null;
+    };
+  };
+}
+
 // ── Status badge ──
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -108,6 +158,173 @@ function typeIcon(type: string) {
     case "campaign": return GlobeHemisphereWest;
     default: return FileText;
   }
+}
+
+// ── Analytics helper: KPI Scorecard ──
+function KpiCard({ label, value, change }: { label: string; value: number; change: number | null }) {
+  const hasData = value > 0;
+  const isUp = change !== null && change > 0;
+  const isDown = change !== null && change < 0;
+
+  return (
+    <div className="bg-bg-surface border border-border-subtle rounded-xl p-4">
+      <p className="text-xs text-text-muted uppercase tracking-wider mb-2">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-bold font-heading text-text-primary tabular-nums">
+          {hasData ? value.toLocaleString() : "—"}
+        </span>
+        {isUp && (
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-success">
+            <ArrowUp size={12} weight="bold" />
+            {change}%
+          </span>
+        )}
+        {isDown && (
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-error">
+            <ArrowDown size={12} weight="bold" />
+            {Math.abs(change)}%
+          </span>
+        )}
+        {change === 0 && hasData && (
+          <span className="text-xs text-text-muted">—</span>
+        )}
+      </div>
+      {!hasData && (
+        <p className="text-xs text-text-muted/70 mt-1">Data will appear as your posts go live</p>
+      )}
+    </div>
+  );
+}
+
+// ── Analytics helper: SVG Line Chart (Impressions + Engagement) ──
+function TrendChart({ snapshots }: { snapshots: AnalyticsData["dailySnapshots"] }) {
+  const W = 600;
+  const H = 200;
+  const PAD = { top: 16, right: 16, bottom: 28, left: 48 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const maxImpressions = Math.max(...snapshots.map((s) => s.total_impressions), 1);
+  const maxEngagement = Math.max(...snapshots.map((s) => s.total_engagement), 1);
+
+  const xScale = (i: number) => PAD.left + (i / Math.max(snapshots.length - 1, 1)) * innerW;
+  const yScaleImpressions = (v: number) => PAD.top + innerH - (v / maxImpressions) * innerH;
+  const yScaleEngagement = (v: number) => PAD.top + innerH - (v / maxEngagement) * innerH;
+
+  const impressionsPath = snapshots
+    .map((s, i) => `${i === 0 ? "M" : "L"} ${xScale(i)} ${yScaleImpressions(s.total_impressions)}`)
+    .join(" ");
+
+  const engagementPath = snapshots
+    .map((s, i) => `${i === 0 ? "M" : "L"} ${xScale(i)} ${yScaleEngagement(s.total_engagement)}`)
+    .join(" ");
+
+  // date labels: show ~5 evenly spaced
+  const labelIndices: number[] = [];
+  if (snapshots.length <= 7) {
+    for (let i = 0; i < snapshots.length; i++) labelIndices.push(i);
+  } else {
+    const step = Math.ceil(snapshots.length / 5);
+    for (let i = 0; i < snapshots.length; i += step) labelIndices.push(i);
+    if (labelIndices[labelIndices.length - 1] !== snapshots.length - 1) {
+      labelIndices.push(snapshots.length - 1);
+    }
+  }
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto min-w-[400px]" role="img" aria-label="30-day impressions and engagement trend">
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
+          const y = PAD.top + innerH * (1 - frac);
+          return (
+            <line key={frac} x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="#1E293B" strokeWidth="0.5" />
+          );
+        })}
+
+        {/* Axes */}
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={H - PAD.bottom} stroke="#334155" strokeWidth="1" />
+        <line x1={PAD.left} y1={H - PAD.bottom} x2={W - PAD.right} y2={H - PAD.bottom} stroke="#334155" strokeWidth="1" />
+
+        {/* Y-axis labels (impressions) */}
+        {[0, 0.5, 1].map((frac) => {
+          const y = PAD.top + innerH * (1 - frac);
+          const val = Math.round(maxImpressions * frac);
+          return (
+            <text key={`yi-${frac}`} x={PAD.left - 6} y={y + 4} textAnchor="end" fill="#64748B" fontSize="9" fontFamily="monospace">
+              {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
+            </text>
+          );
+        })}
+
+        {/* Lines */}
+        <path d={impressionsPath} fill="none" stroke="#008fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+        <path d={engagementPath} fill="none" stroke="#00d4aa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+
+        {/* Dots for impressions */}
+        {snapshots.map((s, i) => (
+          <circle key={`di-${i}`} cx={xScale(i)} cy={yScaleImpressions(s.total_impressions)} r="2.5" fill="#008fff" />
+        ))}
+        {/* Dots for engagement */}
+        {snapshots.map((s, i) => (
+          <circle key={`de-${i}`} cx={xScale(i)} cy={yScaleEngagement(s.total_engagement)} r="2.5" fill="#00d4aa" />
+        ))}
+
+        {/* X-axis date labels */}
+        {labelIndices.map((i) => {
+          const parts = snapshots[i].snapshot_date.split("-");
+          const label = parts.length === 3 ? `${parts[1]}/${parts[2]}` : snapshots[i].snapshot_date;
+          return (
+            <text key={`xl-${i}`} x={xScale(i)} y={H - 8} textAnchor="middle" fill="#64748B" fontSize="9" fontFamily="monospace">
+              {label}
+            </text>
+          );
+        })}
+      </svg>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-6 mt-3 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 rounded-full bg-brand-primary inline-block" />
+          <span className="text-text-secondary">Impressions</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-0.5 rounded-full bg-brand-teal inline-block" />
+          <span className="text-text-secondary">Engagement</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Analytics helper: Platform Breakdown horizontal bars ──
+function PlatformChart({ platforms }: { platforms: AnalyticsData["platformBreakdown"] }) {
+  const maxImpressions = Math.max(...platforms.map((p) => p.impressions), 1);
+
+  return (
+    <div className="space-y-4">
+      {platforms.map((p) => {
+        const pct = maxImpressions > 0 ? (p.impressions / maxImpressions) * 100 : 0;
+        const label = p.platform.charAt(0).toUpperCase() + p.platform.slice(1);
+        return (
+          <div key={p.platform} className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-text-primary font-medium">{label}</span>
+              <span className="text-text-muted tabular-nums text-xs">
+                {p.impressions.toLocaleString()} impressions &middot; {p.engagement.toLocaleString()} engagement
+              </span>
+            </div>
+            <div className="h-2.5 bg-bg-surface-raised rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-glow transition-all duration-500"
+                style={{ width: `${Math.max(pct, 2)}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Main Dashboard ──
@@ -146,7 +363,31 @@ function PortalDashboard() {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   // Active section
-  const [section, setSection] = useState<"activity" | "approvals" | "messages" | "upload">("activity");
+  const [section, setSection] = useState<"activity" | "approvals" | "messages" | "upload" | "analytics">("activity");
+
+  // Analytics state
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState("");
+
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    setAnalyticsError("");
+    try {
+      const res = await fetch("/api/portal/analytics");
+      if (res.status === 401) {
+        window.location.href = "/portal";
+        return;
+      }
+      if (!res.ok) throw new Error("Failed to load analytics");
+      const json = await res.json();
+      setAnalytics(json);
+    } catch (err: any) {
+      setAnalyticsError(err.message || "Failed to load analytics");
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
 
   // Check for onboarding=complete query param
   useEffect(() => {
@@ -177,6 +418,13 @@ function PortalDashboard() {
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
+
+  // Fetch analytics when switching to the analytics tab
+  useEffect(() => {
+    if (section === "analytics" && !analytics && !analyticsLoading) {
+      fetchAnalytics();
+    }
+  }, [section, analytics, analyticsLoading, fetchAnalytics]);
 
   // Scroll messages to bottom
   useEffect(() => {
@@ -364,6 +612,7 @@ function PortalDashboard() {
   const navItems = [
     { key: "activity" as const, label: "Activity", icon: BellRinging },
     { key: "approvals" as const, label: "Approvals", icon: CheckCircle, badge: pendingApprovals },
+    { key: "analytics" as const, label: "Analytics", icon: ChartBar },
     { key: "messages" as const, label: "Messages", icon: ChatCircleText },
     { key: "upload" as const, label: "Upload", icon: UploadSimple },
   ];
@@ -767,6 +1016,141 @@ function PortalDashboard() {
                 )}
               </form>
             </div>
+          </div>
+        )}
+
+        {/* ── Analytics ── */}
+        {section === "analytics" && (
+          <div key="analytics" className="space-y-6 tab-panel-enter">
+            <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Performance Analytics</h3>
+
+            {analyticsLoading ? (
+              <div className="bg-bg-surface border border-border-subtle rounded-2xl p-10 text-center">
+                <Spinner size={36} className="text-brand-primary animate-spin mx-auto mb-3" />
+                <p className="text-text-muted text-sm">Loading analytics...</p>
+              </div>
+            ) : analyticsError ? (
+              <div className="bg-bg-surface border border-border-subtle rounded-2xl p-10 text-center">
+                <WarningCircle size={36} className="text-error mx-auto mb-3" weight="fill" />
+                <p className="text-text-primary font-medium">Couldn&apos;t load analytics</p>
+                <p className="text-sm text-text-muted mt-1">{analyticsError}</p>
+                <button
+                  onClick={fetchAnalytics}
+                  className="mt-4 px-4 py-2 bg-brand-primary text-text-primary rounded-xl text-sm font-semibold"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : !analytics ? null : (
+              <>
+                {/* ── KPI Scorecards ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <KpiCard
+                    label="Impressions"
+                    value={analytics.kpiSummary.totalImpressions}
+                    change={analytics.periodComparison.changes.impressions}
+                  />
+                  <KpiCard
+                    label="Engagement"
+                    value={analytics.kpiSummary.totalEngagement}
+                    change={analytics.periodComparison.changes.engagement}
+                  />
+                  <KpiCard
+                    label="Leads"
+                    value={analytics.kpiSummary.totalLeads}
+                    change={analytics.periodComparison.changes.leads}
+                  />
+                  <KpiCard
+                    label="Conversions"
+                    value={analytics.kpiSummary.totalConversions}
+                    change={analytics.periodComparison.changes.conversions}
+                  />
+                </div>
+
+                {/* ── 30-Day Trend Chart ── */}
+                <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+                  <h4 className="text-sm font-semibold text-text-primary mb-4">30-Day Trend</h4>
+                  {analytics.dailySnapshots.length < 2 ? (
+                    <div className="text-center py-10">
+                      <TrendUp size={36} className="text-text-muted mx-auto mb-3" />
+                      <p className="text-text-muted text-sm">Not enough data yet</p>
+                      <p className="text-xs text-text-muted/70 mt-1">Trends will appear after a few days of data collection.</p>
+                    </div>
+                  ) : (
+                    <TrendChart snapshots={analytics.dailySnapshots} />
+                  )}
+                </div>
+
+                {/* ── Top Posts Table ── */}
+                <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+                  <h4 className="text-sm font-semibold text-text-primary mb-4">Top Posts</h4>
+                  {analytics.topPosts.length === 0 ? (
+                    <div className="text-center py-10">
+                      <FileText size={36} className="text-text-muted mx-auto mb-3" />
+                      <p className="text-text-muted text-sm">No post performance data yet</p>
+                      <p className="text-xs text-text-muted/70 mt-1">Post metrics will appear as your content goes live.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border-subtle text-text-muted text-xs uppercase tracking-wider">
+                            <th className="text-left py-3 px-3 font-semibold">Post</th>
+                            <th className="text-left py-3 px-3 font-semibold">Platform</th>
+                            <th className="text-right py-3 px-3 font-semibold">Impressions</th>
+                            <th className="text-right py-3 px-3 font-semibold">Engagement</th>
+                            <th className="text-right py-3 px-3 font-semibold">Clicks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analytics.topPosts.map((post) => (
+                            <tr key={post.post_id} className="border-b border-border-subtle/50 hover:bg-bg-surface-raised transition-colors">
+                              <td className="py-3 px-3">
+                                <span className="text-text-primary line-clamp-1 max-w-[300px]">
+                                  {post.content_preview
+                                    ? post.content_preview.length > 80
+                                      ? post.content_preview.slice(0, 80) + "..."
+                                      : post.content_preview
+                                    : "—"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-primary/10 text-brand-primary border border-brand-primary/20 capitalize">
+                                  {post.platform}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-right text-text-primary tabular-nums">
+                                {post.impressions.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3 text-right text-text-primary tabular-nums font-semibold">
+                                {post.engagement.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3 text-right text-text-secondary tabular-nums">
+                                {post.clicks.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Platform Breakdown ── */}
+                <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5">
+                  <h4 className="text-sm font-semibold text-text-primary mb-4">Platform Breakdown</h4>
+                  {analytics.platformBreakdown.length === 0 ? (
+                    <div className="text-center py-10">
+                      <GlobeHemisphereWest size={36} className="text-text-muted mx-auto mb-3" />
+                      <p className="text-text-muted text-sm">No platform data yet</p>
+                      <p className="text-xs text-text-muted/70 mt-1">Platform metrics will appear as your posts are published.</p>
+                    </div>
+                  ) : (
+                    <PlatformChart platforms={analytics.platformBreakdown} />
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
