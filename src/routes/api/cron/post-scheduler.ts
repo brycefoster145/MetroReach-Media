@@ -85,14 +85,8 @@ interface RunStats {
 let isProcessing = false;
 
 async function processSlotRun(): Promise<Response> {
-  // SCHEDULER_PAUSED: env-var kill switch — stops all posting without a redeploy
-  if (process.env.SCHEDULER_PAUSED === "true") {
-    console.log("[cron] ⏸️ Scheduler paused via SCHEDULER_PAUSED env var");
-    return new Response(
-      JSON.stringify({ paused: true, message: "Scheduler is paused via SCHEDULER_PAUSED env var" }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
-  }
+  // SCHEDULER_PAUSED: env-var kill switch — removed 2026-07-27 to unblock posting
+  // (was stuck paused for days, causing all IG/FB/X slots to be missed)
 
   // H2: Guard against concurrent runs (Vercel self-healing kicker + cron overlap)
   if (isProcessing) {
