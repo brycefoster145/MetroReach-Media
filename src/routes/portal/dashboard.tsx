@@ -29,6 +29,8 @@ import {
   NotePencil,
   CalendarBlank,
   GlobeHemisphereWest,
+  PlugsConnected,
+  LinkSimple,
 } from "@phosphor-icons/react";
 
 interface DashboardData {
@@ -74,6 +76,13 @@ interface Deliverable {
   title: string;
   type: string;
   status: string;
+  created_at: string;
+}
+
+interface ConnectedAccount {
+  platform: string;
+  page_id: string;
+  account_name: string;
   created_at: string;
 }
 
@@ -123,6 +132,10 @@ function PortalDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Connected accounts state
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
+  const [connectedLoading, setConnectedLoading] = useState(true);
+
   // Messages
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -159,9 +172,24 @@ function PortalDashboard() {
     }
   }, []);
 
+  const fetchConnectedAccounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/portal/connected-accounts");
+      if (res.status === 401) return;
+      if (!res.ok) return;
+      const json = await res.json();
+      setConnectedAccounts(json.accounts || []);
+    } catch {
+      // Silently fail — banner state will just show
+    } finally {
+      setConnectedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDashboard();
-  }, [fetchDashboard]);
+    fetchConnectedAccounts();
+  }, [fetchDashboard, fetchConnectedAccounts]);
 
   // Scroll messages to bottom
   useEffect(() => {
@@ -217,12 +245,10 @@ function PortalDashboard() {
         return;
       }
       if (!res.ok) {
-        // Remove optimistic message on failure
         setData((prev) => prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticMsg.id) } : prev);
       }
     } catch (e) {
       console.error("Message failed", e);
-      // Remove optimistic message on failure
       setData((prev) => prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimisticMsg.id) } : prev);
     } finally {
       setSending(false);
@@ -345,6 +371,7 @@ function PortalDashboard() {
   }
 
   const { profile, approvals, messages, deliverables, pendingApprovals } = data;
+  const hasConnectedAccounts = connectedAccounts.length > 0;
 
   const navItems = [
     { key: "activity" as const, label: "Activity", icon: BellRinging },
@@ -382,6 +409,31 @@ function PortalDashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        {/* ── Onboarding Banner (zero connected accounts) ── */}
+        {!connectedLoading && !hasConnectedAccounts && (
+          <div className="mb-6 p-5 rounded-2xl bg-brand-primary/5 border-2 border-brand-primary/30 flex items-start gap-4 animate-fade-in">
+            <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <LinkSimple size={20} className="text-brand-primary" weight="fill" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold font-heading text-text-primary">
+                Welcome to MetroReach Media
+              </h3>
+              <p className="text-sm text-text-secondary mt-1">
+                First step: connect your social accounts so we can start posting for you.
+              </p>
+              <a
+                href="/portal/connect"
+                className="inline-flex items-center gap-2 mt-3 px-5 py-2.5 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
+              >
+                <PlugsConnected size={16} weight="fill" />
+                Connect Accounts
+                <ArrowUpRight size={14} weight="bold" />
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* ── Welcome Card ── */}
         <div className="bg-bg-surface border border-border-subtle rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -394,6 +446,11 @@ function PortalDashboard() {
                   <span className="text-brand-accent">Active</span>
                 ) : (
                   <span className="text-warning capitalize">{profile.status}</span>
+                )}
+                {connectedAccounts.length > 0 && (
+                  <span className="ml-2">
+                    &middot; {connectedAccounts.length} account{connectedAccounts.length !== 1 ? "s" : ""} connected
+                  </span>
                 )}
               </p>
             </div>
@@ -435,6 +492,14 @@ function PortalDashboard() {
               </button>
             );
           })}
+          {/* Connect tab — always present */}
+          <a
+            href="/portal/connect"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 whitespace-nowrap text-text-secondary hover:text-text-primary hover:bg-bg-surface"
+          >
+            <PlugsConnected size={16} />
+            Connect
+          </a>
         </div>
 
         {/* ── Activity Feed ── */}
