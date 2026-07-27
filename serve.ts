@@ -10,6 +10,12 @@
 // the takeover works across user boundaries.
 import handler from "./dist/server/server.js";
 
+// ── Auto-migration on startup (local dev) ──
+import { migrate } from "./src/lib/migrate.js";
+migrate().catch((err) => {
+  console.error("[migration] Startup migration failed (non-fatal):", err.message);
+});
+
 // Pinned, NOT read from the environment. The published preview URL
 // (<label>.<PUBLIC_SITE_DOMAIN>) is reverse-proxied to 0.0.0.0:3000 inside the
 // sandbox, so the default site MUST bind there. Bun auto-loads .env files, so
