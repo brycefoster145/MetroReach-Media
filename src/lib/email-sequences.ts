@@ -50,6 +50,35 @@ const REPORTS_ADDRESS = "reports@metroreachagency.com";
 
 // ── Helpers ──
 
+/**
+ * Returns true if the service slug represents a one-time deliverable
+ * (audit, strategy doc, setup, template, research, profile work, landing page review)
+ * rather than an ongoing/recurring service.
+ */
+function isOneTimeService(slug: string): boolean {
+  const oneTimeSlugs = [
+    // Audits
+    "social-media-audit", "social-media-audit-strategy", "premium-audit",
+    // Strategy docs
+    "social-media-strategy", "content-strategy", "campaign-strategy",
+    // Setup services
+    "platform-setup-optimization", "platform-setup-community",
+    "ad-account-setup", "pixel-conversion-tracking",
+    "kpi-dashboard-setup",
+    // Templates
+    "community-engagement-templates",
+    // Research
+    "hashtag-research", "audience-research", "competitor-analysis",
+    // Profile work
+    "brand-voice-development", "profile-bio-optimization",
+    // Landing page reviews
+    "landing-page-review",
+    // Other one-time design/setup
+    "social-inbox-design",
+  ];
+  return oneTimeSlugs.includes(slug);
+}
+
 function emailShell(title: string, content: string): string {
   return `
 <!DOCTYPE html>
@@ -82,6 +111,21 @@ function emailShell(title: string, content: string): string {
 // ── Sequence 1: Welcome (sent immediately after payment) ──
 
 export async function sendWelcomeEmail(client: Client): Promise<void> {
+  const isOneTime = isOneTimeService(client.service_slug);
+
+  const timelineItems = isOneTime
+    ? `<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
+  <li>You'll receive an onboarding form within the next hour — this helps us understand your business goals and requirements.</li>
+  <li>Once we have your details, our team begins work on your deliverable within 24 hours.</li>
+  <li>Your deliverable will be ready within 48 hours.</li>
+</ol>`
+    : `<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
+  <li>You'll receive an onboarding form within the next hour — this helps us gather access to your platforms and understand your business goals.</li>
+  <li>Once we have your details, our strategy team builds your custom plan within 2 business days.</li>
+  <li>Content creation begins immediately after strategy approval.</li>
+  <li>Your first campaign goes live within 5-7 business days.</li>
+</ol>`;
+
   const content = `
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Hi ${escapeHtml(client.name)},
@@ -92,12 +136,7 @@ export async function sendWelcomeEmail(client: Client): Promise<void> {
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Here's what happens next:
 </p>
-<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
-  <li>You'll receive an onboarding form within the next hour — this helps us gather access to your platforms and understand your business goals.</li>
-  <li>Once we have your details, our strategy team builds your custom plan within 2 business days.</li>
-  <li>Content creation begins immediately after strategy approval.</li>
-  <li>Your first campaign goes live within 5-7 business days.</li>
-</ol>
+${timelineItems}
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   We'll keep you updated at every stage. If you have questions before then, just reply to this email — our team monitors this inbox directly.
 </p>
@@ -120,12 +159,18 @@ export async function sendOnboardingRequest(client: Client): Promise<void> {
     ? `https://metroreachagency.com/portal?token=${client.portal_token}`
     : `https://metroreachagency.com/portal`;
 
+  const isOneTime = isOneTimeService(client.service_slug);
+
+  const platformAccessItem = isOneTime
+    ? ""
+    : `<li>Social media account logins or admin access (Facebook, Instagram, TikTok, etc.)</li>`;
+
   const content = `
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Hi ${escapeHtml(client.name)},
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-  To get your ${escapeHtml(client.service)} package up and running, we need access to a few things. Please complete the onboarding form below — it takes about 5 minutes.
+  To get your ${escapeHtml(client.service)} package up and running, we need a few details. Please complete the onboarding form below — it takes about 5 minutes.
 </p>
 <div style="text-align:center;margin:24px 0;">
   <a href="${onboardingUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">Complete Onboarding →</a>
@@ -134,7 +179,7 @@ export async function sendOnboardingRequest(client: Client): Promise<void> {
   You'll need:
 </p>
 <ul style="font-size:14px;line-height:1.8;color:#6b7280;margin:0 0 16px;padding-left:20px;">
-  <li>Social media account logins or admin access (Facebook, Instagram, TikTok, etc.)</li>
+  ${platformAccessItem}
   <li>Your brand guidelines or logo files (if available)</li>
   <li>Any existing marketing materials or past campaign data</li>
   <li>A brief overview of your top 3 business goals for this quarter</li>
