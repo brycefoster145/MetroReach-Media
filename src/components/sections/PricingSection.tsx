@@ -37,7 +37,7 @@ export function PricingSection() {
         />
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-stretch">
           {pricing.tiers.map((tier, i) => {
             const isFeatured = tier.featured;
 
