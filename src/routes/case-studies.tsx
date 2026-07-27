@@ -10,7 +10,7 @@ export const Route = createFileRoute("/case-studies")({
   head: () => ({
     meta: [
       { title: "Case Studies — MetroReach Media Client Results" },
-      { name: "description", content: "Real results from real clients. See how MetroReach Media drives qualified leads and measurable growth for service businesses." },
+      { name: "description", content: "We're building our first case studies. Be one of the first clients to get results with MetroReach Media." },
       { property: "og:url", content: "https://www.metroreachagency.com/case-studies" },
     ],
     links: [
@@ -46,8 +46,19 @@ function CaseStudies() {
       {/* Case Study Cards */}
       <section className="py-24 bg-bg-surface">
         <Container>
-          <div className="max-w-5xl mx-auto space-y-12">
-            {caseStudiesPage.studies.map((study, i) => (
+          <div className="max-w-5xl mx-auto">
+            {caseStudiesPage.studies.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-xl text-text-secondary mb-4">
+                  Our first case studies are in progress.
+                </p>
+                <p className="text-text-muted max-w-md mx-auto">
+                  We're looking for service businesses ready to grow with consistent, professional social media management. Your success will be our first case study.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-12">
+                {caseStudiesPage.studies.map((study, i) => (
               <div
                 key={i}
                 className="rounded-2xl bg-bg-surface-raised border border-border-subtle p-8 md:p-10 card-hover"
@@ -85,7 +96,7 @@ function CaseStudies() {
                       </h4>
                     </div>
                     <ul className="space-y-2">
-                      {study.approach.map((step, j) => (
+                      {study.approach.map((step: string, j: number) => (
                         <li
                           key={j}
                           className="flex items-start gap-2 text-sm text-text-secondary leading-relaxed"
@@ -127,6 +138,8 @@ function CaseStudies() {
                 </blockquote>
               </div>
             ))}
+          </div>
+            )}
           </div>
 
           {/* CTA */}

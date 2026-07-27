@@ -77,7 +77,7 @@ export function ServicesSection() {
               <Link
                 key={svc.name}
                 to={serviceCategoryMap[svc.name] || "/services"}
-                className="block"
+                className={`block ${(svc as any).comingSoon ? "pointer-events-none opacity-60" : ""}`}
               >
                 <div
                   className={`glass-card p-10 lg:p-12 service-card-hover transition-all duration-500 ${
@@ -95,7 +95,7 @@ export function ServicesSection() {
 
                   {/* Tagline */}
                   <p className="text-sm font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
-                    {svc.tagline}
+                    {(svc as any).comingSoon ? "Coming Soon" : svc.tagline}
                   </p>
 
                   {/* Name */}
@@ -132,7 +132,7 @@ export function ServicesSection() {
               <Link
                 key={svc.name}
                 to={serviceCategoryMap[svc.name] || "/services"}
-                className="block"
+                className={`block ${(svc as any).comingSoon ? "pointer-events-none opacity-60" : ""}`}
               >
                 <div
                   className={`glass-card p-8 service-card-hover transition-all duration-500 ${
@@ -150,7 +150,7 @@ export function ServicesSection() {
 
                   {/* Tagline */}
                   <p className="text-xs font-semibold text-brand-teal uppercase tracking-[0.15em] mb-2">
-                    {svc.tagline}
+                    {(svc as any).comingSoon ? "Coming Soon" : svc.tagline}
                   </p>
 
                   {/* Name */}

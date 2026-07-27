@@ -9,7 +9,7 @@ export const Route = createFileRoute("/platforms")({
   head: () => ({
     meta: [
       { title: "Platforms — MetroReach Media" },
-      { name: "description", content: "Seven platforms. One team. Zero gaps. Facebook, Instagram, TikTok, Google, YouTube, LinkedIn, X — we manage them all." },
+      { name: "description", content: "Three platforms. One team. Facebook, Instagram, X — we manage organic content across the platforms that matter to service businesses." },
       { property: "og:url", content: "https://www.metroreachagency.com/platforms" },
     ],
     links: [

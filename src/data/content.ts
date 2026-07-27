@@ -4,26 +4,22 @@
 export const siteMeta = {
   title: "MetroReach Media — Premium Social Media Marketing Agency",
   description:
-    "Premium social media management for service businesses. Organic content and paid ads across every major platform. A dedicated team of specialists running your marketing.",
+    "Premium social media management for service businesses. Organic content across Facebook, Instagram, and X. A dedicated team of specialists running your marketing.",
 };
 
 export const hero = {
   tagline: "YOUR PHONE SHOULD BE RINGING.",
   headline: "Social Media Marketing That Builds Brands and Drives Real Growth.",
   subheadline:
-    "High‑quality content, consistent posting, and professional ads — all managed for you to strengthen your brand and drive measurable results.",
+    "High‑quality content, consistent posting, and professional management — all handled for you to strengthen your brand and drive measurable results.",
   primaryCta: "Get a Free Audit",
   secondaryCta: "See our work",
-  trustBar: "HVAC. Med Spa. Real Estate. Auto Repair. Dental. Salon. — 340+ leads delivered monthly across 12+ markets.",
+  trustBar: "Facebook. Instagram. X. — Consistent organic posting for service businesses.",
 };
 
 export const platforms = [
   "Facebook",
   "Instagram",
-  "TikTok",
-  "Google",
-  "YouTube",
-  "LinkedIn",
   "X",
 ] as const;
 
@@ -63,7 +59,7 @@ export const solution = {
     {
       number: "01",
       headline: "Dedicated. Responsive. Accountable.",
-      body: "When CPL drifts, our team catches it — within hours, not days. Bids, creative, audiences — adjusted by specialists who know your account history. Not a junior account manager. Not a freelancer who'll get to it Monday. A full team, working as one unit.",
+      body: "When your content needs adjustment, our team catches it — within hours, not days. Strategy, creative, audience targeting — adjusted by specialists who know your account history. Not a junior account manager. Not a freelancer who'll get to it Monday. A full team, working as one unit.",
       icon: "ClockCounterClockwise" as const,
       color: "brand-primary",
     },
@@ -76,8 +72,8 @@ export const solution = {
     },
     {
       number: "03",
-      headline: "One team. Seven platforms. Zero handoffs.",
-      body: "Most agencies pick two platforms and subcontract the rest. We run all seven — Facebook, Instagram, TikTok, Google, YouTube, LinkedIn, X — from one coordinated team. One strategy. One voice. Every platform covered.",
+      headline: "One team. Three platforms. Zero handoffs.",
+      body: "We run Facebook, Instagram, and X — from one coordinated team. One strategy. One voice. Every platform covered with consistent, professional content.",
       icon: "SquaresFour" as const,
       color: "brand-primary-glow",
     },
@@ -90,11 +86,11 @@ export const services = {
     {
       name: "Organic Content Management",
       description:
-        "Platform-native content built around your business — not a template, not a repurposed blog post. We create posts, carousels, short-form video scripts, and stories that match how your customers actually consume content. Every piece is original. Every piece is on-brand. Every piece goes live on schedule.",
+        "Platform-native content built around your business — not a template, not a repurposed blog post. We create posts, carousels, short-form video scripts, and stories that match how your customers actually consume content. Every piece is original. Every piece is on-brand. Every piece goes live on schedule — on Facebook, Instagram, and X.",
       tagline: "Your brand, everywhere. Consistently.",
       icon: "Article",
       features: [
-        "Platform-native content for every platform",
+        "Platform-native content for Facebook, Instagram, and X",
         "Custom content calendar built around your business",
         "Brand voice development and visual direction",
         "Consistent posting schedule algorithms reward",
@@ -103,14 +99,12 @@ export const services = {
     {
       name: "Paid Advertising",
       description:
-        "Most agencies treat paid ads as a separate silo. We don't. Your paid campaigns run alongside your organic content — same strategy, same creative standards, same team. We build campaigns designed to convert, not just collect impressions. And we optimize them daily.",
-      tagline: "Ad spend that actually turns into booked work.",
+        "Coming soon. We're building our paid advertising capabilities — Meta Ads, TikTok, and Google — and will offer them once fully operational.",
+      tagline: "Coming Soon — Paid campaigns that convert.",
       icon: "Target",
+      comingSoon: true,
       features: [
-        "Campaign strategy and audience architecture",
-        "Ad creative — static, carousel, video scripts",
-        "Continuous A/B testing and creative refresh",
-        "Bid, budget, and targeting optimization daily",
+        "Coming Soon: Campaign strategy and management",
       ],
     },
     {
@@ -129,11 +123,11 @@ export const services = {
     {
       name: "Analytics & Reporting",
       description:
-        "No waiting for a monthly PDF full of vanity metrics. Every client gets a live dashboard — CPL, ROAS, lead volume, platform performance. Check it anytime. A dedicated analyst surfaces what's working, what's slipping, and what to do about it.",
+        "No waiting for a monthly PDF full of vanity metrics. Every client gets a monthly performance summary — engagement, reach, follower growth, and what's working. A dedicated analyst reviews your account and flags what to improve.",
       tagline: "Know exactly what your marketing is doing. Any time.",
       icon: "ChartLineUp",
       features: [
-        "Live dashboard — CPL, ROAS, lead volume",
+        "Monthly performance summary",
         "Weekly performance snapshots",
         "Monthly deep-dives with actionable insights",
         "No vanity metrics — just what matters",
@@ -142,14 +136,12 @@ export const services = {
     {
       name: "Community Management",
       description:
-        "Your customers expect a response — fast. We monitor comments, DMs, mentions, and reviews daily. On-brand responses. Prompt timing. Nothing falls through. Because a missed message is a missed lead.",
-      tagline: "Every comment. Every DM. Every review. Handled.",
+        "Coming soon. We're building out our community management capabilities to handle comments, DMs, and reviews — with the same premium standard as our content.",
+      tagline: "Coming Soon — Every comment. Every DM. Every review.",
       icon: "ChatCircleText",
+      comingSoon: true,
       features: [
-        "Daily monitoring of comments, DMs, mentions",
-        "On-brand responses with prompt timing",
-        "Review management and reputation monitoring",
-        "Nothing falls through — guaranteed",
+        "Coming Soon: Daily monitoring and response",
       ],
     },
   ],
@@ -162,138 +154,53 @@ export const process = {
     { number: 2, label: "Content Creation", description: "Your brand voice. Your visual identity. Your content — produced by specialists." },
     { number: 3, label: "Review & Approval", description: "You see the plan. You approve the direction. We execute." },
     { number: 4, label: "Posting & Scheduling", description: "Content goes live on schedule. Every platform. Every time." },
-    { number: 5, label: "Ads Management", description: "Campaigns built to convert. Optimized daily." },
-    { number: 6, label: "Reporting & Optimization", description: "Live dashboard. Clear metrics. Continuous improvement." },
+    { number: 5, label: "Growth Planning", description: "Monthly reviews to refine strategy. Continuous improvement." },
+    { number: 6, label: "Reporting & Insights", description: "Monthly performance summary. Clear metrics. Actionable recommendations." },
   ],
 };
 
 export const portfolio = {
-  headline: "Premium creative. Proven results.",
-  subheadline: "A look at the kind of work your dedicated team produces.",
+  headline: "What your content engine looks like.",
+  subheadline: "Consistent, professional content across Facebook, Instagram, and X — delivered on schedule, every time.",
   items: [
     {
-      title: "40% More Followers in Q1",
-      category: "Organic Growth",
-      description: "Lumina Aesthetics turned their Instagram into a growth engine.",
+      title: "Consistent Brand Presence",
+      category: "Organic Content",
+      description: "Your brand, showing up daily across Facebook, Instagram, and X.",
       visual: "instagram",
     },
     {
-      title: "$28 Per Lead, 18+ Monthly",
-      category: "Paid Ads",
-      description: "Ridgeway Heating now fills its pipeline profitably.",
-      visual: "ad-creative",
-    },
-    {
-      title: "30+ Posts. 4 Platforms. On Time.",
-      category: "Content Engine",
-      description: "Full-platform coverage, every post delivered without fail.",
+      title: "Content Calendar That Delivers",
+      category: "Scheduling",
+      description: "Every post planned. Every post on time. No surprises.",
       visual: "calendar",
     },
     {
-      title: "Your Numbers, Live",
-      category: "Analytics",
-      description: "CPL, ROAS, and lead volume visible in real time.",
-      visual: "dashboard",
-    },
-    {
-      title: "175% More Seller Leads",
-      category: "Real Estate",
-      description: "Keller Group's win rate climbed from 60% to 80%.",
-      visual: "case-study",
-    },
-    {
-      title: "60% More Patient Consults",
-      category: "TikTok",
-      description: "A med spa found its audience — and its pipeline.",
-      visual: "tiktok",
+      title: "Professional Post Design",
+      category: "Creative",
+      description: "Scroll-stopping content that reflects your brand's quality.",
+      visual: "ad-creative",
     },
   ],
 };
 
 export const credibility = {
-  headline: "Businesses like yours trust MetroReach Media with their pipeline.",
-  stats: [
-    { value: "340+", label: "Leads delivered monthly" },
-    { value: "3.4x", label: "Average ROAS" },
-    { value: "98.7%", label: "On-time content delivery" },
-    { value: "12+", label: "Markets served" },
-  ],
-  badges: ["Meta", "Google", "Canva", "Shopify", "WordPress"],
+  headline: "We're building our client roster. Be one of the first.",
+  stats: [] as { value: string; label: string }[],
+  badges: ["Facebook", "Instagram", "X"],
 };
 
 export const socialProof = {
-  headline: "These businesses stopped guessing. Then their phones started ringing.",
-  subheadline: "Here's what happens when businesses like yours get the full team behind them.",
-  stats: [
-    { value: "340+", label: "Active leads delivered/month" },
-    { value: "3.4x", label: "Average ROAS across clients" },
-    { value: "98.7%", label: "Client satisfaction rate" },
-    { value: "7", label: "Platforms managed" },
-  ],
-  testimonials: [
-    {
-      quote:
-        "We went from 2–3 leads a week to 15–20. The phone hasn't stopped ringing. I check the dashboard on Fridays now instead of worrying about marketing all week.",
-      name: "Mike R.",
-      title: "Owner",
-      business: "Ridgeway Heating & Cooling",
-      industry: "HVAC",
-      location: "Columbus, OH",
-      rating: 5,
-    },
-    {
-      quote:
-        "The content quality is better than the $6,000/month agency we left — and it actually goes out on schedule. Our Instagram grew 40% in the first quarter. Patient consults are up 60%.",
-      name: "Dr. Sarah C.",
-      title: "Medical Director",
-      business: "Lumina Aesthetics",
-      industry: "Med Spa",
-      location: "Scottsdale, AZ",
-      rating: 5,
-    },
-    {
-      quote:
-        "The listing marketing alone pays for the retainer. Sellers see our operation and sign with us. We're winning listings we used to lose to teams with better marketing.",
-      name: "David K.",
-      title: "Team Lead",
-      business: "The Keller Group",
-      industry: "Real Estate",
-      location: "Denver, CO",
-      rating: 5,
-    },
-  ],
-  caseStudies: [
-    {
-      name: "Ridgeway Heating & Cooling",
-      industry: "HVAC",
-      metric: "~18 qualified leads/month",
-      metricLabel: "From referral-only",
-      subMetric: "$28 CPL",
-      subLabel: "Facebook reach ~8,500/mo",
-    },
-    {
-      name: "Lumina Aesthetics",
-      industry: "Med Spa",
-      metric: "$52 CPL",
-      metricLabel: "Down from $85",
-      subMetric: "+40% Instagram",
-      subLabel: "Consults up 60%",
-    },
-    {
-      name: "The Keller Group",
-      industry: "Real Estate",
-      metric: "80% win rate",
-      metricLabel: "Up from 60%",
-      subMetric: "+175% seller leads",
-      subLabel: "Buyer leads doubled",
-    },
-  ],
+  headline: "We're building our client roster. Be one of the first.",
+  subheadline: "We're looking for service businesses that want consistent, professional social media presence — and are ready to grow with us.",
+  testimonials: [] as { quote: string; name: string; title: string; business: string; industry: string; location: string; rating: number }[],
+  caseStudies: [] as { name: string; industry: string; metric: string; metricLabel: string; subMetric: string; subLabel: string }[],
 };
 
 export const pricing = {
-  headline: "One retainer. Full team. Clear results.",
+  headline: "One retainer. Full team. Consistent execution.",
   subheadline:
-    "Every package includes strategy, creative, posting, optimization, and reporting.",
+    "Every package includes strategy, creative, and consistent posting.",
   tiers: [
     {
       name: "Starter",
@@ -304,7 +211,7 @@ export const pricing = {
         "Up to 2 platforms",
         "12 original posts per month",
         "Monthly strategy report + performance review",
-        "Live dashboard access on day one",
+        "Monthly performance summary starting month one",
       ],
       bestFor: "Businesses ready to establish their social presence and start generating leads.",
       cta: "Get Started",
@@ -353,9 +260,9 @@ export const faq = {
   headline: "What business owners ask before they trust us with their pipeline.",
   items: [
     {
-      question: "How does one team manage seven platforms without dropping the ball?",
+      question: "How does one team manage three platforms without dropping the ball?",
       answer:
-        "Most agencies assign one person to handle 4–5 accounts across multiple platforms. That's how things slip. We run a dedicated team structure — each specialist focuses on their function (creative, media buying, analytics) across your accounts. No single point of failure. No \"sorry, your account manager is on vacation.\"",
+        "Most agencies assign one person to handle 4–5 accounts across multiple platforms. That's how things slip. We run a dedicated team structure — each specialist focuses on their function (creative, strategy, analytics) across your accounts. No single point of failure. No \"sorry, your account manager is on vacation.\"",
     },
     {
       question: "What if the content doesn't feel like us?",
@@ -365,7 +272,7 @@ export const faq = {
     {
       question: "When will I actually see leads?",
       answer:
-        "Paid ads: 2–4 weeks to dial in targeting and creative. By month two, you should see your CPL approaching target. Organic: 60–90 days to build meaningful momentum (algorithms reward consistency, and we deliver it). No agency can guarantee overnight results. But we can guarantee we won't waste time — every day, our team is working to narrow the gap.",
+        "Organic social takes 60–90 days to build meaningful momentum — algorithms reward consistency, and we deliver it. No agency can guarantee overnight results. But we can guarantee we won't waste time — every day, our team is working to grow your presence and build your audience.",
     },
     {
       question: "What industries do you specialize in?",
@@ -380,7 +287,7 @@ export const faq = {
     {
       question: "Why shouldn't I just hire a freelancer?",
       answer:
-        "Freelancers are one person trying to do everything — strategy, writing, design, posting, optimization. We run a full team of specialists. Your strategy is built by someone who studies your market. Your copy is written by a dedicated writer. Your performance is tracked by an analyst who flags what's working and what's not. You get the output of an entire agency, not one person's best effort.",
+        "Freelancers are one person trying to do everything — strategy, writing, design, posting. We run a full team of specialists. Your strategy is built by someone who studies your market. Your copy is written by a dedicated writer. Your performance is tracked by a dedicated analyst. You get the output of an entire team, not one person's best effort.",
     },
     {
       question: "Do you handle compliance-sensitive industries?",
@@ -391,7 +298,7 @@ export const faq = {
 };
 
 export const footerCta = {
-  headline: "Stop losing leads to competitors who show up when you don't.",
+  headline: "Your competitors are showing up. You should be too.",
   subheadline:
     "One conversation. No pressure. An honest assessment of what your current marketing is leaving on the table — and exactly what we'd do about it.",
   primaryCta: "Get a Free Audit",
@@ -401,8 +308,8 @@ export const footerCta = {
 
 export const footer = {
   company: "MetroReach Media",
-  tagline: "Premium social media marketing. Real results.",
-  services: ["Organic Social", "Paid Ads", "Strategy & Creative"],
+  tagline: "Premium social media marketing. Consistent execution.",
+  services: ["Organic Social", "Strategy & Creative"],
   markets: [
     "Contractors",
     "Med Spas",
@@ -419,8 +326,6 @@ export const footer = {
   social: [
     { label: "Facebook", href: "#", icon: "FacebookLogo" },
     { label: "Instagram", href: "#", icon: "InstagramLogo" },
-    { label: "LinkedIn", href: "#", icon: "LinkedinLogo" },
-    { label: "TikTok", href: "#", icon: "TiktokLogo" },
     { label: "X (Twitter)", href: "#", icon: "XLogo" },
   ],
   copyright: `© ${new Date().getFullYear()} MetroReach Media. All rights reserved.`,

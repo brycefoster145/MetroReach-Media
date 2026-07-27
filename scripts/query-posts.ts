@@ -1,28 +1,16 @@
-import postgres from "postgres";
+import { sql } from "../src/db.ts";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error("DATABASE_URL not set");
-  process.exit(1);
-}
-
-const sql = postgres(DATABASE_URL, {
-  max: 5,
-  idle_timeout: 20,
-  connect_timeout: 10,
-  ssl: "require",
-});
-
-const rows = await sql`
-  SELECT id, platform, substring(content, 1, 100) as snippet, media_urls, due_at, status
-  FROM scheduled_posts
+const result = await sql`
+  SELECT id, platform, 
+    due_at AT TIME ZONE 'America/New_York' as due_at_est, 
+    status, 
+    LEFT(content, 100) as preview 
+  FROM scheduled_posts 
+  WHERE status = 'pending' 
   ORDER BY due_at ASC
 `;
 
-for (const r of rows) {
-  const urls = Array.isArray(r.media_urls) ? r.media_urls : [];
-  console.log(`${r.id} | ${r.platform} | ${r.due_at} | urls=${urls.length} | ${r.status} | ${(r.snippet as string).substring(0, 80)}`);
+console.log(`Total pending: ${result.length}\n`);
+for (const row of result) {
+  console.log(`${row.platform.toUpperCase()} | ${row.due_at_est} | ${row.preview}`);
 }
-console.log(`\nTotal: ${rows.length}`);
-
-await sql.end();
