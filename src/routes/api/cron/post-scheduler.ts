@@ -11,7 +11,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
-import { publishPost } from "~/lib/meta-poster";
+import { publishPost, NoMediaError } from "~/lib/meta-poster";
 
 export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
@@ -106,6 +106,24 @@ async function processDuePosts(): Promise<Response> {
           ? `${post.content}\n\n${post.hashtags}`
           : post.content;
 
+        // ── PRE-FLIGHT: Instagram requires an image ──
+        // Image generation happens at SCHEDULE time, not here.
+        // If a post was scheduled without media_urls (generation failed/timed out),
+        // skip it now rather than failing at the Meta API.
+        if (platform === "instagram" && mediaUrls.length === 0) {
+          console.log(
+            `[cron]   → Instagram post ${postId} has no media_urls — skipping (needs image generation first)`,
+          );
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'skipped_no_media', posted_at = NOW()
+            WHERE id = ${postId}
+          `;
+          results.push({ id: postId, platform, status: "skipped_no_media" });
+          postsProcessed++;
+          continue;
+        }
+
         console.log(
           `[cron]   → Publishing to ${platform}: pageId=${post.page_id} igUserId=${post.ig_user_id || "N/A"} text_length=${(fullText as string).length} media_count=${mediaUrls.length}`,
         );
@@ -139,6 +157,21 @@ async function processDuePosts(): Promise<Response> {
         postsSucceeded++;
         postsProcessed++;
       } catch (err: any) {
+        // NoMediaError = post has no image. Mark as skipped, not failed.
+        if (err.name === "NoMediaError" || err instanceof NoMediaError) {
+          console.warn(
+            `[cron]   ⚠️ SKIPPED (no media): ${postId} (${platform}): ${err.message}`,
+          );
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'skipped_no_media', posted_at = NOW()
+            WHERE id = ${postId}
+          `;
+          results.push({ id: postId, platform, status: "skipped_no_media" });
+          postsProcessed++;
+          continue;
+        }
+
         console.error(
           `[cron]   ❌ FAILED to publish ${postId} (${platform}): ${err.message}`,
         );

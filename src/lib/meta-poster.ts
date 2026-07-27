@@ -141,32 +141,46 @@ export async function postToFacebook(
 }
 
 /**
+ * Error thrown when an Instagram post has no media_urls.
+ * Caught by the cron scheduler to mark as skipped_no_media instead of failed.
+ */
+export class NoMediaError extends Error {
+  constructor(postId: string) {
+    super(`Instagram post ${postId} has no media_urls — cannot publish without an image`);
+    this.name = "NoMediaError";
+  }
+}
+
+/**
  * Publish a post to an Instagram Business Account.
  * Uses the two-step container creation → publish flow.
+ *
+ * REQUIRES at least one media_url. Instagram does not support text-only posts.
+ * If mediaUrls is empty/undefined, throws NoMediaError — the cron catches this
+ * and marks the post as skipped_no_media instead of attempting to publish.
  */
 export async function postToInstagram(
   igUserId: string,
   text: string,
   mediaUrls?: string[],
 ): Promise<PostResult> {
+  // ── PRE-FLIGHT: Instagram REQUIRES an image ──
+  // Image generation happens at SCHEDULE time (in schedule-post API), not here.
+  // If a post reaches this function without media_urls, it means image generation
+  // failed or was skipped. We must NOT attempt to publish — Meta API will reject it.
+  if (!mediaUrls || mediaUrls.length === 0) {
+    throw new NoMediaError("unknown");
+  }
+
   const pageToken = await getPageAccessToken(
     process.env.META_FB_PAGE_ID || "623055204204992",
   );
 
   // Step 1: Create media container
-  const mediaBody: Record<string, unknown> = { caption: text };
-
-  if (mediaUrls && mediaUrls.length > 0) {
-    mediaBody.image_url = mediaUrls[0];
-  }
-
-  const container = await graphApiRequest<{ id: string }>(
-    "POST",
-    `/${igUserId}/media`,
-    undefined,
-    mediaBody,
-    pageToken,
-  );
+  const mediaBody: Record<string, unknown> = {
+    caption: text,
+    image_url: mediaUrls[0],
+  };
 
   // Step 2: Publish the container
   const publishResult = await graphApiRequest<{ id: string }>(
