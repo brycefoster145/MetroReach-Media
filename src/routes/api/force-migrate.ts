@@ -130,6 +130,31 @@ export const Route = createFileRoute("/api/force-migrate")({
           `;
           results.push("✓ processing_locks table ready");
 
+          // ── Fix page_id for MetroReach Facebook posts ──
+          // Posts were created with wrong or null page_id. Set to correct FB page.
+          await n`
+            UPDATE scheduled_posts
+            SET page_id = '623055204204992'
+            WHERE page_id = '106170049067568' AND platform = 'facebook'
+          `;
+          results.push("✓ FB posts with wrong page_id (106170049067568 → 623055204204992) fixed");
+
+          // Also fix Facebook posts with NULL page_id
+          await n`
+            UPDATE scheduled_posts
+            SET page_id = '623055204204992'
+            WHERE page_id IS NULL AND platform = 'facebook'
+          `;
+          results.push("✓ FB posts with NULL page_id fixed");
+
+          // Fix Instagram posts with NULL ig_user_id
+          await n`
+            UPDATE scheduled_posts
+            SET ig_user_id = '17841472858895937'
+            WHERE ig_user_id IS NULL AND platform = 'instagram'
+          `;
+          results.push("✓ IG posts with NULL ig_user_id fixed");
+
           return new Response(
             JSON.stringify({ success: true, results }),
             { status: 200, headers: { "Content-Type": "application/json" } },
