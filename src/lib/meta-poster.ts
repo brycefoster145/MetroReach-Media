@@ -63,7 +63,8 @@ async function graphApiRequest<T = unknown>(
 
 /**
  * Get a page access token for a specific Facebook Page.
- * Uses the system user token to exchange for a page token.
+ * Uses the system user token to fetch all pages via /me/accounts,
+ * then filters by page ID to find the matching page access token.
  */
 export async function getPageAccessToken(
   pageId: string,
@@ -73,19 +74,22 @@ export async function getPageAccessToken(
     throw new Error("META_ACCESS_TOKEN is not set");
   }
 
-  const data = await graphApiRequest<{ access_token: string }>(
+  const data = await graphApiRequest<{
+    data: Array<{ id: string; access_token: string; name: string }>;
+  }>(
     "GET",
-    `/${pageId}`,
-    { fields: "access_token" },
+    "/me/accounts",
+    { fields: "id,access_token,name" },
     undefined,
     systemToken,
   );
 
-  if (!data.access_token) {
-    throw new Error(`No access_token returned for page ${pageId}`);
+  const page = data.data.find((p) => p.id === pageId);
+  if (!page) {
+    throw new Error(`Page ${pageId} not found in user's accounts`);
   }
 
-  return data.access_token;
+  return page.access_token;
 }
 
 export interface PostResult {
