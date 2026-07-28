@@ -87,6 +87,14 @@ export const Route = createFileRoute("/api/force-migrate")({
             results.push(`ℹ status constraint migration: ${fixErr.message}`);
           }
 
+          // ── Add retry_count column (for post retry logic) ──
+          try {
+            await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0`;
+            results.push("✓ retry_count column ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ retry_count migration: ${fixErr.message}`);
+          }
+
           // Verify
           const count = await n`SELECT COUNT(*) as cnt FROM scheduled_posts`;
           results.push(`Table has ${count[0]?.cnt} rows`);

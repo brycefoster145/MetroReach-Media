@@ -152,7 +152,7 @@ async function handleResetPost(postId: string): Promise<Response> {
     // Reset the post to pending with due_at = NOW()
     const updated = await sql`
       UPDATE scheduled_posts
-      SET due_at = NOW(), retry_count = 0, status = 'pending'
+      SET due_at = NOW(), status = 'pending'
       WHERE id = ${postId}
       RETURNING id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at
     `;
