@@ -8,7 +8,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
-import { generateImage } from "~/lib/generate-image";
 import { getSiteUrl } from "~/lib/site-url";
 
 export const Route = createFileRoute("/api/schedule-post")({
@@ -95,27 +94,19 @@ export const Route = createFileRoute("/api/schedule-post")({
           );
         }
 
-        // ── Auto-generate image for Instagram posts without media ──
-        // Instagram REQUIRES images — never let a text-only IG post through.
-        // Facebook posts without images pass through (FB supports text-only).
-        let finalMediaUrls: string[] = (media_urls || []) as string[];
+        // ── Hard validation: Instagram posts REQUIRE media_urls ──
+        // AI-generated images undermine the premium agency brand.
+        // All Instagram images must be human-crafted by the Designer.
+        const finalMediaUrls: string[] = (media_urls || []) as string[];
         if (platform === "instagram" && finalMediaUrls.length === 0) {
-          try {
-            const generatedUrl = await generateImage(content as string);
-            finalMediaUrls = [generatedUrl];
-          } catch (imgErr: any) {
-            return new Response(
-              JSON.stringify({
-                error:
-                  "Instagram posts require an image, and auto-generation failed. Provide media_urls or try again.",
-                detail: imgErr.message,
-              }),
-              {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              },
-            );
-          }
+          return new Response(
+            JSON.stringify({
+              error: "Instagram posts require media_urls",
+              detail:
+                "Each Instagram post must include at least one image URL (1024x1024 PNG recommended). Coordinate with the Designer before scheduling.",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
         }
 
         try {
