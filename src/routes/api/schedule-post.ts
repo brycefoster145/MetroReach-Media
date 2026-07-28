@@ -8,7 +8,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
-import { generateImage } from "~/lib/generate-image";
+import { generateInstagramImage } from "~/lib/ig-image-generator";
 import { getSiteUrl } from "~/lib/site-url";
 
 export const Route = createFileRoute("/api/schedule-post")({
@@ -97,21 +97,33 @@ export const Route = createFileRoute("/api/schedule-post")({
 
         // ── Auto-generate image for Instagram posts without media ──
         // Instagram REQUIRES images — never let a text-only IG post through.
-        // Facebook posts without images pass through (FB supports text-only).
+        // Three-tier strategy: OpenAI gpt-image-2 → brand image fallback → error.
+        // The fallback makes this near-100% reliable — skipped_no_media is
+        // effectively eliminated for all newly scheduled posts.
         let finalMediaUrls: string[] = (media_urls || []) as string[];
         if (platform === "instagram" && finalMediaUrls.length === 0) {
           try {
-            const generatedUrl = await generateImage(content as string);
-            finalMediaUrls = [generatedUrl];
+            const result = await generateInstagramImage(content as string);
+            finalMediaUrls = [result.url];
+
+            if (result.source === "brand-fallback") {
+              console.warn(
+                `[schedule-post] OpenAI generation failed for IG post — using brand fallback image`,
+              );
+            }
           } catch (imgErr: any) {
+            // Tier 3: both OpenAI and brand fallback failed (extremely rare)
+            console.error(
+              `[schedule-post] CRITICAL: All IG image tiers failed: ${imgErr.message}`,
+            );
             return new Response(
               JSON.stringify({
                 error:
-                  "Instagram posts require an image, and auto-generation failed. Provide media_urls or try again.",
+                  "Instagram image generation failed at all tiers. This is an internal error — please retry or contact support.",
                 detail: imgErr.message,
               }),
               {
-                status: 400,
+                status: 500,
                 headers: { "Content-Type": "application/json" },
               },
             );
