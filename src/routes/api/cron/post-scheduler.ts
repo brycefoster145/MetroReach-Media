@@ -20,6 +20,9 @@
  *
  * Platforms without defined slots (Google, TikTok) fall back to the
  * old "due_at <= NOW()" behavior until their slots are ratified.
+ *
+ * POST actions (when Content-Type is application/json):
+ *   {"action": "reset-post", "post_id": "<id>"} — reset and immediately publish a stuck post
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
@@ -45,7 +48,19 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
         console.log("[cron] ⏰ GET /api/cron/post-scheduler — triggered");
         return processSlotRun();
       },
-      POST: async () => {
+      POST: async ({ request }: { request: Request }) => {
+        // Check if this is a JSON action request (reset-post, etc.)
+        const contentType = request.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          try {
+            const body = await request.json();
+            if (body.action === "reset-post" && body.post_id) {
+              return handleResetPost(body.post_id);
+            }
+          } catch {
+            // fall through to normal cron run
+          }
+        }
         console.log("[cron] ⏰ POST /api/cron/post-scheduler — triggered");
         return processSlotRun();
       },
@@ -76,38 +91,145 @@ interface RunStats {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// MAIN SCHEDULER LOGIC
+// DB-BASED LOCKING — prevents concurrent execution across instances
 // ═══════════════════════════════════════════════════════════════════
 
+async function acquireLock(): Promise<boolean> {
+  try {
+    const result = await sql`
+      INSERT INTO processing_locks (lock_key, acquired_at)
+      VALUES ('post-scheduler', NOW())
+      ON CONFLICT (lock_key) DO NOTHING
+      RETURNING *
+    `;
+    if (result.length > 0) {
+      console.log("[cron] ✅ Lock acquired: post-scheduler");
+      return true;
+    }
+    // Lock exists — check if stale (>5 min)
+    const stale = await sql`
+      SELECT acquired_at FROM processing_locks
+      WHERE lock_key = 'post-scheduler'
+        AND acquired_at < NOW() - INTERVAL '5 minutes'
+    `;
+    if (stale.length > 0) {
+      console.log("[cron] ⚠️ Stale lock detected — force-resetting");
+      await sql`DELETE FROM processing_locks WHERE lock_key = 'post-scheduler'`;
+      const retry = await sql`
+        INSERT INTO processing_locks (lock_key, acquired_at)
+        VALUES ('post-scheduler', NOW())
+        ON CONFLICT (lock_key) DO NOTHING
+        RETURNING *
+      `;
+      return retry.length > 0;
+    }
+    console.log("[cron] ⚠️ Lock held by another instance — skipping");
+    return false;
+  } catch (err: any) {
+    console.error(`[cron] ❌ Lock acquisition error: ${err.message}`);
+    // If the table doesn't exist yet, let the run proceed
+    return err.message?.includes("processing_locks") ? true : false;
+  }
+}
+
+async function releaseLock(): Promise<void> {
+  try {
+    await sql`DELETE FROM processing_locks WHERE lock_key = 'post-scheduler'`;
+    console.log("[cron] 🔓 Lock released: post-scheduler");
+  } catch (err: any) {
+    console.error(`[cron] ❌ Lock release error: ${err.message}`);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════
-// H2: isRunning guard — prevents concurrent execution
+// RESET-POST: rescue a stuck post by resetting and publishing immediately
 // ═══════════════════════════════════════════════════════════════════
-let isProcessing = false;
-let processingSince = 0; // epoch ms when isProcessing was set
+
+async function handleResetPost(postId: string): Promise<Response> {
+  console.log(`[cron] 🔄 RESET-POST: ${postId}`);
+
+  try {
+    // Reset the post to pending with due_at = NOW()
+    const updated = await sql`
+      UPDATE scheduled_posts
+      SET due_at = NOW(), status = 'pending'
+      WHERE id = ${postId}
+      RETURNING id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at
+    `;
+
+    if (updated.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Post not found", post_id: postId }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const post = updated[0];
+    console.log(
+      `[cron]   → Reset post ${postId}: platform=${post.platform}, due_at=${(post.due_at as Date).toISOString()}`,
+    );
+
+    // Immediately publish it
+    const results: PostResult[] = [];
+    const stats: RunStats = {
+      found: 1,
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      missed: 0,
+      elapsed_ms: 0,
+      error: null,
+    };
+
+    const startTime = Date.now();
+    await publishOnePost(post, results, stats);
+    stats.elapsed_ms = Date.now() - startTime;
+
+    return new Response(
+      JSON.stringify({
+        action: "reset-post",
+        post_id: postId,
+        result: results[0] || null,
+        summary: {
+          succeeded: stats.succeeded,
+          failed: stats.failed,
+          elapsed_ms: stats.elapsed_ms,
+        },
+      }),
+      {
+        status: stats.succeeded > 0 ? 200 : 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  } catch (err: any) {
+    console.error(`[cron] ❌ Reset-post error for ${postId}: ${err.message}`);
+    return new Response(
+      JSON.stringify({
+        action: "reset-post",
+        post_id: postId,
+        error: err.message,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN SCHEDULER LOGIC
+// ═══════════════════════════════════════════════════════════════════
 
 async function processSlotRun(): Promise<Response> {
   // SCHEDULER_PAUSED: env-var kill switch — removed 2026-07-27 to unblock posting
   // (was stuck paused for days, causing all IG/FB/X slots to be missed)
 
-  // H2: Guard against concurrent runs (Vercel self-healing kicker + cron overlap)
-  // H2-FIX: If isProcessing has been stuck for >5 minutes, reset it.
-  // This happens when Vercel 60s timeout kills the function before finally runs.
-  if (isProcessing) {
-    const stuckMs = Date.now() - processingSince;
-    if (stuckMs > 5 * 60 * 1000) {
-      console.log(`[cron] ⚠️ isProcessing stuck for ${Math.round(stuckMs / 1000)}s — force-resetting`);
-      isProcessing = false;
-      processingSince = 0;
-    } else {
-      console.log("[cron] ⚠️ Already processing — skipping duplicate run");
-      return new Response(
-        JSON.stringify({ message: "Already processing — skipping duplicate run" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
+  // DB-based lock: prevents concurrent execution across Vercel instances
+  const locked = await acquireLock();
+  if (!locked) {
+    return new Response(
+      JSON.stringify({ message: "Skipping — lock held by another instance" }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
   }
-  isProcessing = true;
-  processingSince = Date.now();
 
   try {
     const startTime = Date.now();
@@ -396,8 +518,7 @@ async function processSlotRun(): Promise<Response> {
     },
   );
   } finally {
-    isProcessing = false;
-    processingSince = 0;
+    await releaseLock();
   }
 }
 

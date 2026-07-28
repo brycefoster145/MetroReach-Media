@@ -339,6 +339,15 @@ export async function migrate(): Promise<void> {
     console.log(`[migration] ℹ due_at column migration skipped: ${err.message}`);
   }
 
+  // ── processing_locks table (DB-based scheduler lock) ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS processing_locks (
+      lock_key TEXT PRIMARY KEY,
+      acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  console.log("[migration] ✓ processing_locks table ready");
+
   // ── orders table ──
   await sql`
     CREATE TABLE IF NOT EXISTS orders (
