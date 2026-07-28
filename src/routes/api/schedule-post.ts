@@ -50,12 +50,16 @@ export const Route = createFileRoute("/api/schedule-post")({
           due_at?: string;
         };
 
+        // ── Apply MetroReach Media defaults (matching publish-now.ts pattern) ──
+        // When client_id === "metroreach" and no page_id provided, default to our FB page
+        const resolvedPageId = page_id || (client_id === "metroreach" ? "623055204204992" : undefined);
+
         // Validate required fields (due_at is optional when autoSlot=true)
         // page_id is only required for Facebook and Instagram — X/Twitter uses OAuth directly
         const needsPageId = platform && ["facebook", "instagram", "fb", "ig"].includes(platform.toLowerCase());
         const requiredFields = autoSlot
-          ? { missing: !platform || (needsPageId && !page_id) || !content }
-          : { missing: !platform || (needsPageId && !page_id) || !content || !due_at };
+          ? { missing: !platform || (needsPageId && !resolvedPageId) || !content }
+          : { missing: !platform || (needsPageId && !resolvedPageId) || !content || !due_at };
 
         if (requiredFields.missing) {
           const fields = needsPageId
@@ -208,7 +212,7 @@ export const Route = createFileRoute("/api/schedule-post")({
                 ${id},
                 ${client_id as string},
                 ${platform},
-                ${page_id as string},
+                ${resolvedPageId},
                 ${ig_user_id ? (ig_user_id as string) : null},
                 ${content as string},
                 ${JSON.stringify(finalMediaUrls)}::jsonb,
@@ -227,7 +231,7 @@ export const Route = createFileRoute("/api/schedule-post")({
                   ${id},
                   ${client_id as string},
                   ${platform},
-                  ${page_id as string},
+                  ${resolvedPageId},
                   ${ig_user_id ? (ig_user_id as string) : null},
                   ${content as string},
                   ${JSON.stringify(finalMediaUrls)}::jsonb,
