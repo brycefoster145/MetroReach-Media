@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { ArrowRight, CheckCircle, WarningCircle, XCircle, Star, Lightning, Target, ChartLineUp, Users, Medal, ShoppingCart, Spinner } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { Button } from "~/components/Button";
+import { getAuditResult } from "~/lib/lead-store";
 
 // Types
 interface ProfileScore { profilePicture: { score: number; observation: string }; bio: { score: number; observation: string }; bioLength: { score: number; observation: string }; websiteLink: { score: number; observation: string }; coverImage: { score: number; observation: string }; category: { score: number; observation: string }; total: number; }
@@ -21,9 +22,29 @@ interface AuditResult {
   strengths: string[]; weaknesses: string[]; quickWins: QuickWin[]; serviceRecommendations: ServiceRec[]; timestamp: string;
 }
 
+/** Load an audit report. Tries filesystem first (free audits), then DB (premium audits). */
 const loadAudit = createServerFn({ method: "GET" }).validator((id: string) => id).handler(async ({ data: id }) => {
   const safeId = id.replace(/[^a-zA-Z0-9\-]/g, "");
-  try { const raw = await readFile(join("/home/team/shared/audits", `${safeId}.json`), "utf-8"); return JSON.parse(raw) as AuditResult; } catch { return null; }
+
+  // 1. Try filesystem (free audits stored as JSON files)
+  try {
+    const raw = await readFile(join("/home/team/shared/audits", `${safeId}.json`), "utf-8");
+    const parsed = JSON.parse(raw);
+    // Free audit format — has platforms array
+    if (parsed.platforms) return parsed as AuditResult;
+  } catch {
+    // Not found on filesystem — that's fine for premium audits
+  }
+
+  // 2. Try DB (premium audits stored via saveAuditResult)
+  try {
+    const dbResult = await getAuditResult(safeId);
+    if (dbResult) return dbResult as any;
+  } catch {
+    // DB lookup failed
+  }
+
+  return null;
 });
 
 export const Route = createFileRoute("/audit-report")({ component: AuditReportPage });

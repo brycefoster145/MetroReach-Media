@@ -461,14 +461,14 @@ export const STRIPE_PRODUCT_MAP: StripeProductMapping[] = [
     priceLabel: "$8,500/month",
   },
   {
-    slug: "premium-audit",
-    stripePriceId: "price_1TwsDx1v80UmMrLIbypnerFp",
-    stripeProductId: "prod_UwllXDhVxrNNPj",
+    slug: "premium-growth-audit",
+    stripePriceId: "price_1TwKxKDGk9TbScamUD3JHGFO",
+    stripeProductId: "prod_UwDOA7SlmyFndE",
     name: "Premium Growth Audit",
-    category: "social-strategy",
-    amount: 50000,
+    category: "strategy",
+    amount: 49500,
     recurring: false,
-    priceLabel: "$500 one-time",
+    priceLabel: "$495 one-time",
   },
 ];
 
@@ -528,5 +528,5 @@ export const PRICE_TO_SERVICE: Record<string, { name: string; slug: string }> = 
   "price_1TwsEC1v80UmMrLIUqPV21WV": { name: "Social Inbox Management", slug: "social-inbox-management" },
   "price_1TwsEC1v80UmMrLIU8rpLrcd": { name: "Social Inbox Design", slug: "social-inbox-design" },
   "price_1Txrn51v80UmMrLIol8Tln4b": { name: "Aggressive Daily Organic — VIP", slug: "vip-daily" },
-  "price_1TwsDx1v80UmMrLIbypnerFp": { name: "Premium Growth Audit", slug: "premium-audit" },
+  "price_1TwKxKDGk9TbScamUD3JHGFO": { name: "Premium Growth Audit", slug: "premium-growth-audit" },
 };
