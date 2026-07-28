@@ -58,7 +58,7 @@ const REPORTS_ADDRESS = "reports@metroreachagency.com";
 function isOneTimeService(slug: string): boolean {
   const oneTimeSlugs = [
     // Audits
-    "social-media-audit", "social-media-audit-strategy", "premium-audit",
+    "social-media-audit", "social-media-audit-strategy", "premium-growth-audit",
     // Strategy docs
     "social-media-strategy", "content-strategy", "campaign-strategy",
     // Setup services
@@ -266,6 +266,60 @@ ${descriptionHtml}
     from: REPORTS_ADDRESS,
     subject: `Your deliverable is ready — MetroReach`,
     body: emailShell(`Your deliverable is ready`, content),
+  });
+}
+
+// ── Sequence 4b: Premium Audit Ready ──
+
+export async function sendPremiumAuditReady(
+  client: Client,
+  reportUrl: string,
+  overallScore: number,
+): Promise<void> {
+  const scoreColor = overallScore >= 70 ? "#10b981" : overallScore >= 40 ? "#f59e0b" : "#ef4444";
+  const scoreLabel = overallScore >= 70 ? "Strong" : overallScore >= 40 ? "Needs Work" : "Needs Attention";
+
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Your <strong>Premium Growth Audit</strong> from MetroReach Media is complete. Our team has analyzed your digital presence across 12 marketing dimensions and produced a comprehensive report with scored insights, prioritized recommendations, and a phased growth roadmap.
+</p>
+
+<div style="background:#f5f3ff;border-radius:12px;padding:24px;margin:20px 0;text-align:center;">
+  <p style="font-size:13px;font-weight:600;color:#7c3aed;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Your Overall Marketing Score</p>
+  <p style="font-size:48px;font-weight:800;color:${scoreColor};margin:0 0 4px;line-height:1;">${overallScore}</p>
+  <p style="font-size:14px;font-weight:600;color:${scoreColor};margin:0;">out of 100 — ${scoreLabel}</p>
+</div>
+
+<div style="text-align:center;margin:24px 0;">
+  <a href="${reportUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">View Your Premium Audit →</a>
+</div>
+
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 8px;">
+  <strong>Your report includes:</strong>
+</p>
+<ul style="font-size:14px;line-height:1.8;color:#6b7280;margin:0 0 16px;padding-left:20px;">
+  <li>12-category marketing assessment with scored breakdowns</li>
+  <li>Brand identity, website, social media, and competitive analysis</li>
+  <li>Priority action matrix — what to fix first and why</li>
+  <li>Phased growth roadmap with expected outcomes</li>
+  <li>Service recommendations tailored to your specific gaps</li>
+</ul>
+
+<p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0 0 16px;">
+  Your report is accessible anytime from the link above. If you'd like to discuss the findings or explore how MetroReach Media can implement the recommendations, reply to this email — our strategy team reviews every response personally.
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  — The MetroReach Team
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: REPORTS_ADDRESS,
+    subject: `Your Premium Growth Audit is ready — MetroReach`,
+    body: emailShell(`Your Premium Growth Audit is ready`, content),
   });
 }
 

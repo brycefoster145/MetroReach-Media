@@ -10,8 +10,10 @@
  */
 
 import { sql } from "~/lib/db";
-import { sendStatusUpdate, sendDeliverableReady } from "~/lib/email-sequences";
+import { sendStatusUpdate, sendDeliverableReady, sendPremiumAuditReady } from "~/lib/email-sequences";
 import type { Client } from "~/lib/email-sequences";
+import { findLeadByEmail, saveAuditResult, markPurchased } from "~/lib/lead-store";
+import { runPremiumAudit } from "~/lib/premium-audit-analyzer";
 
 // ── Types ──
 
@@ -299,8 +301,8 @@ export const PIPELINE_MAP: Record<string, PipelineDefinition[]> = {
     { file: "review-and-dm-templates.md", steps: ["research", "create", "review", "deliver"], label: "Review & DM Templates", recurring: false },
   ],
 
-  // ── Premium Audit ──
-  "premium-audit": [
+  // ── Premium Growth Audit ──
+  "premium-growth-audit": [
     { file: "social-media-audit.md", steps: ["research", "create", "review", "deliver"], label: "Premium Growth Audit", recurring: false },
     { file: "competitor-analysis.md", steps: ["research", "create", "review", "deliver"], label: "Competitor Analysis", recurring: false },
     { file: "content-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Content Strategy", recurring: false },
@@ -342,6 +344,15 @@ const STEP_LABELS: Record<PipelineStep, string> = {
  */
 export async function executePipeline(client: Client): Promise<void> {
   const serviceSlug = client.service_slug;
+
+  // ── Premium Growth Audit: special handling ──
+  // The lead was created pre-payment via /api/premium-audit/submit.
+  // On purchase, we run the full premium analysis, save results, and email the client.
+  if (serviceSlug === "premium-growth-audit") {
+    await executePremiumAuditPipeline(client);
+    return;
+  }
+
   const pipelines = PIPELINE_MAP[serviceSlug];
 
   if (!pipelines || pipelines.length === 0) {
@@ -368,6 +379,62 @@ export async function executePipeline(client: Client): Promise<void> {
   // All initial pipelines executed
   await updatePipelineStatus(client.id, "active");
   console.log(`Pipeline execution complete for client ${client.id}`);
+}
+
+/**
+ * Execute the Premium Growth Audit pipeline.
+ * 
+ * Unlike the generic pipeline, this runs the actual analysis engine:
+ * 1. Finds the lead record (created pre-payment by /api/premium-audit/submit)
+ * 2. Runs the 12-category premium analysis via runPremiumAudit()
+ * 3. Saves results to both the lead store and audit_results table
+ * 4. Marks the lead as purchased
+ * 5. Sends the premium audit email with a link to the report
+ */
+async function executePremiumAuditPipeline(client: Client): Promise<void> {
+  console.log(`Running Premium Growth Audit pipeline for ${client.id} (${client.email})`);
+
+  // 1. Find the lead record by email
+  const lead = await findLeadByEmail(client.email);
+  if (!lead) {
+    console.error(`Premium audit: no lead found for email ${client.email}`);
+    await updatePipelineStatus(client.id, "failed");
+    return;
+  }
+
+  await updatePipelineStatus(client.id, "analyzing");
+
+  // 2. Run the premium analysis
+  let result;
+  try {
+    result = await runPremiumAudit(lead.businessInfo, lead.id);
+    console.log(`Premium audit complete for ${lead.id}: overall score ${result.scores.overall}/100`);
+  } catch (err: any) {
+    console.error(`Premium audit analysis failed for ${lead.id}:`, err.message);
+    await updatePipelineStatus(client.id, "failed");
+    return;
+  }
+
+  // 3. Save results to the lead store and audit_results table
+  const resultJson = JSON.stringify(result);
+  await saveAuditResult(lead.id, resultJson);
+
+  // 4. Mark lead as purchased
+  await markPurchased(lead.id);
+
+  // 5. Update client pipeline status
+  await updatePipelineStatus(client.id, "delivered");
+
+  // 6. Send premium audit email with report link
+  const reportUrl = `https://metroreachagency.com/audit-report?id=${lead.id}`;
+  try {
+    await sendPremiumAuditReady(client, reportUrl, result.scores.overall);
+    console.log(`Premium audit email sent to ${client.email}`);
+  } catch (err: any) {
+    console.error(`Premium audit email failed for ${client.id}:`, err.message);
+  }
+
+  console.log(`Premium Growth Audit pipeline complete for ${client.id}`);
 }
 
 /**
