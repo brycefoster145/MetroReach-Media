@@ -113,6 +113,15 @@ export const Route = createFileRoute("/api/force-migrate")({
           `;
           results.push("✓ cron_runs table ready");
 
+          // ── processing_locks table (DB-based scheduler lock) ──
+          await n`
+            CREATE TABLE IF NOT EXISTS processing_locks (
+              lock_key TEXT PRIMARY KEY,
+              acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `;
+          results.push("✓ processing_locks table ready");
+
           return new Response(
             JSON.stringify({ success: true, results }),
             { status: 200, headers: { "Content-Type": "application/json" } },
