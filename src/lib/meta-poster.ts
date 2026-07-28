@@ -176,9 +176,9 @@ export async function postToInstagram(
     throw new NoMediaError("unknown");
   }
 
-  const pageToken = await getPageAccessToken(
-    process.env.META_FB_PAGE_ID || "623055204204992",
-  );
+  // Use system user token directly — page token from /me/accounts
+  // may drop Instagram permissions even if the system token carries them.
+  const pageToken = process.env.META_ACCESS_TOKEN!;
 
   // Step 1: Create media container
   const mediaBody: Record<string, unknown> = {
