@@ -9,17 +9,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
 import { generateImage } from "~/lib/generate-image";
-import { getNextAvailableSlot } from "~/lib/slot-assigner";
 import { getSiteUrl } from "~/lib/site-url";
 
 export const Route = createFileRoute("/api/schedule-post")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // ── Check for autoSlot query parameter ──
-        const url = new URL(request.url);
-        const autoSlot = url.searchParams.get("autoSlot") === "true";
-
         let body: Record<string, unknown>;
         try {
           body = await request.json();
@@ -50,68 +45,38 @@ export const Route = createFileRoute("/api/schedule-post")({
           due_at?: string;
         };
 
-        // ── Apply MetroReach Media defaults (matching publish-now.ts pattern) ──
-        // When client_id === "metroreach" and no page_id provided, default to our FB page
+        // ── Apply MetroReach Media defaults ──
         const resolvedPageId = page_id || (client_id === "metroreach" ? "623055204204992" : undefined);
 
-        // Validate required fields (due_at is optional when autoSlot=true)
-        // page_id is only required for Facebook and Instagram — X/Twitter uses OAuth directly
+        // Validate required fields — due_at is always required
         const needsPageId = platform && ["facebook", "instagram", "fb", "ig"].includes(platform.toLowerCase());
-        const requiredFields = autoSlot
-          ? { missing: !platform || (needsPageId && !resolvedPageId) || !content }
-          : { missing: !platform || (needsPageId && !resolvedPageId) || !content || !due_at };
+        const missingFields = !platform || (needsPageId && !resolvedPageId) || !content || !due_at;
 
-        if (requiredFields.missing) {
+        if (missingFields) {
           const fields = needsPageId
-            ? (autoSlot ? "platform, page_id, content" : "platform, page_id, content, due_at")
-            : (autoSlot ? "platform, content" : "platform, content, due_at");
+            ? "platform, page_id, content, due_at"
+            : "platform, content, due_at";
           return new Response(
-            JSON.stringify({
-              error: `Missing required fields: ${fields}`,
-              hint: autoSlot
-                ? "Use ?autoSlot=true to auto-assign the next available slot"
-                : undefined,
-            }),
+            JSON.stringify({ error: `Missing required fields: ${fields}` }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
 
-        // ── Resolve due_at ──
-        let resolvedDueAt: string;
-
-        if (autoSlot) {
-          // Auto-assign next available slot
-          const slot = await getNextAvailableSlot(platform as string);
-          if (!slot) {
-            return new Response(
-              JSON.stringify({
-                error: `No available slots for ${platform} in the next 30 days`,
-              }),
-              { status: 409, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          resolvedDueAt = slot.utcTimestamp;
-        } else {
-          // ── Validate due_at is in the future ──
-          const dueAtDate = new Date(due_at as string);
-          if (isNaN(dueAtDate.getTime())) {
-            return new Response(
-              JSON.stringify({
-                error: "Invalid due_at: must be a valid ISO-8601 datetime string",
-              }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          if (dueAtDate.getTime() <= Date.now()) {
-            return new Response(
-              JSON.stringify({
-                error: "due_at must be in the future — cannot schedule posts for a past time",
-              }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-          resolvedDueAt = due_at as string;
+        // ── Validate due_at is in the future ──
+        const dueAtDate = new Date(due_at as string);
+        if (isNaN(dueAtDate.getTime())) {
+          return new Response(
+            JSON.stringify({ error: "Invalid due_at: must be a valid ISO-8601 datetime string" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
         }
+        if (dueAtDate.getTime() <= Date.now()) {
+          return new Response(
+            JSON.stringify({ error: "due_at must be in the future — cannot schedule posts for a past time" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        const resolvedDueAt = due_at as string;
 
         const validPlatforms = [
           "facebook",
@@ -251,7 +216,7 @@ export const Route = createFileRoute("/api/schedule-post")({
               id,
               platform,
               due_at: resolvedDueAt,
-              message: `Post scheduled for ${resolvedDueAt}${autoSlot ? " (auto-assigned slot)" : ""}`,
+              message: `Post scheduled for ${resolvedDueAt}`,
             }),
             { status: 201, headers: { "Content-Type": "application/json" } },
           );

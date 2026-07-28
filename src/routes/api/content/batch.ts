@@ -1,8 +1,7 @@
 /**
  * Content Batch Scheduling — POST /api/content/batch
  *
- * Accepts a batch of posts across platforms and auto-assigns each
- * to the next available posting slot via the slot-assigner.
+ * Accepts a batch of posts across platforms with explicit due_at timestamps.
  *
  * Request body:
  * {
@@ -22,13 +21,15 @@
  * MetroReach Media
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { fillSlot } from "~/lib/slot-assigner";
+import { randomBytes } from "node:crypto";
+import { sql } from "~/lib/db";
 
 // ── Types ──
 
 interface BatchPost {
   platform: string;
   content: string;
+  due_at: string;
   hashtags?: string;
   page_id?: string;
   ig_user_id?: string;
@@ -124,35 +125,47 @@ export const Route = createFileRoute("/api/content/batch")({
             continue;
           }
 
+          if (!post.due_at) {
+            results.push({
+              platform: post.platform,
+              success: false,
+              error: "due_at is required (ISO-8601 timestamp)",
+            });
+            errorCount++;
+            continue;
+          }
+
           const hashtags =
             post.hashtags || "#MetroReachMedia";
           const pageId = post.page_id || defaultPageId;
           const igUserId = post.ig_user_id || defaultIgUserId;
 
           try {
-            const result = await fillSlot(
-              post.platform,
-              post.content.trim(),
-              hashtags,
-              clientId,
-              pageId,
-              igUserId,
-            );
+            const id = `post-${randomBytes(8).toString("hex")}`;
+            await sql`
+              INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
+              VALUES (
+                ${id},
+                ${clientId},
+                ${post.platform},
+                ${pageId || null},
+                ${igUserId || null},
+                ${post.content.trim()},
+                ${JSON.stringify([])}::jsonb,
+                ${hashtags},
+                ${post.due_at}::timestamptz,
+                'pending'
+              )
+            `;
 
             results.push({
               platform: post.platform,
-              success: result.success,
-              id: result.id,
-              due_at: result.due_at,
-              message: result.message,
-              error: result.error,
+              success: true,
+              id,
+              due_at: post.due_at,
+              message: `Post scheduled for ${post.due_at}`,
             });
-
-            if (result.success) {
-              successCount++;
-            } else {
-              errorCount++;
-            }
+            successCount++;
           } catch (err: any) {
             results.push({
               platform: post.platform,
@@ -189,7 +202,7 @@ export const Route = createFileRoute("/api/content/batch")({
             endpoint: "/api/content/batch",
             method: "POST",
             description:
-              "Batch-schedule posts with automatic slot assignment",
+              "Batch-schedule posts with explicit due_at timestamps",
             body: {
               client_id: "string (optional, default: metroreach)",
               page_id: "string (optional fallback)",
@@ -198,6 +211,7 @@ export const Route = createFileRoute("/api/content/batch")({
                 {
                   platform: "instagram",
                   content: "Post text...",
+                  due_at: "2026-07-29T13:00:00-04:00",
                   hashtags: "#tag1 #tag2 (optional)",
                   page_id: "string (optional override)",
                   ig_user_id: "string (optional override)",
