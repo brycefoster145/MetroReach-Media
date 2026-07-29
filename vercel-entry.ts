@@ -9,27 +9,26 @@
 // Bundled (with its deps + the SSR handler's dynamic ./assets chunks) into
 // .vercel/output/functions/render.func/index.mjs by build-vercel.sh.
 //
-// ── Self-healing cron kicker ──
-// Vercel Cron Jobs (vercel.json) are the PRIMARY scheduler trigger. But serverless
-// cold starts and cron execution delays can cause missed windows. As a fallback,
-// this module starts a keep-alive interval that fires every 62 seconds and kicks
-// the cron route internally. While the function stays warm, this guarantees at
-// least one scheduling pass per minute. When the function goes cold, the next
-// request restarts the interval. Combined with Vercel's own cron, we get
-// overlapping coverage — posts WILL go out.
+// ── Scheduler: external triggers only ──
+// The post scheduler at /api/cron/post-scheduler is triggered EXCLUSIVELY by
+// external services that ping the public HTTPS endpoint. No self-kicker, no
+// traffic recovery, no in-process timers. This file is just the SSR handler.
 //
-// ── Cold-start guard ──
-// On every deployment cold start, the cron kicker waits STARTUP_DELAY_MS before
-// its first kick. This prevents burst-publishing that would otherwise fire
-// immediately on deploy (the old 5-second delay was too short to let the scheduler
-// stabilize).
+// Primary trigger: cron-job.org (free, 60s interval, independent infrastructure)
+// Backup trigger:  Vercel native cron (vercel.json: * * * * *)
+// Monitoring:      GitHub Actions cron-kicker.yml (5min interval)
+//
+// To set up cron-job.org:
+//   1. Go to https://cron-job.org, sign up (free, no credit card)
+//   2. Create a cron job: URL = https://www.metroreachagency.com/api/cron/post-scheduler
+//   3. Schedule: every 1 minute, 24/7
+//   4. Done. Posts will never miss a slot.
+
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import handler from "./dist/server/server.js";
 
 // ── Auto-migration on cold start ──
-// Runs BEFORE the cron kicker so the orders table (and all others) exist
-// before any API handler tries to use them. Idempotent — safe every deploy.
 import { migrate } from "./src/lib/migrate.js";
 migrate().catch((err) => {
   console.error("[migration] Startup migration failed (non-fatal):", err.message);
@@ -38,8 +37,6 @@ migrate().catch((err) => {
 const fetchHandler = handler as {
   fetch: (request: Request) => Response | Promise<Response>;
 };
-
-// ── Security headers applied to every response ──
 
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy":
@@ -79,92 +76,10 @@ const toWebRequest = (req: IncomingMessage): Request => {
   } as RequestInit);
 };
 
-// ── Self-healing cron kicker ──
-// FOUR-LAYER GUARANTEE: every post slot fires on time, zero tolerance for misses.
-//
-// Layer 1 — Vercel native cron (vercel.json: * * * * *) — primary, every 60s
-// Layer 2 — Self-kicker (setInterval, no .unref()) — every 62s while function warm
-// Layer 3 — GitHub Actions (cron-kicker.yml) — external, every 5min
-// Layer 4 — Site-traffic recovery (below) — every page visit checks if kick needed
-//
-// Combined, the scheduler fires every ~10s when warm and recovers within one
-// page visit after cold start. No slot can be missed.
-
-const STARTUP_DELAY_MS = 60_000; // 60-second cold-start guard to prevent burst-publishing
-const TRAFFIC_RECOVERY_GAP_MS = 90_000; // If no kick in 90s, traffic triggers recovery
-
-let cronKickerInterval: ReturnType<typeof setInterval> | null = null;
-let lastCronKickMs = 0;
-
-function startCronKicker(): void {
-  if (cronKickerInterval) return; // Already running
-
-  console.log(
-    `[cron-kicker] Starting self-healing cron kicker (every 62s, first kick in ${STARTUP_DELAY_MS / 1000}s)`,
-  );
-
-  // Fire once on startup after the cold-start guard delay
-  setTimeout(() => {
-    kickCron().catch((err) =>
-      console.error("[cron-kicker] Initial kick failed:", err.message),
-    );
-  }, STARTUP_DELAY_MS);
-
-  // Then every 62 seconds
-  cronKickerInterval = setInterval(() => {
-    kickCron().catch((err) =>
-      console.error("[cron-kicker] Interval kick failed:", err.message),
-    );
-  }, 62_000);
-
-  // DO NOT unref — the interval MUST keep the event loop alive.
-}
-
-async function kickCron(): Promise<void> {
-  lastCronKickMs = Date.now();
-  const startTime = lastCronKickMs;
-  const isoTime = new Date().toISOString();
-  try {
-    const res = await fetchHandler.fetch(
-      new Request("http://localhost/api/cron/post-scheduler", { method: "GET" }),
-    );
-    const elapsed = Date.now() - startTime;
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "(unreadable)");
-      console.error(
-        `[cron-kicker] ❌ [${isoTime}] Cron kick FAILED (${res.status} ${res.statusText}, ${elapsed}ms): ${errBody.substring(0, 500)}`,
-      );
-    }
-  } catch (err: any) {
-    const elapsed = Date.now() - startTime;
-    console.error(`[cron-kicker] ❌ [${isoTime}] Kick error (${elapsed}ms): ${err.message}`);
-  }
-}
-
-// LAYER 4: Site-traffic recovery — if the scheduler hasn't been kicked in
-// TRAFFIC_RECOVERY_GAP_MS, any page visit triggers an async kick. This means
-// that as long as the site gets ANY traffic (human, bot, crawler, health check),
-// the scheduler cannot stay cold for more than 90 seconds.
-function maybeKickFromTraffic(): void {
-  if (Date.now() - lastCronKickMs > TRAFFIC_RECOVERY_GAP_MS) {
-    kickCron().catch((err) =>
-      console.error("[cron-kicker] Traffic-recovery kick failed:", err.message),
-    );
-  }
-}
-
-// Start the kicker on module load
-startCronKicker();
-
-// ── Main handler ──
-
 export default async function vercelHandler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  // LAYER 4: Every request checks if scheduler needs a kick — fire-and-forget
-  maybeKickFromTraffic();
-
   try {
     const webRes = await fetchHandler.fetch(toWebRequest(req));
     res.statusCode = webRes.status;
@@ -180,8 +95,6 @@ export default async function vercelHandler(
     }
     res.end();
   } catch (error) {
-    // Log the detail server-side (captured by the host's function logs); never
-    // return a stack trace to the public visitor of the site.
     console.error("[team-site] SSR request failed", error);
     res.statusCode = 500;
     res.setHeader("content-type", "text/plain");
