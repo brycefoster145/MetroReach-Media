@@ -112,10 +112,28 @@ function PortalOnboarding() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auth check on mount
+  // Auth check on mount — supports ?token=XXX for direct onboarding access
   useEffect(() => {
     async function checkAuth() {
       try {
+        // If a portal token is in the URL, authenticate first
+        const searchParams = new URLSearchParams(window.location.search);
+        const portalToken = searchParams.get("token");
+        if (portalToken && portalToken.length >= 8) {
+          const authRes = await fetch("/api/portal/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-csrf-protection": "1" },
+            body: JSON.stringify({ token: portalToken }),
+          });
+          if (!authRes.ok) {
+            window.location.href = "/portal";
+            return;
+          }
+          // Clean the token from the URL after auth
+          window.history.replaceState(null, "", "/portal/onboarding");
+        }
+
+        // Verify session via dashboard endpoint
         const res = await fetch("/api/portal/dashboard");
         if (res.status === 401) {
           window.location.href = "/portal";
