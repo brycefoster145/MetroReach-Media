@@ -7,8 +7,13 @@
  * across all Vercel serverless instances.
  */
 
-import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
+
+function randomHex(bytes: number): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,7 +74,7 @@ export interface LeadRecord {
 // ---------------------------------------------------------------------------
 
 export function generateLeadId(): string {
-  return `lead-${randomBytes(8).toString("hex")}`;
+  return `lead-${randomHex(8)}`;
 }
 
 function sanitizeId(id: string): string {
