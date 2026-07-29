@@ -93,6 +93,21 @@ function FreeAudit() {
   const [errorMessage, setErrorMessage] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Read error from URL query string (set by API on native form submission errors)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    if (err) {
+      setStatus("error");
+      setErrorMessage(decodeURIComponent(err));
+      // Clean the URL without a page reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
   const update = (field: FieldName, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -331,7 +346,14 @@ function FreeAudit() {
             )}
 
             {/* Form */}
-            <form ref={formRef} onSubmit={handleSubmit} className="space-y-8" noValidate>
+            <form
+              ref={formRef}
+              onSubmit={handleSubmit}
+              action="/api/audit/submit"
+              method="POST"
+              className="space-y-8"
+              noValidate
+            >
               {/* ── Business Information ── */}
               <fieldset className="space-y-5">
                 <legend className="text-lg font-semibold font-heading text-text-primary mb-1">
@@ -344,6 +366,7 @@ function FreeAudit() {
                   </label>
                   <input
                     id="businessName"
+                    name="businessName"
                     type="text"
                     className={inputClass}
                     placeholder="Your company name"
@@ -361,6 +384,7 @@ function FreeAudit() {
                     </label>
                     <input
                       id="websiteUrl"
+                      name="websiteUrl"
                       type="url"
                       className={inputClass}
                       placeholder="https://yourbusiness.com"
@@ -377,6 +401,7 @@ function FreeAudit() {
                     <div className="relative">
                       <select
                         id="industry"
+                        name="industry"
                         className={`${inputClass} appearance-none pr-10`}
                         value={form.industry}
                         onChange={(e) => update("industry", e.target.value)}
@@ -408,6 +433,7 @@ function FreeAudit() {
                     </label>
                     <input
                       id="location"
+                      name="location"
                       type="text"
                       className={inputClass}
                       placeholder="Austin, TX"
@@ -424,6 +450,7 @@ function FreeAudit() {
                     <div className="relative">
                       <select
                         id="primaryGoal"
+                        name="primaryGoal"
                         className={`${inputClass} appearance-none pr-10`}
                         value={form.primaryGoal}
                         onChange={(e) => update("primaryGoal", e.target.value)}
@@ -473,6 +500,7 @@ function FreeAudit() {
                       </label>
                       <input
                         id={key}
+                        name={key}
                         type="url"
                         className={inputClass}
                         placeholder={placeholder}
@@ -497,6 +525,7 @@ function FreeAudit() {
                   </label>
                   <input
                     id="contactName"
+                    name="contactName"
                     type="text"
                     className={inputClass}
                     placeholder="Your full name"
@@ -514,6 +543,7 @@ function FreeAudit() {
                     </label>
                     <input
                       id="email"
+                      name="email"
                       type="email"
                       className={inputClass}
                       placeholder="you@company.com"
@@ -529,6 +559,7 @@ function FreeAudit() {
                     </label>
                     <input
                       id="phone"
+                      name="phone"
                       type="tel"
                       className={inputClass}
                       placeholder="(555) 555-5555"
@@ -544,6 +575,7 @@ function FreeAudit() {
                 <div className="flex items-start gap-3">
                   <input
                     id="consent"
+                    name="consent"
                     type="checkbox"
                     className="mt-1 w-4 h-4 rounded border-border-emphasis bg-bg-surface-raised text-brand-primary focus:ring-brand-primary/30 cursor-pointer"
                     checked={form.consent}
