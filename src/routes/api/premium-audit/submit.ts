@@ -48,7 +48,7 @@ function getStripe(): Stripe {
 }
 
 // Premium Growth Audit product
-const PREMIUM_AUDIT_PRICE_ID = "price_1TyNwTDGk9TbScamiIZxgTXY";
+const PREMIUM_AUDIT_PRICE_ID = "price_1TwsE71v80UmMrLIGCovGtU0";
 const SERVICE_SLUG = "premium-growth-audit";
 
 // ---------------------------------------------------------------------------
@@ -265,7 +265,7 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
             leadId: lead.id,
           });
           return errorResponse(
-            `Stripe error: ${err.message}`,
+            "Failed to create checkout session. Please try again.",
             500
           );
         }
