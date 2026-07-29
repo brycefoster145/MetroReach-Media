@@ -2,8 +2,11 @@
  * Premium Growth Audit — API Endpoint
  * POST /api/premium-audit/submit
  *
- * Receives form data, saves the lead, creates a Stripe Checkout Session,
- * and returns the session URL for client-side redirect.
+ * Receives form data (JSON or form-encoded), saves the lead,
+ * creates a Stripe Checkout Session, and returns the session URL.
+ *
+ * For native HTML forms: 302 redirect to Stripe Checkout.
+ * For JS fetch: JSON response with { url: session.url }.
  *
  * MetroReach Media — Premium Social Media Marketing Agency
  */
@@ -56,23 +59,72 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ── Determine submission type ──
+        const contentType = request.headers.get("content-type") || "";
+        const isNativeForm = contentType.includes("application/x-www-form-urlencoded");
+
+        // ── Response helpers: JSON for JS fetch, redirect for native form ──
+        function errorResponse(message: string, status: number): Response {
+          if (isNativeForm) {
+            const errorParam = encodeURIComponent(message);
+            return new Response(null, {
+              status: 302,
+              headers: { Location: `/premium-audit?error=${errorParam}` },
+            });
+          }
+          return new Response(JSON.stringify({ error: message }), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        function successResponse(url: string, leadId: string, sessionId: string): Response {
+          if (isNativeForm) {
+            return new Response(null, {
+              status: 302,
+              headers: { Location: url! },
+            });
+          }
+          return new Response(
+            JSON.stringify({
+              id: leadId,
+              success: true,
+              url,
+              sessionId,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
         // ── Rate limiting ──
         const ip = getClientIp(request);
         const rl = rateLimit(`premium-audit:${ip}`, 3, 60_000); // max 3 per minute
         if (!rl.allowed) {
-          return new Response(
-            JSON.stringify({ error: "Too many requests. Please wait a moment before trying again." }),
-            { status: 429, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Too many requests. Please wait a moment before trying again.",
+            429
           );
         }
 
+        // ── Parse body (JSON for JS fetch, url-encoded for native form) ──
         let body: Record<string, unknown>;
         try {
-          body = await request.json();
+          if (isNativeForm) {
+            const text = await request.text();
+            const params = new URLSearchParams(text);
+            body = {};
+            params.forEach((value, key) => {
+              body[key] = value;
+            });
+            // Checkbox: only present in form data when checked
+            body.consent = params.has("consent");
+          } else {
+            body = await request.json();
+          }
         } catch {
-          return new Response(
-            JSON.stringify({ error: "We couldn't process your submission. Please try again." }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "We couldn't process your submission. Please try again.",
+            400
           );
         }
 
@@ -103,23 +155,20 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
         if (!formData.email) missing.push("Email");
 
         if (missing.length > 0) {
-          return new Response(
-            JSON.stringify({ error: `Please complete these required fields: ${missing.join(", ")}.` }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            `Please complete these required fields: ${missing.join(", ")}.`,
+            400
           );
         }
 
         if (!isValidEmail(formData.email)) {
-          return new Response(
-            JSON.stringify({ error: "Please enter a valid email address." }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
+          return errorResponse("Please enter a valid email address.", 400);
         }
 
         if (formData.websiteUrl && !isValidUrl(formData.websiteUrl)) {
-          return new Response(
-            JSON.stringify({ error: "Please enter a valid website URL (e.g., https://yourbusiness.com)." }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Please enter a valid website URL (e.g., https://yourbusiness.com).",
+            400
           );
         }
 
@@ -134,19 +183,17 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
         for (const [field, label] of socialFields) {
           const val = formData[field as keyof LeadFormData];
           if (val && !isValidUrl(val)) {
-            return new Response(
-              JSON.stringify({ error: `Please enter a valid ${label} or leave it blank.` }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+            return errorResponse(
+              `Please enter a valid ${label} or leave it blank.`,
+              400
             );
           }
         }
 
         if (!body.consent) {
-          return new Response(
-            JSON.stringify({
-              error: "Please confirm your consent for us to analyze your publicly accessible business information.",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Please confirm your consent for us to analyze your publicly accessible business information.",
+            400
           );
         }
 
@@ -161,9 +208,9 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
           }
         } catch (err: any) {
           console.error("Lead creation error:", err.message);
-          return new Response(
-            JSON.stringify({ error: "We had trouble saving your information. Please try again." }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "We had trouble saving your information. Please try again.",
+            500
           );
         }
 
@@ -197,20 +244,16 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
             },
           });
 
-          return new Response(
-            JSON.stringify({
-              id: lead.id,
-              success: true,
-              url: session.url,
-              sessionId: session.id,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
+          if (!session.url) {
+            return errorResponse("Failed to create checkout session. Please try again.", 500);
+          }
+
+          return successResponse(session.url, lead.id, session.id);
         } catch (err: any) {
           console.error("Stripe checkout session creation failed:", err.message);
-          return new Response(
-            JSON.stringify({ error: "Failed to create checkout session. Please try again." }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Failed to create checkout session. Please try again.",
+            500
           );
         }
       },
