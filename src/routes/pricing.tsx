@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, LockOpen } from "@phosphor-icons/react";
+import { Check, LockOpen, Spinner } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { pricingPage } from "~/data/pages";
@@ -19,6 +20,31 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function Pricing() {
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  async function handleCheckout(slug: string, tierName: string) {
+    setCheckingOut(tierName);
+    setCheckoutError(null);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to create checkout session. Please try again.");
+      }
+      const { url } = await res.json();
+      if (!url) throw new Error("No checkout URL returned. Please try again.");
+      window.location.href = url;
+    } catch (err: any) {
+      setCheckoutError(err.message || "Something went wrong. Please try again.");
+      setCheckingOut(null);
+    }
+  }
+
   return (
     <section className="py-24 bg-bg-root min-h-dvh">
       <Container>
@@ -26,6 +52,13 @@ function Pricing() {
           headline={pricingPage.headline}
           description={pricingPage.subheadline}
         />
+
+        {/* Checkout error banner */}
+        {checkoutError && (
+          <div className="flex items-start gap-2 rounded-xl bg-red-500/10 border border-red-500/20 p-3 mb-6 max-w-5xl mx-auto">
+            <p className="text-sm text-red-400">{checkoutError}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {pricingPage.tiers.map((tier) => {
@@ -111,16 +144,24 @@ function Pricing() {
                       Coming Soon
                     </button>
                   ) : (
-                    <a
-                      href={tier.paymentLink}
+                    <button
+                      onClick={() => tier.serviceSlug && handleCheckout(tier.serviceSlug, tier.name)}
+                      disabled={checkingOut === tier.name}
                       className={`w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-all duration-200 ${
                         isFeatured
                           ? "bg-brand-primary text-white hover:bg-brand-primary-glow hover:shadow-[0_0_20px_rgba(0,143,255,0.3)]"
                           : "bg-bg-surface-high text-text-primary border border-border-subtle hover:border-brand-primary hover:text-brand-primary"
-                      }`}
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      Get Started
-                    </a>
+                      {checkingOut === tier.name ? (
+                        <>
+                          <Spinner size={18} weight="bold" className="animate-spin" />
+                          Redirecting...
+                        </>
+                      ) : (
+                        tier.cta || "Get Started"
+                      )}
+                    </button>
                   )}
                 </div>
               </div>

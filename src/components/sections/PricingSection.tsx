@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, LockOpen, Star } from "@phosphor-icons/react";
+import { Check, LockOpen, Star, Spinner } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { SectionHeading } from "~/components/SectionHeading";
 import { Button } from "~/components/Button";
@@ -8,6 +8,30 @@ import { pricing } from "~/data/content";
 export function PricingSection() {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  async function handleCheckout(slug: string, tierName: string) {
+    setCheckingOut(tierName);
+    setCheckoutError(null);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to create checkout session. Please try again.");
+      }
+      const { url } = await res.json();
+      if (!url) throw new Error("No checkout URL returned. Please try again.");
+      window.location.href = url;
+    } catch (err: any) {
+      setCheckoutError(err.message || "Something went wrong. Please try again.");
+      setCheckingOut(null);
+    }
+  }
 
   useEffect(() => {
     const el = ref.current;
@@ -35,6 +59,13 @@ export function PricingSection() {
           headline={pricing.headline}
           description={pricing.subheadline}
         />
+
+        {/* Checkout error banner */}
+        {checkoutError && (
+          <div className="flex items-start gap-2 rounded-xl bg-red-500/10 border border-red-500/20 p-3 mb-6 max-w-5xl mx-auto">
+            <p className="text-sm text-red-400">{checkoutError}</p>
+          </div>
+        )}
 
         {/* Pricing cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-stretch">
@@ -118,19 +149,35 @@ export function PricingSection() {
                       Coming Soon
                     </button>
                   ) : isFeatured ? (
-                    <a
-                      href={(tier as any).paymentLink || "#"}
-                      className="cta-featured-hover inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow w-full"
+                    <button
+                      onClick={() => (tier as any).serviceSlug && handleCheckout((tier as any).serviceSlug, tier.name)}
+                      disabled={checkingOut === tier.name}
+                      className="cta-featured-hover inline-flex items-center justify-center gap-2 font-semibold bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base cta-glow w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {tier.cta} →
-                    </a>
+                      {checkingOut === tier.name ? (
+                        <>
+                          <Spinner size={18} weight="bold" className="animate-spin" />
+                          Redirecting...
+                        </>
+                      ) : (
+                        <>{tier.cta} →</>
+                      )}
+                    </button>
                   ) : (
-                    <a
-                      href={(tier as any).paymentLink || "#"}
-                      className="inline-flex items-center justify-center gap-2 font-semibold rounded-full px-8 py-3.5 text-base w-full border border-border-subtle text-text-secondary bg-bg-surface hover:border-brand-primary hover:text-brand-primary transition-colors"
+                    <button
+                      onClick={() => (tier as any).serviceSlug && handleCheckout((tier as any).serviceSlug, tier.name)}
+                      disabled={checkingOut === tier.name}
+                      className="inline-flex items-center justify-center gap-2 font-semibold rounded-full px-8 py-3.5 text-base w-full border border-border-subtle text-text-secondary bg-bg-surface hover:border-brand-primary hover:text-brand-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {tier.cta}
-                    </a>
+                      {checkingOut === tier.name ? (
+                        <>
+                          <Spinner size={18} weight="bold" className="animate-spin" />
+                          Redirecting...
+                        </>
+                      ) : (
+                        tier.cta
+                      )}
+                    </button>
                   )}
                 </div>
               </div>

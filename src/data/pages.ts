@@ -148,7 +148,7 @@ export const pricingPage = {
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
       featured: false,
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+      serviceSlug: "monthly-content-calendar",
     },
     {
       name: "Growth",
@@ -164,7 +164,7 @@ export const pricingPage = {
       ],
       bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
       featured: true,
-      paymentLink: "",
+      serviceSlug: "multi-platform-management",
     },
     {
       name: "Scale",
@@ -180,7 +180,7 @@ export const pricingPage = {
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
       featured: false,
-      paymentLink: "",
+      serviceSlug: "vip-daily",
     },
   ],
   noLockPledge:

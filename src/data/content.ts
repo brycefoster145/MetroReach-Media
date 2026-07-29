@@ -215,7 +215,7 @@ export const pricing = {
       ],
       bestFor: "Businesses ready to establish their social presence and start generating leads.",
       cta: "Get Started",
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+      serviceSlug: "monthly-content-calendar",
     },
     {
       name: "Growth",
@@ -223,6 +223,7 @@ export const pricing = {
       period: "/month",
       featured: true,
       comingSoon: true,
+      serviceSlug: "multi-platform-management",
       features: [
         "Up to 4 platforms — organic on all",
         "20 original posts per month",
@@ -237,6 +238,7 @@ export const pricing = {
       period: "/month",
       featured: false,
       comingSoon: true,
+      serviceSlug: "vip-daily",
       features: [
         "Up to 7 platforms — organic on all",
         "30+ original posts per month",
