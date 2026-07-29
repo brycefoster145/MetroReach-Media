@@ -48,7 +48,7 @@ function getStripe(): Stripe {
 }
 
 // Premium Growth Audit product
-const PREMIUM_AUDIT_PRICE_ID = "price_1TwKxKDGk9TbScamUD3JHGFO";
+const PREMIUM_AUDIT_PRICE_ID = "price_1TyNwTDGk9TbScamiIZxgTXY";
 const SERVICE_SLUG = "premium-growth-audit";
 
 // ---------------------------------------------------------------------------
