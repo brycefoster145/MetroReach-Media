@@ -302,7 +302,7 @@ export async function migrate(): Promise<void> {
       media_urls JSONB DEFAULT '[]',
       hashtags TEXT DEFAULT '#MetroReachMedia',
       due_at TIMESTAMPTZ NOT NULL,
-      status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed', 'missed')),
+      status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'pending_review', 'pending', 'publishing', 'posted', 'failed', 'missed', 'skipped_no_media')),
       meta_post_id TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       posted_at TIMESTAMPTZ
@@ -320,7 +320,13 @@ export async function migrate(): Promise<void> {
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ`;
   console.log("[migration] ✓ scheduled_posts.locked_at column ready");
 
-  // ── C3: Expand status CHECK to include 'publishing' (atomic claim state) ──
+  // ── Content pipeline: rejection tracking for the review→replace loop ──
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS rejection_count INTEGER DEFAULT 0`;
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS replaced_post_id TEXT`;
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS content_prompt TEXT`;
+  console.log("[migration] ✓ scheduled_posts rejection_count, replaced_post_id, content_prompt columns ready");
+
+  // ── C3: Expand status CHECK to include 'pending_review', 'draft', 'publishing' ──
   try {
     await sql`
       ALTER TABLE scheduled_posts
@@ -329,9 +335,9 @@ export async function migrate(): Promise<void> {
     await sql`
       ALTER TABLE scheduled_posts
       ADD CONSTRAINT scheduled_posts_status_check
-      CHECK (status IN ('pending', 'publishing', 'posted', 'failed', 'skipped_no_media', 'missed'))
+      CHECK (status IN ('draft', 'pending_review', 'pending', 'publishing', 'posted', 'failed', 'skipped_no_media', 'missed'))
     `.catch(() => {});
-    console.log("[migration] ✓ status CHECK constraint updated (includes publishing)");
+    console.log("[migration] ✓ status CHECK constraint updated (includes draft, pending_review, publishing)");
   } catch (err: any) {
     console.log(`[migration] ℹ status CHECK migration skipped: ${err.message}`);
   }
