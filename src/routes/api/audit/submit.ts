@@ -57,24 +57,72 @@ export const Route = createFileRoute("/api/audit/submit")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ── Determine submission type ──
+        const contentType = request.headers.get("content-type") || "";
+        const isNativeForm = contentType.includes("application/x-www-form-urlencoded");
+
+        // ── Response helpers: JSON for JS fetch, redirect for native form ──
+        function errorResponse(message: string, status: number): Response {
+          if (isNativeForm) {
+            const errorParam = encodeURIComponent(message);
+            return new Response(null, {
+              status: 302,
+              headers: { Location: `/free-audit?error=${errorParam}` },
+            });
+          }
+          return new Response(JSON.stringify({ error: message }), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        function successResponse(data: {
+          id: string;
+          redirect: string;
+          result?: unknown;
+          existing?: boolean;
+        }): Response {
+          if (isNativeForm) {
+            return new Response(null, {
+              status: 302,
+              headers: { Location: data.redirect },
+            });
+          }
+          return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
         // ── Rate limiting ──
         const ip = getClientIp(request);
         const rl = rateLimit(`audit:${ip}`, 5, 60_000); // max 5 per minute
         if (!rl.allowed) {
-          return new Response(
-            JSON.stringify({ error: "Too many requests. Please wait a moment before trying again." }),
-            { status: 429, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Too many requests. Please wait a moment before trying again.",
+            429
           );
         }
 
-        // Parse body
+        // ── Parse body (JSON for JS fetch, url-encoded for native form) ──
         let body: Record<string, unknown>;
         try {
-          body = await request.json();
+          if (isNativeForm) {
+            const text = await request.text();
+            const params = new URLSearchParams(text);
+            body = {};
+            params.forEach((value, key) => {
+              body[key] = value;
+            });
+            // Checkbox: only present in form data when checked
+            body.consent = params.has("consent");
+          } else {
+            body = await request.json();
+          }
         } catch {
-          return new Response(
-            JSON.stringify({ error: "We couldn't process your submission. Please try again." }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "We couldn't process your submission. Please try again.",
+            400
           );
         }
 
@@ -105,27 +153,22 @@ export const Route = createFileRoute("/api/audit/submit")({
         if (!formData.email) missing.push("Email");
 
         if (missing.length > 0) {
-          return new Response(
-            JSON.stringify({ error: `Please complete these required fields: ${missing.join(", ")}.` }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            `Please complete these required fields: ${missing.join(", ")}.`,
+            400
           );
         }
 
         // Validate formats
         if (!isValidEmail(formData.email)) {
-          return new Response(
-            JSON.stringify({ error: "Please enter a valid email address." }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          );
+          return errorResponse("Please enter a valid email address.", 400);
         }
 
         // Validate website URL format
         if (formData.websiteUrl && !isValidUrl(formData.websiteUrl)) {
-          return new Response(
-            JSON.stringify({
-              error: "Please enter a valid website URL (e.g., https://yourbusiness.com).",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Please enter a valid website URL (e.g., https://yourbusiness.com).",
+            400
           );
         }
 
@@ -140,20 +183,18 @@ export const Route = createFileRoute("/api/audit/submit")({
         for (const [field, label] of socialFields) {
           const val = formData[field as keyof LeadFormData];
           if (val && !isValidUrl(val)) {
-            return new Response(
-              JSON.stringify({ error: `Please enter a valid ${label} or leave it blank.` }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+            return errorResponse(
+              `Please enter a valid ${label} or leave it blank.`,
+              400
             );
           }
         }
 
         // Check consent
         if (!body.consent) {
-          return new Response(
-            JSON.stringify({
-              error: "Please confirm your consent for us to analyze your publicly accessible business information.",
-            }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "Please confirm your consent for us to analyze your publicly accessible business information.",
+            400
           );
         }
 
@@ -164,25 +205,19 @@ export const Route = createFileRoute("/api/audit/submit")({
           const existing = await findLeadByEmail(formData.email);
           if (existing) {
             // Return the existing lead's report — don't create duplicates
-            return new Response(
-              JSON.stringify({
-                id: existing.id,
-                success: true,
-                redirect: `/free-audit/report?id=${existing.id}&email=${encodeURIComponent(formData.email)}`,
-                existing: true,
-              }),
-              { status: 200, headers: { "Content-Type": "application/json" } }
-            );
+            return successResponse({
+              id: existing.id,
+              redirect: `/free-audit/report?id=${existing.id}&email=${encodeURIComponent(formData.email)}`,
+              existing: true,
+            });
           }
 
           lead = await createLead(formData);
         } catch (err: any) {
           console.error("Lead creation error:", err.message);
-          return new Response(
-            JSON.stringify({
-              error: "We had trouble saving your information. Please try again.",
-            }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "We had trouble saving your information. Please try again.",
+            500
           );
         }
 
@@ -299,15 +334,11 @@ export const Route = createFileRoute("/api/audit/submit")({
             // Don't break the flow — online report is the fallback
           }
 
-          return new Response(
-            JSON.stringify({
-              id: lead.id,
-              success: true,
-              redirect: `/free-audit/report?id=${lead.id}&email=${encodeURIComponent(formData.email)}`,
-              result,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
+          return successResponse({
+            id: lead.id,
+            redirect: `/free-audit/report?id=${lead.id}&email=${encodeURIComponent(formData.email)}`,
+            result,
+          });
         } catch (err: any) {
           console.error("Audit analysis error:", err.message);
 
@@ -318,13 +349,9 @@ export const Route = createFileRoute("/api/audit/submit")({
             // Best effort
           }
 
-          return new Response(
-            JSON.stringify({
-              error:
-                "We encountered an issue while analyzing your profiles. Your information has been saved and our team will review it. Please try again or contact us directly for assistance.",
-              leadId: lead.id,
-            }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+          return errorResponse(
+            "We encountered an issue while analyzing your profiles. Your information has been saved and our team will review it. Please try again or contact us directly for assistance.",
+            500
           );
         }
       },
