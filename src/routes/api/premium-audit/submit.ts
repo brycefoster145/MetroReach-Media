@@ -2,16 +2,20 @@
  * Premium Growth Audit — API Endpoint
  * POST /api/premium-audit/submit
  *
- * Receives form data, saves the lead, returns Stripe payment URL.
- * Analysis happens on the report page after payment confirmation.
+ * Receives form data, saves the lead, creates a Stripe Checkout Session,
+ * and returns the session URL for client-side redirect.
+ *
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import Stripe from "stripe";
 import {
   createLead,
   findLeadByEmail,
   type LeadFormData,
 } from "~/lib/lead-store";
+import { getSiteUrl } from "~/lib/site-url";
 import { rateLimit, getClientIp } from "~/lib/rate-limit";
 
 // ---------------------------------------------------------------------------
@@ -32,12 +36,17 @@ function isValidEmail(str: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
 }
 
-// Stripe Payment Link for Premium Growth Audit ($495)
-// Product: price_1TwKxKDGk9TbScamUD3JHGFO
-// Owner: create this Payment Link at https://dashboard.stripe.com/payment-links
-const STRIPE_PREMIUM_AUDIT_LINK =
-  process.env.STRIPE_PREMIUM_AUDIT_LINK ||
-  "https://buy.stripe.com/bJe7sLcTy6Ds0OQ2tv1ck1t";
+function getStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
+}
+
+// Premium Growth Audit product
+const PREMIUM_AUDIT_PRICE_ID = "price_1TwKxKDGk9TbScamUD3JHGFO";
+const SERVICE_SLUG = "premium-growth-audit";
 
 // ---------------------------------------------------------------------------
 // Route Handler
@@ -141,25 +150,15 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
           );
         }
 
-        // Save the lead
+        // Save or retrieve the lead
         let lead;
         try {
           const existing = await findLeadByEmail(formData.email);
           if (existing) {
-            // Return existing lead
-            const paymentUrl = `${STRIPE_PREMIUM_AUDIT_LINK}?prefilled_email=${encodeURIComponent(formData.email)}&client_reference_id=${existing.id}`;
-            return new Response(
-              JSON.stringify({
-                id: existing.id,
-                success: true,
-                paymentUrl,
-                existing: true,
-              }),
-              { status: 200, headers: { "Content-Type": "application/json" } }
-            );
+            lead = existing;
+          } else {
+            lead = await createLead(formData);
           }
-
-          lead = await createLead(formData);
         } catch (err: any) {
           console.error("Lead creation error:", err.message);
           return new Response(
@@ -168,17 +167,52 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
           );
         }
 
-        // Build Stripe payment URL
-        const paymentUrl = `${STRIPE_PREMIUM_AUDIT_LINK}?prefilled_email=${encodeURIComponent(formData.email)}&client_reference_id=${lead.id}`;
+        // Create Stripe Checkout Session
+        const siteUrl = getSiteUrl();
+        try {
+          const stripe = getStripe();
 
-        return new Response(
-          JSON.stringify({
-            id: lead.id,
-            success: true,
-            paymentUrl,
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+          const session = await stripe.checkout.sessions.create({
+            line_items: [
+              {
+                price: PREMIUM_AUDIT_PRICE_ID,
+                quantity: 1,
+              },
+            ],
+            mode: "payment",
+            client_reference_id: lead.id,
+            success_url: `${siteUrl}/confirmation?service=${encodeURIComponent(SERVICE_SLUG)}&leadId=${lead.id}`,
+            cancel_url: `${siteUrl}/premium-audit`,
+            metadata: {
+              service_slug: SERVICE_SLUG,
+              lead_id: lead.id,
+            },
+            billing_address_collection: "auto",
+            allow_promotion_codes: true,
+            payment_intent_data: {
+              metadata: {
+                service_slug: SERVICE_SLUG,
+                lead_id: lead.id,
+              },
+            },
+          });
+
+          return new Response(
+            JSON.stringify({
+              id: lead.id,
+              success: true,
+              url: session.url,
+              sessionId: session.id,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        } catch (err: any) {
+          console.error("Stripe checkout session creation failed:", err.message);
+          return new Response(
+            JSON.stringify({ error: "Failed to create checkout session. Please try again." }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+          );
+        }
       },
     },
   },

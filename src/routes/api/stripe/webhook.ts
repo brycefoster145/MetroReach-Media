@@ -17,12 +17,14 @@ import {
   sendInternalNewClientAlert,
   sendPurchaseConfirmation,
 } from "~/lib/email-sequences";
+import { sendEmail } from "~/lib/email";
 import { createOrder } from "~/lib/order-router";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
 import { generatePortalToken } from "~/lib/portal-auth";
 import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
+import { markPurchased } from "~/lib/lead-store";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -188,6 +190,40 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request
       );
     })
     .catch((e) => console.error("Conversion event write failed:", e.message));
+
+  // ── 7. Premium Growth Audit: mark lead as paid + send report email ──
+  if (serviceSlug === "premium-growth-audit") {
+    const leadId = session.metadata?.lead_id;
+    if (leadId) {
+      try {
+        await markPurchased(leadId);
+        console.log(`Premium audit lead marked paid: ${leadId}`);
+      } catch (e: any) {
+        console.error("Failed to mark premium audit lead as paid:", e.message);
+      }
+
+      // Send report-access email with direct link
+      const reportUrl = `https://metroreachagency.com/premium-audit/report?id=${leadId}&email=${encodeURIComponent(customerEmail)}`;
+      sendEmail({
+        to: customerEmail,
+        from: "reports@metroreachagency.com",
+        subject: "Your Premium Growth Audit Report Is Ready",
+        body: [
+          `Hi ${customerName},`,
+          "",
+          "Your Premium Growth Audit report is ready to view.",
+          "",
+          `View your report: ${reportUrl}`,
+          "",
+          "This comprehensive analysis includes 12-category scoring, a priority matrix, and a phased growth roadmap — all evidence-based and built by our team of marketing specialists.",
+          "",
+          "If you have any questions about your report or the service recommendations, just reply to this email — our team is here to help.",
+          "",
+          "— The MetroReach Media Team",
+        ].join("\n"),
+      }).catch((e) => console.error("Premium audit report email failed:", e.message));
+    }
+  }
 
   console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
 }

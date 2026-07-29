@@ -72,6 +72,7 @@ const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   // VIP
   "vip-daily": "Aggressive Daily Organic — VIP",
   "premium-audit": "Premium Growth Audit",
+  "premium-growth-audit": "Premium Growth Audit",
 };
 
 function getServiceDisplayName(slug: string): string {

@@ -176,8 +176,8 @@ function PremiumAudit() {
         throw new Error(data.error || "Something went wrong. Please try again.");
       }
 
-      // Redirect to Stripe payment
-      window.location.href = data.paymentUrl;
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
     } catch (err: any) {
       setStatus("error");
       setErrorMessage(err.message || "An unexpected error occurred. Please try again.");
