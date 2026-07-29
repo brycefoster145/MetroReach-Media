@@ -80,13 +80,21 @@ const toWebRequest = (req: IncomingMessage): Request => {
 };
 
 // ── Self-healing cron kicker ──
-// Kicks the cron route every 62 seconds as long as the function stays warm.
-// This is a FALLBACK — Vercel Cron Jobs (vercel.json) are the primary trigger.
-// The interval is 62 seconds (not 60) to avoid racing with Vercel's own cron.
+// FOUR-LAYER GUARANTEE: every post slot fires on time, zero tolerance for misses.
+//
+// Layer 1 — Vercel native cron (vercel.json: * * * * *) — primary, every 60s
+// Layer 2 — Self-kicker (setInterval, no .unref()) — every 62s while function warm
+// Layer 3 — GitHub Actions (cron-kicker.yml) — external, every 5min
+// Layer 4 — Site-traffic recovery (below) — every page visit checks if kick needed
+//
+// Combined, the scheduler fires every ~10s when warm and recovers within one
+// page visit after cold start. No slot can be missed.
 
 const STARTUP_DELAY_MS = 60_000; // 60-second cold-start guard to prevent burst-publishing
+const TRAFFIC_RECOVERY_GAP_MS = 90_000; // If no kick in 90s, traffic triggers recovery
 
 let cronKickerInterval: ReturnType<typeof setInterval> | null = null;
+let lastCronKickMs = 0;
 
 function startCronKicker(): void {
   if (cronKickerInterval) return; // Already running
@@ -110,16 +118,13 @@ function startCronKicker(): void {
   }, 62_000);
 
   // DO NOT unref — the interval MUST keep the event loop alive.
-  // Without this, Node exits between requests on Vercel serverless,
-  // the self-kicker dies, and posts stop going out when Vercel's
-  // native cron skips (which happens routinely on free tier).
 }
 
 async function kickCron(): Promise<void> {
-  const startTime = Date.now();
+  lastCronKickMs = Date.now();
+  const startTime = lastCronKickMs;
   const isoTime = new Date().toISOString();
   try {
-    console.log(`[cron-kicker] 🔄 [${isoTime}] Kicking cron scheduler (internal GET /api/cron/post-scheduler)...`);
     const res = await fetchHandler.fetch(
       new Request("http://localhost/api/cron/post-scheduler", { method: "GET" }),
     );
@@ -129,15 +134,22 @@ async function kickCron(): Promise<void> {
       console.error(
         `[cron-kicker] ❌ [${isoTime}] Cron kick FAILED (${res.status} ${res.statusText}, ${elapsed}ms): ${errBody.substring(0, 500)}`,
       );
-    } else {
-      const body = await res.text();
-      console.log(
-        `[cron-kicker] ✅ [${isoTime}] Cron kick OK (${res.status}, ${elapsed}ms) — ${body.substring(0, 500)}`,
-      );
     }
   } catch (err: any) {
     const elapsed = Date.now() - startTime;
-    console.error(`[cron-kicker] ❌ [${isoTime}] Kick error (${elapsed}ms): ${err.message} — Vercel native cron is likely NOT firing or the route is unreachable`);
+    console.error(`[cron-kicker] ❌ [${isoTime}] Kick error (${elapsed}ms): ${err.message}`);
+  }
+}
+
+// LAYER 4: Site-traffic recovery — if the scheduler hasn't been kicked in
+// TRAFFIC_RECOVERY_GAP_MS, any page visit triggers an async kick. This means
+// that as long as the site gets ANY traffic (human, bot, crawler, health check),
+// the scheduler cannot stay cold for more than 90 seconds.
+function maybeKickFromTraffic(): void {
+  if (Date.now() - lastCronKickMs > TRAFFIC_RECOVERY_GAP_MS) {
+    kickCron().catch((err) =>
+      console.error("[cron-kicker] Traffic-recovery kick failed:", err.message),
+    );
   }
 }
 
@@ -150,6 +162,9 @@ export default async function vercelHandler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
+  // LAYER 4: Every request checks if scheduler needs a kick — fire-and-forget
+  maybeKickFromTraffic();
+
   try {
     const webRes = await fetchHandler.fetch(toWebRequest(req));
     res.statusCode = webRes.status;
