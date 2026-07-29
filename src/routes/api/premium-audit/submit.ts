@@ -250,7 +250,20 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
 
           return successResponse(session.url, lead.id, session.id);
         } catch (err: any) {
-          console.error("Stripe checkout session creation failed:", err.message);
+          // Log the FULL Stripe error details for diagnosis
+          console.error("Stripe checkout session creation failed:", {
+            message: err.message,
+            type: err.type,
+            code: err.code,
+            statusCode: err.statusCode,
+            rawMessage: err.raw?.message,
+            rawType: err.raw?.type,
+            rawCode: err.raw?.code,
+            param: err.raw?.param,
+            declineCode: err.raw?.decline_code,
+            priceId: PREMIUM_AUDIT_PRICE_ID,
+            leadId: lead.id,
+          });
           return errorResponse(
             "Failed to create checkout session. Please try again.",
             500

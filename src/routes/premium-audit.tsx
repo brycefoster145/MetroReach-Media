@@ -121,8 +121,21 @@ function PremiumAudit() {
               </ul>
             </div>
 
-            {/* FORM — Pure HTML, no JavaScript required */}
+            {/* Error banner — hidden by default, shown via JS */}
+            <div
+              id="form-error"
+              className="hidden bg-error/10 border border-error/30 text-error rounded-xl p-4 mb-8"
+              role="alert"
+            >
+              <p className="text-sm font-medium flex items-start gap-2">
+                <span className="text-base flex-shrink-0">⚠</span>
+                <span id="form-error-msg"></span>
+              </p>
+            </div>
+
+            {/* FORM — hybrid: pure HTML fallback, JS-enhanced for error handling */}
             <form
+              id="premium-audit-form"
               action="/api/premium-audit/submit"
               method="POST"
               encType="application/x-www-form-urlencoded"
@@ -376,10 +389,17 @@ function PremiumAudit() {
               {/* ── Submit ── */}
               <div className="pt-4">
                 <button
+                  id="submit-btn"
                   type="submit"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-10 py-4 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02] cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-10 py-4 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
                 >
-                  Get My Premium Audit — $495
+                  <span id="submit-btn-text">Get My Premium Audit — $495</span>
+                  <span id="submit-btn-spinner" className="hidden" aria-hidden="true">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </span>
                 </button>
                 <p className="text-xs text-text-muted mt-4">
                   You'll be redirected to Stripe for secure payment. After purchase,
@@ -443,6 +463,94 @@ function PremiumAudit() {
       </section>
 
       <Outlet />
+
+      {/* Inline JS — hybrid form enhancement for error display + loading state */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+(function() {
+  var form = document.getElementById('premium-audit-form');
+  var errorDiv = document.getElementById('form-error');
+  var errorMsg = document.getElementById('form-error-msg');
+  var submitBtn = document.getElementById('submit-btn');
+  var btnText = document.getElementById('submit-btn-text');
+  var btnSpinner = document.getElementById('submit-btn-spinner');
+
+  if (!form || !errorDiv || !errorMsg || !submitBtn || !btnText || !btnSpinner) return;
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorDiv.classList.remove('hidden');
+    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function hideError() {
+    errorDiv.classList.add('hidden');
+  }
+
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    if (loading) {
+      btnText.textContent = 'Processing...';
+      btnSpinner.classList.remove('hidden');
+    } else {
+      btnText.textContent = 'Get My Premium Audit — $495';
+      btnSpinner.classList.add('hidden');
+    }
+  }
+
+  // Check URL for error param on page load
+  var urlParams = new URLSearchParams(window.location.search);
+  var urlError = urlParams.get('error');
+  if (urlError) {
+    showError(decodeURIComponent(urlError));
+    // Clean URL without reloading
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+
+  // Intercept form submit
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    hideError();
+    setLoading(true);
+
+    var formData = new FormData(form);
+    var body = new URLSearchParams(formData).toString();
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body,
+      redirect: 'follow',
+    })
+      .then(function(resp) {
+        var finalUrl = resp.url;
+        if (finalUrl.indexOf('checkout.stripe.com') !== -1) {
+          // Success — redirect to Stripe Checkout
+          window.location.href = finalUrl;
+        } else if (finalUrl.indexOf('?error=') !== -1) {
+          // API returned an error — extract and show inline (form data preserved!)
+          var parts = finalUrl.split('?');
+          var errParams = new URLSearchParams(parts[1] || '');
+          var err = errParams.get('error');
+          showError(err ? decodeURIComponent(err) : 'An unexpected error occurred. Please try again.');
+          setLoading(false);
+        } else {
+          // Unexpected response — navigate to it
+          window.location.href = finalUrl;
+        }
+      })
+      .catch(function() {
+        showError('A network error occurred. Please check your connection and try again.');
+        setLoading(false);
+      });
+  });
+})();
+          `.trim(),
+        }}
+      />
     </main>
   );
 }
