@@ -70,6 +70,20 @@ export const Route = createFileRoute("/api/client/onboarding")({
             .catch((e) =>
               console.error("Onboarding conversion event write failed:", e.message),
             );
+
+          // ── Trigger automatic content generation ──
+          // Fire-and-forget: don't block the onboarding response.
+          // The content pipeline will generate a 30-day calendar, copy, and images.
+          const siteUrl = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : process.env.SITE_URL || "http://localhost:3000";
+          fetch(`${siteUrl}/api/content/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ client_id: client.sub }),
+          }).catch((e) =>
+            console.error("[onboarding] Content generation trigger failed:", e.message),
+          );
         }
 
         // Notify team
