@@ -288,7 +288,20 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_client_platform_tokens_expires ON client_platform_tokens(token_status, expires_at)`;
   await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS token_status TEXT DEFAULT 'active'`;
   await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS refresh_token TEXT`;
-  console.log("[migration] ✓ client_platform_tokens table ready (incl. refresh_token)");
+  // Add unique constraint (idempotent — wrapped in DO block to skip if exists)
+  await sql`
+    DO $
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uq_client_platform_page'
+          AND conrelid = 'client_platform_tokens'::regclass
+      ) THEN
+        ALTER TABLE client_platform_tokens ADD CONSTRAINT uq_client_platform_page UNIQUE (client_id, platform, page_id);
+      END IF;
+    END $;
+  `;
+  console.log("[migration] ✓ client_platform_tokens table ready (incl. refresh_token + unique constraint)");
 
   // ── cron_runs table (deduplicated from above — skipped if exists) ──
 
