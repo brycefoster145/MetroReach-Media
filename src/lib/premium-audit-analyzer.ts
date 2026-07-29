@@ -331,7 +331,7 @@ interface PackageDefinition {
   price: string;
   billingFrequency: string;
   postPurchase: string;
-  stripeLink: string | null;
+  serviceSlug: string | null;
 }
 
 const packages: Record<string, PackageDefinition> = {
@@ -354,7 +354,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$1,500",
     billingFrequency: "monthly",
     postPurchase: "Our team onboards you within 48 hours — brand voice interview, platform access setup, and content strategy session. First posts go live within 5 business days.",
-    stripeLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+    serviceSlug: "social-media-audit",
   },
   communityManagement: {
     slug: "community-management",
@@ -374,7 +374,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$1,200",
     billingFrequency: "monthly",
     postPurchase: "Our community team connects to your profiles within 24 hours. Response templates and brand voice guidelines confirmed on day one.",
-    stripeLink: null,
+    serviceSlug: null,
   },
   brandingCreative: {
     slug: "branding-creative",
@@ -395,7 +395,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$500",
     billingFrequency: "one-time",
     postPurchase: "Our brand team begins with a visual audit of your existing profiles. You receive optimized profiles first, followed by the full brand system.",
-    stripeLink: null,
+    serviceSlug: null,
   },
   websiteFunnel: {
     slug: "website-funnel",
@@ -415,7 +415,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$350",
     billingFrequency: "one-time",
     postPurchase: "Your website audit is delivered as a prioritized report.",
-    stripeLink: null,
+    serviceSlug: null,
   },
   localSeoReputation: {
     slug: "local-seo-reputation",
@@ -435,7 +435,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$750",
     billingFrequency: "monthly",
     postPurchase: "Our local SEO specialist audits your Google Business Profile and local search presence immediately.",
-    stripeLink: null,
+    serviceSlug: null,
   },
   growthPackage: {
     slug: "growth-package",
@@ -457,7 +457,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$3,000",
     billingFrequency: "monthly",
     postPurchase: "Dedicated team assigned within 24 hours. Platform audits, brand voice development, and ad account setup begin immediately.",
-    stripeLink: "https://buy.stripe.com/7sY6oH3iYd1Q69ad891ck0m",
+    serviceSlug: "monthly-content-calendar",
   },
   scalePackage: {
     slug: "scale-package",
@@ -477,7 +477,7 @@ const packages: Record<string, PackageDefinition> = {
     price: "$5,500",
     billingFrequency: "monthly",
     postPurchase: "Senior strategist assigned as your dedicated lead. Full team onboarding within 48 hours.",
-    stripeLink: "https://buy.stripe.com/fZufZh2eU0f41SUfgh1ck0n",
+    serviceSlug: "single-platform-management",
   },
 };
 
@@ -511,7 +511,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
@@ -527,7 +527,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
@@ -543,7 +543,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
@@ -559,7 +559,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
@@ -575,7 +575,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
@@ -592,7 +592,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
@@ -608,7 +608,7 @@ function generateServiceRecommendations(
       price: pkg.price,
       billingFrequency: pkg.billingFrequency,
       postPurchase: pkg.postPurchase,
-      stripeLink: pkg.stripeLink,
+      serviceSlug: pkg.serviceSlug,
     });
   }
 
