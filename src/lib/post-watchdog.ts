@@ -8,8 +8,8 @@
  * the claim UPDATE didn't match, or some other edge case swallowed the post.
  * The watchdog fires a Telegram alert so the team can investigate immediately.
  *
- * Only active platforms are checked: facebook, instagram, x.
- * Posts for LinkedIn/TikTok/Google/YouTube are excluded — those platforms
+ * Only active platforms are checked: facebook, instagram, x, linkedin.
+ * Posts for TikTok/Google/YouTube are excluded — those platforms
  * are awaiting OAuth credentials and are handled separately.
  *
  * Missed posts are marked `failed` with a watchdog note so we never
@@ -20,7 +20,7 @@ import { sql } from "~/lib/db";
 import { sendTelegramMessage } from "~/lib/telegram";
 
 /** Platforms that are live and actively publishing. */
-const ACTIVE_PLATFORMS = ["facebook", "instagram", "x"];
+const ACTIVE_PLATFORMS = ["facebook", "instagram", "x", "linkedin"];
 
 export interface MissedPost {
   id: string;
