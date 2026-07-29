@@ -18,6 +18,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { publishPost, NoMediaError } from "~/lib/meta-poster";
 import { publishToX } from "~/lib/x-poster";
+import { publishToLinkedIn } from "~/lib/linkedin-poster";
 import { checkMissedPosts } from "~/lib/post-watchdog";
 
 const MAX_RETRIES = 3;
@@ -48,7 +49,6 @@ class NotConnectedError extends Error {
 }
 
 const PLATFORM_AWAITING_CREDENTIALS = new Set([
-  "linkedin",
   "tiktok",
   "google",
   "youtube",
@@ -78,7 +78,8 @@ const PUBLISHERS: Record<string, (post: NormalizedPost) => Promise<{ post_id: st
     }),
   x: (post) =>
     publishToX(post.client_id || "metroreach", post.page_id || "", post.fullText),
-  linkedin: () => { throw new NotConnectedError("linkedin"); },
+  linkedin: (post) =>
+    publishToLinkedIn(post.client_id || "metroreach", post.fullText),
   tiktok: () => { throw new NotConnectedError("tiktok"); },
   google: () => { throw new NotConnectedError("google"); },
   youtube: () => { throw new NotConnectedError("youtube"); },
