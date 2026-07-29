@@ -2,15 +2,16 @@
  * Post Scheduler — GET|POST /api/cron/post-scheduler
  *
  * Cron fires every ~60s (Vercel cron + self-kicker in vercel-entry.ts).
- * Buffer-style simplicity: publishes whatever is due, in order, no fuss.
+ * Atomic claim-first: UPDATE claims posts before publishing, preventing
+ * double-posts from overlapping cron invocations.
  *
- * No time slots. No grace windows. No DB locks. No recovery sweeps.
- * Just: find pending posts whose due_at has passed, and publish them.
+ * No time slots. No grace windows. No recovery sweeps.
  *
- * Self-healing additions:
- *  - Retry: transient failures keep status='pending' up to MAX_RETRIES
- *  - Stale detection: alerts on posts 30+ min past due (dead tokens, API outages)
- *  - Platform dispatch table: clean PUBLISHERS object instead of if/else chain
+ * Self-healing:
+ *  - Atomic claim: UPDATE … AND status = 'pending' prevents double-claims
+ *  - Retry: transient failures release the claim (status → 'pending')
+ *  - Stale detection: alerts on posts 30+ min past due still pending/publishing
+ *  - Platform dispatch table: clean PUBLISHERS object
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -61,13 +62,20 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
     handlers: {
       GET: async () => {
-        // ── 1. Find pending posts whose due_at has passed ──
+        // ── 1. Atomic claim — UPDATE … AND status = 'pending' prevents double-claims ──
+        // Only one cron tick can claim each post: the second tick sees status != 'pending' and skips it.
         const rows = await sql`
-          SELECT * FROM scheduled_posts
-          WHERE status = 'pending'
-          AND due_at <= NOW()
-          ORDER BY due_at ASC
-          LIMIT 5
+          UPDATE scheduled_posts
+          SET status = 'publishing', locked_at = NOW()
+          WHERE id IN (
+            SELECT id FROM scheduled_posts
+            WHERE status = 'pending'
+            AND due_at <= NOW()
+            ORDER BY due_at ASC
+            LIMIT 5
+          )
+          AND status = 'pending'
+          RETURNING *
         `;
 
         // ── 2. Pre-process into normalized shape ──
@@ -95,7 +103,7 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
         let failed = 0;
         let retried = 0;
 
-        // ── 3. Publish each one ──
+        // ── 3. Publish each claimed post ──
         for (const post of posts) {
           const publisher = PUBLISHERS[post.platform];
 
@@ -167,10 +175,10 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
                 error: err.message || String(err),
               });
             } else if (newRetryCount < MAX_RETRIES) {
-              // Transient failure — keep pending for retry on next cron tick
+              // Transient failure — release claim (back to pending) for retry on next cron tick
               await sql`
                 UPDATE scheduled_posts
-                SET retry_count = ${newRetryCount}, error_message = ${err.message || String(err)}
+                SET status = 'pending', retry_count = ${newRetryCount}, error_message = ${err.message || String(err)}
                 WHERE id = ${post.id}
               `;
               retried++;
@@ -199,19 +207,22 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
         }
 
         // ── 4. Stale post detection ──
-        // Posts that are 30+ min past due and still pending signal deeper issues:
+        // Posts 30+ min past due that are still pending (unclaimed) or publishing (claimed but
+        // stuck — e.g. process crashed mid-publish) signal deeper issues:
         // expired page tokens, revoked permissions, API outages, etc.
         try {
           const staleRows = await sql`
-            SELECT id, platform, due_at FROM scheduled_posts
-            WHERE status = 'pending'
+            SELECT id, platform, status, due_at FROM scheduled_posts
+            WHERE status IN ('pending', 'publishing')
             AND due_at < NOW() - INTERVAL '30 minutes'
             ORDER BY due_at ASC
           `;
           if (staleRows.length > 0) {
-            const staleIds = staleRows.map((r: any) => `${r.id} (${r.platform}, due ${r.due_at})`);
+            const staleIds = staleRows.map((r: any) =>
+              `${r.id} (${r.platform}, ${r.status}, due ${r.due_at})`,
+            );
             console.error(
-              `[post-scheduler] ⚠️ STALE POSTS DETECTED: ${staleRows.length} post(s) 30+ min past due and still pending. ` +
+              `[post-scheduler] ⚠️ STALE POSTS DETECTED: ${staleRows.length} post(s) 30+ min past due and still pending/publishing. ` +
                 `IDs: [${staleIds.join(", ")}]`,
             );
           }
