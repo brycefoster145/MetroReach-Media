@@ -18,6 +18,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { publishPost, NoMediaError } from "~/lib/meta-poster";
 import { publishToX } from "~/lib/x-poster";
+import { checkMissedPosts } from "~/lib/post-watchdog";
 
 const MAX_RETRIES = 3;
 
@@ -271,7 +272,23 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
           console.error("[post-scheduler] Stale detection query failed:", staleErr.message);
         }
 
-        // ── 5. Log run to cron_runs for health monitoring ──
+        // ── 5. Post-failure watchdog — Telegram alerts for missed deadlines ──
+        // Catches posts 5+ min past due that the scheduler never claimed.
+        // Runs after every tick. Must never block the scheduler.
+        try {
+          console.log("[post-scheduler] Running post-failure watchdog...");
+          const watchdogResult = await checkMissedPosts();
+          if (watchdogResult.missed > 0) {
+            console.error(
+              `[post-scheduler] ⚠️ WATCHDOG: ${watchdogResult.missed} missed post(s) detected and alerted.`,
+            );
+          }
+          console.log("[post-scheduler] Watchdog check complete.");
+        } catch (watchdogErr: any) {
+          console.error("[post-scheduler] Watchdog check failed:", watchdogErr.message);
+        }
+
+        // ── 6. Log run to cron_runs for health monitoring ──
         const elapsedMs = Date.now() - handlerStartTime;
         const postsFound = rows.length;
         const postsProcessed = published + failed + retried;
