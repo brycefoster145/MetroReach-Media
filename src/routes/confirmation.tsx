@@ -84,23 +84,11 @@ function getServiceDisplayName(slug: string): string {
   return SERVICE_DISPLAY_NAMES[slug] || slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-interface ConfirmationLoaderData {
-  service?: string;
-  leadId?: string;
-}
-
 export const Route = createFileRoute("/confirmation")({
   validateSearch: (search: Record<string, unknown>): ConfirmationSearch => ({
     service: typeof search.service === "string" ? search.service : undefined,
     leadId: typeof search.leadId === "string" ? search.leadId : undefined,
   }),
-  loader: ({ request }): ConfirmationLoaderData => {
-    const url = new URL(request.url);
-    return {
-      service: url.searchParams.get("service") || undefined,
-      leadId: url.searchParams.get("leadId") || undefined,
-    };
-  },
   head: () => ({
     meta: [
       { title: "Payment Confirmed — MetroReach Media" },
@@ -111,8 +99,7 @@ export const Route = createFileRoute("/confirmation")({
 });
 
 function ConfirmationPage() {
-  const loaderData = Route.useLoaderData();
-  const serviceSlug = loaderData?.service;
+  const { service: serviceSlug } = Route.useSearch();
   const serviceName = serviceSlug ? getServiceDisplayName(serviceSlug) : "your service";
 
   const nextSteps = [

@@ -280,7 +280,7 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
             ],
             mode: "payment",
             client_reference_id: lead.id,
-            success_url: `${siteUrl}/confirmation?service=${encodeURIComponent(SERVICE_SLUG)}&leadId=${lead.id}`,
+            success_url: `${siteUrl}/confirmation/premium-audit?leadId=${lead.id}`,
             cancel_url: `${siteUrl}/premium-audit`,
             metadata: {
               service_slug: SERVICE_SLUG,
