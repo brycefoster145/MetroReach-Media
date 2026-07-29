@@ -17,11 +17,14 @@
  *   social_inbox_reply_to_comment  — reply to a Facebook comment
  *   social_inbox_reply_to_ig_comment — reply to an Instagram comment
  *   social_inbox_reply              — unified reply across all platforms (FB, IG, X, LinkedIn)
+ *   social_inbox_get_linkedin_comments — pull comments on a LinkedIn post
+ *   social_inbox_get_linkedin_posts    — pull recent LinkedIn posts
  */
 
 import { createFileRoute } from "@tanstack/react-router";
 import { replyToTweet } from "~/lib/x-reply";
 import { replyToLinkedInComment } from "~/lib/linkedin-reply";
+import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -36,6 +39,44 @@ const SERVER_VERSION = "1.0.0";
 const DEFAULT_PAGE_ID = "623055204204992";
 const DEFAULT_IG_USER_ID = "17841472858895937";
 const DEFAULT_LIMIT = 10;
+
+// ---------------------------------------------------------------------------
+// LinkedIn REST API config
+// ---------------------------------------------------------------------------
+const LINKEDIN_API_BASE = "https://api.linkedin.com";
+const LINKEDIN_VERSION = "202501";
+
+/**
+ * Look up the LinkedIn access token and person_id for a given MetroReach
+ * client from the client_platform_tokens table.
+ */
+async function getLinkedInCredentials(
+  clientId: string,
+): Promise<{ accessToken: string; personId: string } | null> {
+  const rows = await sql`
+    SELECT access_token, page_id
+    FROM client_platform_tokens
+    WHERE client_id = ${clientId}
+      AND platform = 'linkedin'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+
+  if (rows.length === 0) return null;
+
+  const accessToken = rows[0].access_token as string;
+  let rawPageId = (rows[0].page_id as string) || "";
+
+  // page_id may be a full URN ("urn:li:person:abc123") or a raw ID ("abc123").
+  let personId: string;
+  if (rawPageId.startsWith("urn:li:")) {
+    personId = rawPageId;
+  } else {
+    personId = `urn:li:person:${rawPageId}`;
+  }
+
+  return { accessToken, personId };
+}
 
 // ---------------------------------------------------------------------------
 // Facebook Graph API request helper
@@ -433,6 +474,181 @@ async function unifiedReply(args: {
   }
 }
 
+// LinkedIn comment + post tools
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve a post ID argument to a URN.
+ * Handles both full URNs ("urn:li:activity:123456789") and raw IDs ("123456789").
+ */
+function resolvePostUrn(postId: string): string {
+  if (postId.startsWith("urn:li:")) return postId;
+  return `urn:li:activity:${postId}`;
+}
+
+async function getLinkedInComments(args: {
+  post_id: string;
+  client_id?: string;
+  limit?: number;
+}) {
+  const clientId = args.client_id ?? "metroreach";
+  const limit = args.limit ?? DEFAULT_LIMIT;
+  const postUrn = resolvePostUrn(args.post_id);
+
+  const creds = await getLinkedInCredentials(clientId);
+  if (!creds) {
+    return {
+      error: true,
+      message: `No LinkedIn token found for client "${clientId}". Ensure the LinkedIn account is connected via the client portal.`,
+    };
+  }
+
+  const encodedUrn = encodeURIComponent(postUrn);
+  const url = `${LINKEDIN_API_BASE}/rest/socialActions/${encodedUrn}/comments`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${creds.accessToken}`,
+        "LinkedIn-Version": LINKEDIN_VERSION,
+        Accept: "application/json",
+      },
+    });
+
+    if (res.status === 404) {
+      return {
+        error: true,
+        message: `Post ${postUrn} not found or has no comments. The post may have been deleted, or the post_id may be incorrect.`,
+      };
+    }
+
+    const json = await res.json();
+
+    if (res.status >= 400 || json.error) {
+      const errMsg =
+        json.message ||
+        json.error_description ||
+        json.error ||
+        `HTTP ${res.status}`;
+      return {
+        error: true,
+        message: `LinkedIn API error: ${errMsg}`,
+      };
+    }
+
+    // Normalise the response — LinkedIn returns { elements: [...] }
+    const elements: any[] = json.elements ?? [];
+
+    const comments = elements.map((el: any) => ({
+      comment_id: el.id ?? "unknown",
+      author: el.author
+        ? `${el.author.firstName ?? ""} ${el.author.lastName ?? ""}`.trim()
+        : "Unknown",
+      author_id: el.author?.id ?? null,
+      text: el.message ?? "",
+      created_at: el.created?.time ?? el.createdAt ?? null,
+      parent_comment_id: el.parentComment ?? null,
+      like_count: el.likesSummary?.totalLikes ?? 0,
+    }));
+
+    return {
+      post_id: postUrn,
+      total: json.paging?.total ?? comments.length,
+      comments: comments.slice(0, limit),
+    };
+  } catch (err: any) {
+    const message = err.message ?? String(err);
+    return {
+      error: true,
+      message: `LinkedIn API request failed: ${message}`,
+    };
+  }
+}
+
+async function getLinkedInPosts(args: { client_id?: string; limit?: number }) {
+  const clientId = args.client_id ?? "metroreach";
+  const limit = args.limit ?? DEFAULT_LIMIT;
+
+  const creds = await getLinkedInCredentials(clientId);
+  if (!creds) {
+    return {
+      error: true,
+      message: `No LinkedIn token found for client "${clientId}". Ensure the LinkedIn account is connected via the client portal.`,
+    };
+  }
+
+  const url = `${LINKEDIN_API_BASE}/rest/posts?author=${encodeURIComponent(creds.personId)}&q=author&count=${limit}&sortBy=LAST_MODIFIED`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${creds.accessToken}`,
+        "LinkedIn-Version": LINKEDIN_VERSION,
+        Accept: "application/json",
+      },
+    });
+
+    if (res.status === 404) {
+      return {
+        error: true,
+        message: `No posts found for ${creds.personId}. The author may have no published posts, or the token does not have r_liteprofile / w_member_social permissions.`,
+      };
+    }
+
+    const json = await res.json();
+
+    if (res.status >= 400 || json.error) {
+      const errMsg =
+        json.message ||
+        json.error_description ||
+        json.error ||
+        `HTTP ${res.status}`;
+      return {
+        error: true,
+        message: `LinkedIn API error: ${errMsg}`,
+      };
+    }
+
+    const elements: any[] = json.elements ?? [];
+
+    const posts = elements.map((el: any) => {
+      const commentary = el.commentary ?? "";
+      const textPreview =
+        typeof commentary === "string"
+          ? commentary.slice(0, 200)
+          : commentary.text?.slice(0, 200) ?? "(media post)";
+
+      return {
+        post_id: el.id ?? "unknown",
+        text: textPreview,
+        created_at: el.created?.time ?? el.createdAt ?? null,
+        comment_count: el.commentarySummary?.count ??
+          el.socialDetail?.totalSocialActivityCounts?.numComments ??
+          0,
+        like_count: el.socialDetail?.totalSocialActivityCounts?.numLikes ?? 0,
+        share_count: el.socialDetail?.totalSocialActivityCounts?.numShares ?? 0,
+        visibility: el.visibility ?? "PUBLIC",
+      };
+    });
+
+    return {
+      author: creds.personId,
+      total: json.paging?.total ?? posts.length,
+      posts: posts.slice(0, limit),
+    };
+  } catch (err: any) {
+    const message = err.message ?? String(err);
+    return {
+      error: true,
+      message: `LinkedIn API request failed: ${message}`,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+
 // ---------------------------------------------------------------------------
 // Tool registry (MCP tools/list schema)
 // ---------------------------------------------------------------------------
@@ -675,6 +891,62 @@ const tools: ToolDef[] = [
       required: ["platform", "comment_id", "message"],
     },
     handler: unifiedReply,
+  },
+  {
+    name: "social_inbox_get_linkedin_comments",
+    description:
+      "Pull comments from a specific LinkedIn post for a MetroReach Media client. " +
+      "Looks up the client's stored LinkedIn OAuth token from client_platform_tokens, " +
+      "then retrieves comments via the LinkedIn REST API. " +
+      "Post ID can be a full URN (urn:li:activity:...) or a raw numeric ID. " +
+      "Returns comment_id, author name, text, created_at, and like_count for each comment.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        post_id: {
+          type: "string",
+          description:
+            "LinkedIn post URN (e.g. urn:li:activity:123456789) or raw numeric post ID.",
+        },
+        client_id: {
+          type: "string",
+          description:
+            "MetroReach client ID. Defaults to \"metroreach\" (the agency's own LinkedIn account).",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of comments to return (default: 10).",
+        },
+      },
+      required: ["post_id"],
+    },
+    handler: getLinkedInComments,
+  },
+  {
+    name: "social_inbox_get_linkedin_posts",
+    description:
+      "Pull recent LinkedIn posts for a MetroReach Media client. " +
+      "Looks up the client's stored LinkedIn OAuth token from client_platform_tokens, " +
+      "then retrieves posts via the LinkedIn REST API using the author URN. " +
+      "Use this to discover post IDs, which can then be passed to " +
+      "social_inbox_get_linkedin_comments to fetch comments on specific posts. " +
+      "Returns post_id, text preview (first 200 chars), created_at, comment_count, " +
+      "like_count, share_count, and visibility.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        client_id: {
+          type: "string",
+          description:
+            "MetroReach client ID. Defaults to \"metroreach\" (the agency's own LinkedIn account).",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of posts to return (default: 10).",
+        },
+      },
+    },
+    handler: getLinkedInPosts,
   },
 ];
 
