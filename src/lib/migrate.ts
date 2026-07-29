@@ -110,6 +110,8 @@ export async function migrate(): Promise<void> {
       error TEXT
     )
   `;
+  // Backfill: add elapsed_ms column if table existed before this migration
+  await sql`ALTER TABLE cron_runs ADD COLUMN IF NOT EXISTS elapsed_ms INTEGER DEFAULT 0`.catch(() => {});
   console.log("[migration] ✓ cron_runs table ready");
 
   // ── pipeline_log table ──
