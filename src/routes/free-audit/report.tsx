@@ -807,10 +807,10 @@ function FreeAuditReportPage() {
                     <p className="text-sm text-red-400 mt-2">{checkoutError}</p>
                   )}
               <a
-                href="/services"
+                href="/pricing"
                 className="border border-border-emphasis text-text-primary rounded-full px-6 py-2.5 text-sm hover:border-brand-primary hover:text-brand-primary inline-flex items-center gap-2 font-semibold transition-all duration-200"
               >
-                Compare All Services
+                Compare All Packages
               </a>
             </div>
             <p className="text-xs text-text-muted mt-8 pt-8 border-t border-border-subtle">
