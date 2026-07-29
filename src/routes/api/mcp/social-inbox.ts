@@ -14,9 +14,14 @@
  *   social_inbox_get_messages   — pull FB page conversations (may require pages_messaging)
  *   social_inbox_get_ig_comments — pull IG media comments
  *   social_inbox_get_ig_mentions — pull IG tags/mentions
+ *   social_inbox_reply_to_comment  — reply to a Facebook comment
+ *   social_inbox_reply_to_ig_comment — reply to an Instagram comment
+ *   social_inbox_reply              — unified reply across all platforms (FB, IG, X, LinkedIn)
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { replyToTweet } from "~/lib/x-reply";
+import { replyToLinkedInComment } from "~/lib/linkedin-reply";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -360,6 +365,75 @@ async function getIgMentions(args: { igUserId?: string; limit?: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// Reply tool implementations
+// ---------------------------------------------------------------------------
+
+async function replyToFacebookComment(args: { comment_id: string; message: string }) {
+  if (!args.comment_id || !args.message) {
+    throw new Error("Both comment_id and message are required");
+  }
+
+  const data = await graphApiRequest<{ id?: string }>(
+    "POST",
+    `/${args.comment_id}/comments`,
+    { message: args.message },
+  );
+  return { reply_id: data.id ?? "unknown", platform: "facebook", status: "published" };
+}
+
+async function replyToIGComment(args: { comment_id: string; message: string }) {
+  if (!args.comment_id || !args.message) {
+    throw new Error("Both comment_id and message are required");
+  }
+
+  const data = await graphApiRequest<{ id?: string }>(
+    "POST",
+    `/${args.comment_id}/replies`,
+    { message: args.message },
+  );
+  return { reply_id: data.id ?? "unknown", platform: "instagram", status: "published" };
+}
+
+async function unifiedReply(args: {
+  platform: string;
+  comment_id: string;
+  message: string;
+  client_id?: string;
+  x_user_id?: string;
+}) {
+  const { platform, comment_id, message, client_id, x_user_id } = args;
+
+  if (!platform || !comment_id || !message) {
+    throw new Error("platform, comment_id, and message are all required");
+  }
+
+  switch (platform.toLowerCase()) {
+    case "facebook":
+      return replyToFacebookComment({ comment_id, message });
+    case "instagram":
+      return replyToIGComment({ comment_id, message });
+    case "x":
+    case "twitter":
+      return replyToTweet(
+        comment_id,
+        message,
+        client_id ?? "metroreach",
+        x_user_id ?? "",
+      );
+    case "linkedin":
+      return replyToLinkedInComment(
+        comment_id,
+        message,
+        client_id ?? "metroreach",
+      );
+    default:
+      throw new Error(
+        `Unsupported platform: "${platform}". Supported: facebook, instagram, x, linkedin`,
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tool registry (MCP tools/list schema)
 // ---------------------------------------------------------------------------
 
@@ -517,6 +591,90 @@ const tools: ToolDef[] = [
       },
     },
     handler: getIgMentions,
+  },
+  {
+    name: "social_inbox_reply_to_comment",
+    description:
+      "Reply to a comment on a Facebook Page post. " +
+      "Posts a reply as the Page to the given comment ID. " +
+      "Returns the new reply comment ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        comment_id: {
+          type: "string",
+          description: "The Facebook comment ID to reply to.",
+        },
+        message: {
+          type: "string",
+          description: "The reply text to post.",
+        },
+      },
+      required: ["comment_id", "message"],
+    },
+    handler: replyToFacebookComment,
+  },
+  {
+    name: "social_inbox_reply_to_ig_comment",
+    description:
+      "Reply to a comment on an Instagram media item. " +
+      "Posts a reply as the Instagram Business Account to the given comment ID. " +
+      "Returns the new reply ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        comment_id: {
+          type: "string",
+          description: "The Instagram comment ID to reply to.",
+        },
+        message: {
+          type: "string",
+          description: "The reply text to post.",
+        },
+      },
+      required: ["comment_id", "message"],
+    },
+    handler: replyToIGComment,
+  },
+  {
+    name: "social_inbox_reply",
+    description:
+      "Unified reply tool — reply to a comment on any supported platform. " +
+      "Routes to the correct platform-specific reply function. " +
+      "Supports: facebook, instagram, x (twitter), linkedin. " +
+      "For X, provide x_user_id for token lookup. " +
+      "For LinkedIn, provide client_id if not default metroreach.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        platform: {
+          type: "string",
+          description:
+            "Platform to reply on: facebook, instagram, x, twitter, or linkedin.",
+        },
+        comment_id: {
+          type: "string",
+          description:
+            "The comment/tweet ID to reply to. For Facebook/IG: comment ID. For X: tweet ID. For LinkedIn: comment URN.",
+        },
+        message: {
+          type: "string",
+          description: "The reply text.",
+        },
+        client_id: {
+          type: "string",
+          description:
+            "MetroReach client ID (default: metroreach). Used for X and LinkedIn token lookup.",
+        },
+        x_user_id: {
+          type: "string",
+          description:
+            "X user ID for token lookup when replying on X. Defaults to MetroReach's X account.",
+        },
+      },
+      required: ["platform", "comment_id", "message"],
+    },
+    handler: unifiedReply,
   },
 ];
 
