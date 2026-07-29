@@ -62,6 +62,8 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
   server: {
     handlers: {
       GET: async () => {
+        const handlerStartTime = Date.now();
+
         // ── 1. Atomic claim — UPDATE … AND status = 'pending' prevents double-claims ──
         // Only one cron tick can claim each post: the second tick sees status != 'pending' and skips it.
         const rows = await sql`
@@ -228,6 +230,19 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
           }
         } catch (staleErr: any) {
           console.error("[post-scheduler] Stale detection query failed:", staleErr.message);
+        }
+
+        // ── 5. Log run to cron_runs for health monitoring ──
+        const elapsedMs = Date.now() - handlerStartTime;
+        const postsFound = rows.length;
+        const postsProcessed = published + failed + retried;
+        try {
+          await sql`
+            INSERT INTO cron_runs (run_at, posts_found, posts_processed, posts_succeeded, posts_failed, elapsed_ms)
+            VALUES (NOW(), ${postsFound}, ${postsProcessed}, ${published}, ${failed}, ${elapsedMs})
+          `;
+        } catch (logErr: any) {
+          console.error("[post-scheduler] Failed to log cron run:", logErr.message);
         }
 
         return new Response(

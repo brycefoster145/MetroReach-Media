@@ -109,29 +109,35 @@ function startCronKicker(): void {
     );
   }, 62_000);
 
-  // Keep the event loop alive — unref would let Node exit between requests
-  cronKickerInterval.unref();
+  // DO NOT unref — the interval MUST keep the event loop alive.
+  // Without this, Node exits between requests on Vercel serverless,
+  // the self-kicker dies, and posts stop going out when Vercel's
+  // native cron skips (which happens routinely on free tier).
 }
 
 async function kickCron(): Promise<void> {
+  const startTime = Date.now();
+  const isoTime = new Date().toISOString();
   try {
-    console.log("[cron-kicker] 🔄 Kicking cron scheduler...");
+    console.log(`[cron-kicker] 🔄 [${isoTime}] Kicking cron scheduler (internal GET /api/cron/post-scheduler)...`);
     const res = await fetchHandler.fetch(
       new Request("http://localhost/api/cron/post-scheduler", { method: "GET" }),
     );
+    const elapsed = Date.now() - startTime;
     if (!res.ok) {
+      const errBody = await res.text().catch(() => "(unreadable)");
       console.error(
-        `[cron-kicker] Cron kick returned ${res.status}: ${res.statusText}`,
+        `[cron-kicker] ❌ [${isoTime}] Cron kick FAILED (${res.status} ${res.statusText}, ${elapsed}ms): ${errBody.substring(0, 500)}`,
       );
     } else {
       const body = await res.text();
-      // Truncate log — full body is in the cron route's own logs
       console.log(
-        `[cron-kicker] ✅ Cron kick OK (${res.status}) — ${body.substring(0, 200)}`,
+        `[cron-kicker] ✅ [${isoTime}] Cron kick OK (${res.status}, ${elapsed}ms) — ${body.substring(0, 500)}`,
       );
     }
   } catch (err: any) {
-    console.error(`[cron-kicker] ❌ Kick error: ${err.message}`);
+    const elapsed = Date.now() - startTime;
+    console.error(`[cron-kicker] ❌ [${isoTime}] Kick error (${elapsed}ms): ${err.message} — Vercel native cron is likely NOT firing or the route is unreachable`);
   }
 }
 
