@@ -294,9 +294,9 @@ export const faq = {
 export const footerCta = {
   headline: "Your competitors are showing up. You should be too.",
   subheadline:
-    "One conversation. No pressure. An honest assessment of what your current marketing is leaving on the table — and exactly what we'd do about it.",
+    "One message. No pressure. An honest assessment of what your current marketing is leaving on the table — and exactly what we'd do about it.",
   primaryCta: "Get a Free Audit",
-  secondaryLabel: "Or if you're not ready to talk:",
+  secondaryLabel: "Or if you're not ready to reach out:",
   secondaryCta: "See an example monthly report",
 };
 

@@ -240,9 +240,9 @@ export const contactPage = {
 };
 
 export const demoPage = {
-  headline: "30 minutes. Straight answers. No pitch.",
+  headline: "Straight answers. No pitch.",
   subheadline:
-    "Book a call with our strategy team. We'll look at what you're doing now, what's missing, and whether MetroReach Media makes sense for your business. If it doesn't, we'll tell you.",
+    "Submit a free audit request. Our team will review your marketing — what's working, what's missing, and whether MetroReach Media makes sense for your business. If it doesn't, we'll tell you.",
   takeaways: [
     "An honest assessment of your current marketing — what's working, what's not, what's costing you money you don't know about",
     "A realistic timeline for what results look like in your industry and market",
@@ -250,13 +250,13 @@ export const demoPage = {
     "No obligation. No contract waiting in your inbox. No follow-up pressure campaign.",
   ],
   prepare: [
-    "A rough sense of your current marketing: what platforms you're on, what you're spending, what's frustrating you",
-    "Your top business goal for the next 6 months (more leads? more listings? more booked consults?)",
-    "That's it. Don't build a deck. Don't pull reports. Just show up.",
+    "Share your website and social profiles — we'll pull what we need from there",
+    "Tell us your top business goal for the next 6 months (more leads? more listings? more booked consults?)",
+    "That's it. Don't build a deck. Don't pull reports. Just fill out the form.",
   ],
-  timeCommitment: "30 minutes. We'll end on time. If we need more time to dig into something, we'll schedule a follow-up — we won't hold you hostage on a Zoom call.",
-  bookingUrl: "/book",
-  confirmation: "You're in. Check your email for the calendar invite and a quick note on what to expect.",
+  timeCommitment: "Async — no calls, no meetings. We review your presence, build your audit, and deliver the report. If we need clarification, we'll email you.",
+  bookingUrl: "/free-audit",
+  confirmation: "Your audit request is in. Our team will review your presence and deliver your report. No waiting on a calendar invite.",
 };
 
 export const caseStudiesPage = {
@@ -386,14 +386,17 @@ export const securityPage = {
     {
       name: "Google (Search, Display, YouTube)",
       text: "We adhere to Google Ads policies including restricted content categories, local service ad requirements, and Google Business Profile guidelines. For industries with Google's verification requirements, we guide you through verification.",
+      comingSoon: true,
     },
     {
       name: "TikTok",
       text: "We follow TikTok's advertising policies and branded content guidelines. For restricted industries, we apply the appropriate content limitations and disclaimers.",
+      comingSoon: true,
     },
     {
       name: "LinkedIn",
       text: "We comply with LinkedIn's advertising policies and professional community guidelines, including industry-specific restrictions for healthcare, legal, and financial services.",
+      comingSoon: true,
     },
     {
       name: "X",
@@ -424,7 +427,7 @@ export const privacyPage = {
   sections: [
     {
       heading: "Information We Collect",
-      text: "We collect information you provide directly: name, email, phone number, business details, and marketing preferences when you fill out our contact form or book a strategy call. We also collect standard web analytics data: pages visited, referrer, device type, and approximate location — all anonymized.",
+      text: "We collect information you provide directly: name, email, phone number, business details, and marketing preferences when you fill out our contact form or request a free audit. We also collect standard web analytics data: pages visited, referrer, device type, and approximate location — all anonymized.",
     },
     {
       heading: "How We Use Your Information",
@@ -583,7 +586,7 @@ export const cookiePolicyPage = {
     },
     {
       heading: "Third-Party Cookies",
-      text: "We embed a scheduling tool for strategy call bookings. When you use the booking widget, the scheduling provider may set its own cookies for functionality. These are governed by the provider's own cookie policy.",
+      text: "We use cookies for analytics and site functionality. No third-party scheduling widgets or tracking cookies are embedded on this site.",
     },
     {
       heading: "How to Control Cookies",

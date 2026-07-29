@@ -44,9 +44,7 @@ interface FormState {
   primaryGoal: string;
   facebookUrl: string;
   instagramUrl: string;
-  linkedinUrl: string;
-  tiktokUrl: string;
-  googleBusinessUrl: string;
+  xUrl: string;
   contactName: string;
   email: string;
   phone: string;
@@ -61,9 +59,7 @@ const initialForm: FormState = {
   primaryGoal: "",
   facebookUrl: "",
   instagramUrl: "",
-  linkedinUrl: "",
-  tiktokUrl: "",
-  googleBusinessUrl: "",
+  xUrl: "",
   contactName: "",
   email: "",
   phone: "",
@@ -160,9 +156,7 @@ function FreeAudit() {
     const socialUrls: { field: FieldName; label: string }[] = [
       { field: "facebookUrl", label: "Facebook URL" },
       { field: "instagramUrl", label: "Instagram URL" },
-      { field: "linkedinUrl", label: "LinkedIn URL" },
-      { field: "tiktokUrl", label: "TikTok URL" },
-      { field: "googleBusinessUrl", label: "Google Business Profile URL" },
+      { field: "xUrl", label: "X URL" },
     ];
     for (const { field, label } of socialUrls) {
       const val = form[field] as string;
@@ -490,11 +484,9 @@ function FreeAudit() {
                   {([
                     { key: "facebookUrl" as FieldName, label: "Facebook URL", placeholder: "https://facebook.com/yourpage" },
                     { key: "instagramUrl" as FieldName, label: "Instagram URL", placeholder: "https://instagram.com/yourhandle" },
-                    { key: "linkedinUrl" as FieldName, label: "LinkedIn URL", placeholder: "https://linkedin.com/company/yourcompany" },
-                    { key: "tiktokUrl" as FieldName, label: "TikTok URL", placeholder: "https://tiktok.com/@yourhandle" },
-                    { key: "googleBusinessUrl" as FieldName, label: "Google Business Profile URL", placeholder: "https://maps.google.com/..." },
+                    { key: "xUrl" as FieldName, label: "X URL", placeholder: "https://x.com/yourhandle" },
                   ]).map(({ key, label, placeholder }) => (
-                    <div key={key} className={key === "googleBusinessUrl" ? "sm:col-span-2" : ""}>
+                    <div key={key}>
                       <label htmlFor={key} className={labelClass}>
                         {label} <span className={optionalClass}>(optional)</span>
                       </label>
