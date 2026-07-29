@@ -45,6 +45,9 @@ interface FormState {
   facebookUrl: string;
   instagramUrl: string;
   xUrl: string;
+  linkedinUrl: string;
+  tiktokUrl: string;
+  googleBusinessUrl: string;
   contactName: string;
   email: string;
   phone: string;
@@ -60,6 +63,9 @@ const initialForm: FormState = {
   facebookUrl: "",
   instagramUrl: "",
   xUrl: "",
+  linkedinUrl: "",
+  tiktokUrl: "",
+  googleBusinessUrl: "",
   contactName: "",
   email: "",
   phone: "",
@@ -157,6 +163,9 @@ function FreeAudit() {
       { field: "facebookUrl", label: "Facebook URL" },
       { field: "instagramUrl", label: "Instagram URL" },
       { field: "xUrl", label: "X URL" },
+      { field: "linkedinUrl", label: "LinkedIn URL" },
+      { field: "tiktokUrl", label: "TikTok URL" },
+      { field: "googleBusinessUrl", label: "Google Business Profile URL" },
     ];
     for (const { field, label } of socialUrls) {
       const val = form[field] as string;
@@ -485,6 +494,9 @@ function FreeAudit() {
                     { key: "facebookUrl" as FieldName, label: "Facebook URL", placeholder: "https://facebook.com/yourpage" },
                     { key: "instagramUrl" as FieldName, label: "Instagram URL", placeholder: "https://instagram.com/yourhandle" },
                     { key: "xUrl" as FieldName, label: "X URL", placeholder: "https://x.com/yourhandle" },
+                    { key: "linkedinUrl" as FieldName, label: "LinkedIn URL", placeholder: "https://linkedin.com/company/your-page" },
+                    { key: "tiktokUrl" as FieldName, label: "TikTok URL", placeholder: "https://tiktok.com/@yourhandle" },
+                    { key: "googleBusinessUrl" as FieldName, label: "Google Business URL", placeholder: "https://maps.google.com/?cid=..." },
                   ]).map(({ key, label, placeholder }) => (
                     <div key={key}>
                       <label htmlFor={key} className={labelClass}>
