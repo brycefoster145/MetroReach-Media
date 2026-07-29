@@ -8,7 +8,6 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
 import {
   CheckCircle,
   Envelope,
@@ -18,6 +17,12 @@ import {
   Buildings,
 } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
+
+// ── Search param types ──
+interface ConfirmationSearch {
+  service?: string;
+  leadId?: string;
+}
 
 // ── Service display names (fallback if slug not in product map) ──
 const SERVICE_DISPLAY_NAMES: Record<string, string> = {
@@ -80,6 +85,10 @@ function getServiceDisplayName(slug: string): string {
 }
 
 export const Route = createFileRoute("/confirmation")({
+  validateSearch: (search: Record<string, unknown>): ConfirmationSearch => ({
+    service: typeof search.service === "string" ? search.service : undefined,
+    leadId: typeof search.leadId === "string" ? search.leadId : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Payment Confirmed — MetroReach Media" },
@@ -90,13 +99,7 @@ export const Route = createFileRoute("/confirmation")({
 });
 
 function ConfirmationPage() {
-  const [serviceSlug, setServiceSlug] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setServiceSlug(params.get("service") || "");
-  }, []);
-
+  const { service: serviceSlug } = Route.useSearch();
   const serviceName = serviceSlug ? getServiceDisplayName(serviceSlug) : "your service";
 
   const nextSteps = [
