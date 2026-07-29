@@ -87,7 +87,7 @@ const SERVICE_TEAM_MAP: Record<string, TeamKey[]> = {
   "vip-daily": ["contentStrategist", "copywriter", "qaEngineer"],
 
   // ── Premium Audit ──
-  "premium-audit": ["contentStrategist", "analyticsWatchdog"],
+  "premium-growth-audit": ["contentStrategist", "analyticsWatchdog"],
 };
 
 // ── Deliverable descriptions ──
