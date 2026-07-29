@@ -5,24 +5,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
 
-export const Route = createFileRoute("/api/stripe-tools/create-audit-price")({
+export const Route = createFileRoute("/api/create-audit-price")({
   server: {
     handlers: {
       GET: async () => {
         const key = process.env.STRIPE_SECRET_KEY;
         if (!key) {
-          return new Response(JSON.stringify({ error: "No Stripe key" }), { status: 500 });
+          return new Response(JSON.stringify({ error: "No Stripe key" }), { status: 500, headers: { "Content-Type": "application/json" } });
         }
         const stripe = new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
 
         try {
-          // First, create the product
           const product = await stripe.products.create({
             name: "Premium Growth Audit — MetroReach Media",
             metadata: { slug: "premium-growth-audit", service_type: "strategy" },
           });
 
-          // Then create a one-time price at $495
           const price = await stripe.prices.create({
             product: product.id,
             unit_amount: 49500,
