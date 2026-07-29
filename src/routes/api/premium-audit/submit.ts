@@ -265,7 +265,7 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
             leadId: lead.id,
           });
           return errorResponse(
-            "Failed to create checkout session. Please try again.",
+            `Stripe error: ${err.message}`,
             500
           );
         }
