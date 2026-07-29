@@ -1,0 +1,70 @@
+name: Cron Kicker — Post Scheduler Backup
+
+# External cron backup for the MetroReach Media post scheduler.
+#
+# This is layer 3 of 3 in the scheduler reliability stack:
+#   Layer 1: Vercel native cron (`* * * * *` in vercel.json) — primary
+#   Layer 2: Self-kicker in `vercel-entry.ts` — fires every 62s while warm
+#   Layer 3: THIS workflow — independent GitHub Actions infra, fires every 5 min
+#
+# When layers 1+2 both fail (function cold start + Vercel cron skip), this
+# ensures the scheduler endpoint still gets hit from external infrastructure.
+#
+# Triggers:
+#   - schedule: every 5 minutes
+#   - push to main: fires immediately on deploy (proof-of-life verifier)
+#   - workflow_dispatch: manual run from GitHub UI for testing
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Every 5 minutes
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  kick-scheduler:
+    name: Kick Post Scheduler
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Kick scheduler endpoint
+        run: |
+          echo "::group::Kicking post-scheduler"
+          SCHEDULER_RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 \
+            "https://www.metroreachagency.com/api/cron/post-scheduler")
+          HTTP_CODE=$(echo "$SCHEDULER_RESPONSE" | tail -1)
+          BODY=$(echo "$SCHEDULER_RESPONSE" | head -n -1)
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response: ${BODY:0:500}"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Scheduler kick succeeded"
+          else
+            echo "::warning::Scheduler returned HTTP $HTTP_CODE — may indicate issues"
+          fi
+          echo "::endgroup::"
+
+      - name: Check scheduler health
+        run: |
+          echo "::group::Health check"
+          HEALTH=$(curl -s --max-time 15 \
+            "https://www.metroreachagency.com/api/cron/health")
+          
+          # Extract key metrics for the run summary
+          PENDING=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('pending_count','?'))" 2>/dev/null || echo "?")
+          DUE=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('due_now_count','?'))" 2>/dev/null || echo "?")
+          STALE=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cron_stale','?'))" 2>/dev/null || echo "?")
+          
+          echo "Pending posts: $PENDING"
+          echo "Due now: $DUE"
+          echo "Cron stale: $STALE"
+          
+          if [ "$STALE" = "True" ]; then
+            echo "::warning::CRON IS STALE — posts may be missed!"
+          elif [ "$DUE" != "0" ] && [ "$DUE" != "?" ]; then
+            echo "::notice::$DUE posts are past due_at — scheduler should process them"
+          fi
+          echo "::endgroup::"
