@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import {
   ChartBar,
@@ -41,6 +42,103 @@ const inputClass =
   "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
 const labelClass = "block text-sm font-medium text-text-secondary mb-2";
 const optionalClass = "text-text-muted font-normal";
+
+/**
+ * FormEnhancer — attaches submit interception + URL error display via useEffect.
+ * Renders nothing visually; exists purely to attach event listeners after
+ * React commits the DOM, avoiding the hydration race condition of inline <script>.
+ */
+function FormEnhancer() {
+  useEffect(() => {
+    const form = document.getElementById("premium-audit-form") as HTMLFormElement | null;
+    const errorDiv = document.getElementById("form-error");
+    const errorMsg = document.getElementById("form-error-msg");
+    const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement | null;
+    const btnText = document.getElementById("submit-btn-text");
+    const btnSpinner = document.getElementById("submit-btn-spinner");
+
+    if (!form || !errorDiv || !errorMsg || !submitBtn || !btnText || !btnSpinner) return;
+
+    function showError(msg: string) {
+      errorMsg!.textContent = msg;
+      errorDiv!.classList.remove("hidden");
+      errorDiv!.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function hideError() {
+      errorDiv!.classList.add("hidden");
+    }
+
+    function setLoading(loading: boolean) {
+      submitBtn!.disabled = loading;
+      if (loading) {
+        btnText!.textContent = "Processing...";
+        btnSpinner!.classList.remove("hidden");
+      } else {
+        btnText!.textContent = "Get My Premium Audit — $495";
+        btnSpinner!.classList.add("hidden");
+      }
+    }
+
+    // Check URL for error param on page load
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlError = urlParams.get("error");
+    if (urlError) {
+      showError(decodeURIComponent(urlError));
+      // Clean URL without reloading
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+
+    // Intercept form submit
+    function handleSubmit(e: Event) {
+      e.preventDefault();
+      hideError();
+      setLoading(true);
+
+      const formData = new FormData(form!);
+      const body = new URLSearchParams(formData as any).toString();
+
+      fetch(form!.action, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+        redirect: "follow",
+      })
+        .then((resp) => {
+          const finalUrl = resp.url;
+          if (finalUrl.indexOf("checkout.stripe.com") !== -1) {
+            // Success — redirect to Stripe Checkout
+            window.location.href = finalUrl;
+          } else if (finalUrl.indexOf("?error=") !== -1) {
+            // API returned an error — extract and show inline (form data preserved!)
+            const parts = finalUrl.split("?");
+            const errParams = new URLSearchParams(parts[1] || "");
+            const err = errParams.get("error");
+            showError(err ? decodeURIComponent(err) : "An unexpected error occurred. Please try again.");
+            setLoading(false);
+          } else {
+            // Unexpected response — navigate to it
+            window.location.href = finalUrl;
+          }
+        })
+        .catch(() => {
+          showError("A network error occurred. Please check your connection and try again.");
+          setLoading(false);
+        });
+    }
+
+    form.addEventListener("submit", handleSubmit);
+
+    // Cleanup: remove event listener on unmount
+    return () => {
+      form.removeEventListener("submit", handleSubmit);
+    };
+  }, []);
+
+  return null;
+}
 
 function PremiumAudit() {
   return (
@@ -463,94 +561,108 @@ function PremiumAudit() {
       </section>
 
       <Outlet />
-
-      {/* Inline JS — hybrid form enhancement for error display + loading state */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-(function() {
-  var form = document.getElementById('premium-audit-form');
-  var errorDiv = document.getElementById('form-error');
-  var errorMsg = document.getElementById('form-error-msg');
-  var submitBtn = document.getElementById('submit-btn');
-  var btnText = document.getElementById('submit-btn-text');
-  var btnSpinner = document.getElementById('submit-btn-spinner');
-
-  if (!form || !errorDiv || !errorMsg || !submitBtn || !btnText || !btnSpinner) return;
-
-  function showError(msg) {
-    errorMsg.textContent = msg;
-    errorDiv.classList.remove('hidden');
-    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  function hideError() {
-    errorDiv.classList.add('hidden');
-  }
-
-  function setLoading(loading) {
-    submitBtn.disabled = loading;
-    if (loading) {
-      btnText.textContent = 'Processing...';
-      btnSpinner.classList.remove('hidden');
-    } else {
-      btnText.textContent = 'Get My Premium Audit — $495';
-      btnSpinner.classList.add('hidden');
-    }
-  }
-
-  // Check URL for error param on page load
-  var urlParams = new URLSearchParams(window.location.search);
-  var urlError = urlParams.get('error');
-  if (urlError) {
-    showError(decodeURIComponent(urlError));
-    // Clean URL without reloading
-    if (window.history && window.history.replaceState) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }
-
-  // Intercept form submit
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    hideError();
-    setLoading(true);
-
-    var formData = new FormData(form);
-    var body = new URLSearchParams(formData).toString();
-
-    fetch(form.action, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body,
-      redirect: 'follow',
-    })
-      .then(function(resp) {
-        var finalUrl = resp.url;
-        if (finalUrl.indexOf('checkout.stripe.com') !== -1) {
-          // Success — redirect to Stripe Checkout
-          window.location.href = finalUrl;
-        } else if (finalUrl.indexOf('?error=') !== -1) {
-          // API returned an error — extract and show inline (form data preserved!)
-          var parts = finalUrl.split('?');
-          var errParams = new URLSearchParams(parts[1] || '');
-          var err = errParams.get('error');
-          showError(err ? decodeURIComponent(err) : 'An unexpected error occurred. Please try again.');
-          setLoading(false);
-        } else {
-          // Unexpected response — navigate to it
-          window.location.href = finalUrl;
-        }
-      })
-      .catch(function() {
-        showError('A network error occurred. Please check your connection and try again.');
-        setLoading(false);
-      });
-  });
-})();
-          `.trim(),
-        }}
-      />
+      <FormEnhancer />
     </main>
   );
+}
+
+function FormEnhancer() {
+  useEffect(() => {
+    const form = document.getElementById("premium-audit-form") as HTMLFormElement | null;
+    const errorDiv = document.getElementById("form-error") as HTMLDivElement | null;
+    const errorMsg = document.getElementById("form-error-msg") as HTMLSpanElement | null;
+    const btn = document.getElementById("submit-btn") as HTMLButtonElement | null;
+    const btnText = document.getElementById("submit-btn-text") as HTMLSpanElement | null;
+    const btnSpinner = document.getElementById("submit-btn-spinner") as HTMLSpanElement | null;
+
+    if (!form || !errorDiv || !errorMsg || !btn || !btnText || !btnSpinner) return;
+
+    const show = (msg: string) => {
+      errorMsg.textContent = msg;
+      errorDiv.classList.remove("hidden");
+      errorDiv.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    const hide = () => errorDiv.classList.add("hidden");
+    const loading = (on: boolean) => {
+      btn.disabled = on;
+      if (on) {
+        btnText.textContent = "Processing...";
+        btnSpinner.classList.remove("hidden");
+      } else {
+        btnText.textContent = "Get My Premium Audit — $495";
+        btnSpinner.classList.add("hidden");
+      }
+    };
+
+    // Show error from URL param on load (if SSR preserved it)
+    const q = new URLSearchParams(window.location.search);
+    const e = q.get("error");
+    if (e) {
+      show(decodeURIComponent(e));
+      history.replaceState({}, "", window.location.pathname);
+    }
+
+    const onSubmit = async (e: Event) => {
+      e.preventDefault();
+      hide();
+      loading(true);
+
+      try {
+        const fd = new FormData(form);
+        const body = new URLSearchParams(fd as any).toString();
+
+        // Don't follow redirects — we want the 302 itself
+        const res = await fetch(form.action, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+          redirect: "manual",
+        });
+
+        if (res.type === "opaqueredirect" || res.status === 302 || res.status === 301) {
+          const location = res.headers.get("Location") || "";
+          if (location.includes("checkout.stripe.com")) {
+            window.location.href = location;
+            return;
+          }
+          if (location.includes("?error=")) {
+            const parts = location.split("?");
+            const ep = new URLSearchParams(parts[1] || "");
+            const err = ep.get("error");
+            show(err ? decodeURIComponent(err) : "An unexpected error occurred.");
+            loading(false);
+            return;
+          }
+          // Unknown redirect — follow it
+          window.location.href = location || "/premium-audit";
+          return;
+        }
+
+        // Non-redirect response — try JSON
+        try {
+          const data = await res.json();
+          if (data.url) {
+            window.location.href = data.url;
+          } else if (data.error) {
+            show(data.error);
+          } else {
+            show("An unexpected error occurred. Please try again.");
+          }
+        } catch {
+          show("An unexpected error occurred. Please try again.");
+        }
+      } catch {
+        show("A network error occurred. Please check your connection and try again.");
+      } finally {
+        if (btn.disabled && btnText.textContent === "Processing...") {
+          loading(false);
+        }
+      }
+    };
+
+    form.addEventListener("submit", onSubmit);
+    return () => form.removeEventListener("submit", onSubmit);
+  }, []);
+
+  return null;
 }
