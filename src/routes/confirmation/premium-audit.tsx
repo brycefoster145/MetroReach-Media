@@ -12,7 +12,11 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { randomBytes } from "node:crypto";
+function randomHex(bytes: number): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 import {
   CheckCircle,
   ClipboardText,
@@ -86,7 +90,7 @@ export const Route = createFileRoute("/confirmation/premium-audit")({
         `;
       } else {
         // No client yet — create one (webhook hasn't fired or this is ahead of it)
-        const clientId = `client-${randomBytes(8).toString("hex")}`;
+        const clientId = `client-${randomHex(8)}`;
         portalToken = generatePortalToken();
 
         await sql`
