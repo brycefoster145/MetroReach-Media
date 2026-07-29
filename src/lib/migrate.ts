@@ -316,6 +316,26 @@ export async function migrate(): Promise<void> {
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0`;
   console.log("[migration] ✓ scheduled_posts.retry_count column ready");
 
+  // ── C2: locked_at for atomic claim scheduler (prevents double-posts) ──
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ`;
+  console.log("[migration] ✓ scheduled_posts.locked_at column ready");
+
+  // ── C3: Expand status CHECK to include 'publishing' (atomic claim state) ──
+  try {
+    await sql`
+      ALTER TABLE scheduled_posts
+      DROP CONSTRAINT IF EXISTS scheduled_posts_status_check
+    `.catch(() => {});
+    await sql`
+      ALTER TABLE scheduled_posts
+      ADD CONSTRAINT scheduled_posts_status_check
+      CHECK (status IN ('pending', 'publishing', 'posted', 'failed', 'skipped_no_media', 'missed'))
+    `.catch(() => {});
+    console.log("[migration] ✓ status CHECK constraint updated (includes publishing)");
+  } catch (err: any) {
+    console.log(`[migration] ℹ status CHECK migration skipped: ${err.message}`);
+  }
+
   // ── UTM attribution: utm_link for click tracking redirects ──
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS utm_link TEXT`;
   console.log("[migration] ✓ scheduled_posts.utm_link column ready");

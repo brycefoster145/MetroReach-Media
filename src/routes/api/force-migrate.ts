@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/force-migrate")({
             results.push(`ℹ due_at migration skipped: ${fixErr.message}`);
           }
 
-          // ── Fix status check constraint to include 'skipped_no_media' ──
+          // ── Fix status check constraint to include 'skipped_no_media' and 'publishing' ──
           try {
             await n`
               ALTER TABLE scheduled_posts 
@@ -80,11 +80,19 @@ export const Route = createFileRoute("/api/force-migrate")({
             await n`
               ALTER TABLE scheduled_posts 
               ADD CONSTRAINT scheduled_posts_status_check 
-              CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media', 'missed'))
+              CHECK (status IN ('pending', 'publishing', 'posted', 'failed', 'skipped_no_media', 'missed'))
             `;
-            results.push("✓ status check constraint updated (includes skipped_no_media)");
+            results.push("✓ status check constraint updated (includes publishing, skipped_no_media)");
           } catch (fixErr: any) {
             results.push(`ℹ status constraint migration: ${fixErr.message}`);
+          }
+
+          // ── Add locked_at column (for atomic claim scheduler) ──
+          try {
+            await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ`;
+            results.push("✓ locked_at column ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ locked_at migration: ${fixErr.message}`);
           }
 
           // ── Add retry_count column (for post retry logic) ──
