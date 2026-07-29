@@ -92,7 +92,7 @@ async function refreshXAccessToken(
 /**
  * Get a valid X access token, refreshing if within 5 minutes of expiry.
  */
-async function getValidXToken(
+export async function getValidXToken(
   clientId: string,
   xUserId: string,
 ): Promise<string> {
