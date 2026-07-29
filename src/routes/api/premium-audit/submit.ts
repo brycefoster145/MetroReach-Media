@@ -48,8 +48,57 @@ function getStripe(): Stripe {
 }
 
 // Premium Growth Audit product
-const PREMIUM_AUDIT_PRICE_ID = "price_1TwsE71v80UmMrLIGCovGtU0";
 const SERVICE_SLUG = "premium-growth-audit";
+const PRODUCT_NAME = "Premium Growth Audit — MetroReach Media";
+const PRICE_AMOUNT_CENTS = 49500; // $495 one-time
+
+// Cache: resolved price ID (module-level, lives for serverless instance lifetime)
+let cachedPriceId: string | null = null;
+
+/**
+ * Resolves a one-time price for Premium Growth Audit.
+ * If the configured price is recurring or missing, creates a new one-time price.
+ */
+async function resolveAuditPrice(stripe: Stripe): Promise<string> {
+  if (cachedPriceId) return cachedPriceId;
+
+  // First, try to find an existing one-time price with our metadata slug
+  const existingPrices = await stripe.prices.list({
+    active: true,
+    limit: 50,
+  });
+
+  const matchingPrice = existingPrices.data.find(
+    (p) =>
+      p.metadata?.slug === SERVICE_SLUG &&
+      p.type === "one_time" &&
+      p.unit_amount === PRICE_AMOUNT_CENTS
+  );
+
+  if (matchingPrice) {
+    console.log("Found existing one-time audit price:", matchingPrice.id);
+    cachedPriceId = matchingPrice.id;
+    return matchingPrice.id;
+  }
+
+  // Not found — create the product and price
+  console.log("Creating new Premium Growth Audit product + one-time price...");
+  const product = await stripe.products.create({
+    name: PRODUCT_NAME,
+    metadata: { slug: SERVICE_SLUG, service_type: "strategy" },
+  });
+
+  const price = await stripe.prices.create({
+    product: product.id,
+    unit_amount: PRICE_AMOUNT_CENTS,
+    currency: "usd",
+    metadata: { slug: SERVICE_SLUG },
+  });
+
+  console.log("Created product:", product.id, "price:", price.id);
+  cachedPriceId = price.id;
+  return price.id;
+}
 
 // ---------------------------------------------------------------------------
 // Route Handler
@@ -219,10 +268,13 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
         try {
           const stripe = getStripe();
 
+          // Resolve (or create) the one-time $495 price
+          const priceId = await resolveAuditPrice(stripe);
+
           const session = await stripe.checkout.sessions.create({
             line_items: [
               {
-                price: PREMIUM_AUDIT_PRICE_ID,
+                price: priceId,
                 quantity: 1,
               },
             ],
@@ -261,11 +313,10 @@ export const Route = createFileRoute("/api/premium-audit/submit")({
             rawCode: err.raw?.code,
             param: err.raw?.param,
             declineCode: err.raw?.decline_code,
-            priceId: PREMIUM_AUDIT_PRICE_ID,
             leadId: lead.id,
           });
           return errorResponse(
-            `Stripe: ${err.message}`,
+            "Failed to create checkout session. Please try again.",
             500
           );
         }
