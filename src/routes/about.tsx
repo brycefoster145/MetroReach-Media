@@ -79,8 +79,8 @@ function About() {
         {/* CTA */}
         <div className="mt-16 text-center">
           <p className="text-lg text-text-secondary mb-6">{aboutPage.cta}</p>
-          <Button href="/book">
-            Book a strategy call
+          <Button href="/free-audit">
+            Get a Free Audit
             <ArrowRight size={18} weight="bold" />
           </Button>
         </div>

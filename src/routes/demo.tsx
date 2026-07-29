@@ -83,8 +83,8 @@ function Demo() {
 
         {/* CTA */}
         <div className="text-center">
-          <Button href={demoPage.bookingUrl || "/contact"}>
-            Book a strategy call
+          <Button href="/free-audit">
+            Get a Free Audit
             <ArrowRight size={18} weight="bold" />
           </Button>
         </div>

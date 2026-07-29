@@ -2,6 +2,13 @@
   "buildCommand": "bash build-vercel.sh",
   "installCommand": "bun install",
   "framework": null,
+  "redirects": [
+    {
+      "source": "/book",
+      "destination": "/free-audit",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/post-scheduler",

@@ -194,7 +194,7 @@ function Services() {
               {servicesPage.cta}
             </h2>
             <p className="text-text-secondary mb-8">
-              Book a strategy call. No pitch deck. Just an honest conversation about your marketing.
+              Start with a free audit. No pitch. Just an honest assessment of your marketing.
             </p>
             <Button href="/free-audit">
               Get a Free Audit

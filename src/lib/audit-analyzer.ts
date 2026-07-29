@@ -887,7 +887,7 @@ const packages: Record<string, PackageDefinition> = {
     deliverables: [
       "Comprehensive landing page review with conversion recommendations",
       "Meta tag and Open Graph configuration guidance",
-      "Conversion tracking setup consultation",
+      "Conversion tracking setup guidance",
       "Mobile responsiveness assessment",
     ],
     estimatedTimeline: "Audit delivered within 3 business days. Implementation timeline depends on your web platform.",

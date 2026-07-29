@@ -2,16 +2,12 @@ import { footer } from "~/data/content";
 import {
   FacebookLogo,
   InstagramLogo,
-  LinkedinLogo,
-  TiktokLogo,
   XLogo,
 } from "@phosphor-icons/react";
 
 const socialIconMap: Record<string, React.ComponentType<{ size?: number; weight?: "fill" | "bold" | "duotone"; className?: string }>> = {
   FacebookLogo,
   InstagramLogo,
-  LinkedinLogo,
-  TiktokLogo,
   XLogo,
 };
 
