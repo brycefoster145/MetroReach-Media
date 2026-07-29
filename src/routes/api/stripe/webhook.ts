@@ -21,7 +21,7 @@ import { sendEmail } from "~/lib/email";
 import { createOrder } from "~/lib/order-router";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
-import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
+import { PRICE_TO_SERVICE, getMappingBySlug } from "~/lib/stripe-product-map";
 import { generatePortalToken } from "~/lib/portal-auth";
 import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 import { markPurchased } from "~/lib/lead-store";
@@ -46,16 +46,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request
   }
 
   // Determine which service was purchased
-  const lineItemId = session.metadata?.service_slug;
   let serviceName = "MetroReach Service";
   let serviceSlug = "unknown";
 
-  // Try metadata first, then fall back to line items
-  if (lineItemId && PRICE_TO_SERVICE[lineItemId]) {
-    serviceName = PRICE_TO_SERVICE[lineItemId].name;
-    serviceSlug = PRICE_TO_SERVICE[lineItemId].slug;
-  } else if (session.line_items?.data?.length) {
-    // Look up from line items' price IDs
+  // Try metadata service_slug first (supports dynamically-priced services like Premium Growth Audit)
+  const serviceSlugMeta = session.metadata?.service_slug;
+  if (serviceSlugMeta) {
+    const mapping = getMappingBySlug(serviceSlugMeta);
+    if (mapping) {
+      serviceName = mapping.name;
+      serviceSlug = mapping.slug;
+    }
+  }
+
+  // Fall back to line items' price IDs (for services that don't set service_slug metadata)
+  if (serviceSlug === "unknown" && session.line_items?.data?.length) {
     for (const item of session.line_items.data) {
       const priceId = item.price?.id;
       if (priceId && PRICE_TO_SERVICE[priceId]) {
