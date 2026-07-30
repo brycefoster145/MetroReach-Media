@@ -15,6 +15,7 @@ import {
   runPreWindowCheck,
   checkCronHealth,
   checkPostSuccess,
+  checkMissedSlots,
 } from "~/lib/watchdog";
 
 export const Route = createFileRoute("/api/watchdog/status")({
@@ -27,16 +28,18 @@ export const Route = createFileRoute("/api/watchdog/status")({
         try {
           // ── Light mode: no Meta API calls ──
           if (mode === "light") {
-            const [cronHealth, postSuccess] = await Promise.all([
+            const [cronHealth, postSuccess, missedSlots] = await Promise.all([
               checkCronHealth(),
               checkPostSuccess(),
+              checkMissedSlots(),
             ]);
 
             const report = {
-              status: cronHealth.ok && postSuccess.ok ? "ok" : "degraded",
+              status: cronHealth.ok && postSuccess.ok && missedSlots.ok ? "ok" : "degraded",
               server_time_utc: new Date().toISOString(),
               cron_health: cronHealth,
               post_success_24h: postSuccess,
+              missed_slots: missedSlots,
             };
 
             return new Response(JSON.stringify(report, null, 2), {

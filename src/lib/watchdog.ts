@@ -16,6 +16,9 @@
  */
 
 import { sql } from "./db";
+import { publishPost } from "./meta-poster";
+import { publishToX } from "./x-poster";
+import { publishToLinkedIn } from "./linkedin-poster";
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG
@@ -64,6 +67,7 @@ export interface WatchdogStatusReport {
   server_time_est: string;
   alerts: WatchdogAlert[];
   checks: Record<string, WatchdogCheckResult>;
+  missed_slots: MissedSlotsCheckResult | null;
   last_post_published_utc: string | null;
   posts_published_24h: number;
   posts_failed_24h: number;
@@ -556,6 +560,227 @@ async function checkBusinessPaused(): Promise<WatchdogCheckResult> {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 7. MISSED SLOTS — AUTO-FAILOVER PUBLISH
+// ═══════════════════════════════════════════════════════════════════
+
+/** Active platforms that support direct API publishing */
+const ACTIVE_PLATFORMS = ["facebook", "instagram", "x", "linkedin"];
+
+/** How long after due_at before a pending post is considered missed */
+const MISSED_SLOT_THRESHOLD_MINUTES = 10;
+
+/** Max retries before giving up on auto-failover */
+const MISSED_SLOT_MAX_RETRIES = 3;
+
+interface MissedSlotResult {
+  post_id: string;
+  platform: string;
+  outcome: "auto_published" | "failed" | "skipped";
+  detail?: string;
+}
+
+interface MissedSlotsCheckResult {
+  name: string;
+  ok: boolean;
+  details: {
+    checked: number;
+    auto_published: number;
+    failed: number;
+    skipped: number;
+    results: MissedSlotResult[];
+  };
+  alerts: WatchdogAlert[];
+}
+
+/**
+ * Auto-failover: publish any post that is 10+ minutes past due_at
+ * and still stuck in 'pending' status. This catches posts the main
+ * scheduler missed (e.g., cron gap, cold-start delay, DB blip).
+ */
+export async function checkMissedSlots(): Promise<MissedSlotsCheckResult> {
+  const alerts: WatchdogAlert[] = [];
+  const results: MissedSlotResult[] = [];
+  const now = new Date();
+  let autoPublished = 0;
+  let failed = 0;
+  let skipped = 0;
+  let rows: any[] = [];
+
+  try {
+    // Find posts 10+ min past due, still pending, not yet exhausted retries
+    rows = await sql`
+      SELECT id, platform, page_id, ig_user_id, client_id,
+             content, media_urls, hashtags, retry_count
+      FROM scheduled_posts
+      WHERE status = 'pending'
+        AND due_at < NOW() - INTERVAL '${MISSED_SLOT_THRESHOLD_MINUTES} minutes'
+        AND platform = ANY(${ACTIVE_PLATFORMS})
+        AND retry_count < ${MISSED_SLOT_MAX_RETRIES}
+      ORDER BY due_at ASC
+      LIMIT 5
+    `;
+
+    if (rows.length === 0) {
+      return {
+        name: "missed_slots",
+        ok: true,
+        details: { checked: 0, auto_published: 0, failed: 0, skipped: 0, results: [] },
+        alerts: [],
+      };
+    }
+
+    console.log(`[watchdog] 🔍 checkMissedSlots: ${rows.length} missed post(s) found — attempting auto-failover`);
+
+    for (const row of rows as any[]) {
+      const postId = row.id as string;
+      const platform = (row.platform as string).toLowerCase();
+      const pageId = (row.page_id as string) || "";
+      const igUserId = row.ig_user_id as string | undefined;
+      const clientId = (row.client_id as string) || "metroreach";
+      const content = row.content as string;
+      const mediaUrls: string[] = Array.isArray(row.media_urls) ? (row.media_urls as string[]) : [];
+      const hashtags = row.hashtags as string | undefined;
+      const retryCount = (row.retry_count as number) || 0;
+      const fullText = hashtags ? `${content}\n\n${hashtags}` : content;
+
+      // ── Build publisher dispatch ──
+      try {
+        let postResult: { post_id: string };
+
+        switch (platform) {
+          case "facebook":
+            postResult = await publishPost({
+              platform: "facebook",
+              pageId: pageId,
+              text: fullText,
+              mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+            });
+            break;
+          case "instagram":
+            // Instagram requires media — skip if none
+            if (mediaUrls.length === 0) {
+              console.warn(`[watchdog] ⏭️ Skipping Instagram post ${postId} — no media_urls`);
+              skipped++;
+              results.push({ post_id: postId, platform, outcome: "skipped", detail: "No media_urls" });
+              continue;
+            }
+            if (!igUserId) {
+              console.warn(`[watchdog] ⏭️ Skipping Instagram post ${postId} — no ig_user_id`);
+              skipped++;
+              results.push({ post_id: postId, platform, outcome: "skipped", detail: "No ig_user_id" });
+              continue;
+            }
+            postResult = await publishPost({
+              platform: "instagram",
+              pageId: pageId,
+              igUserId: igUserId,
+              text: fullText,
+              mediaUrls: mediaUrls,
+            });
+            break;
+          case "x":
+            postResult = await publishToX(clientId, pageId, fullText);
+            break;
+          case "linkedin":
+            postResult = await publishToLinkedIn(clientId, fullText);
+            break;
+          default:
+            skipped++;
+            results.push({ post_id: postId, platform, outcome: "skipped", detail: `Unsupported platform: ${platform}` });
+            continue;
+        }
+
+        // ── Success: update status to posted ──
+        await sql`
+          UPDATE scheduled_posts
+          SET status = 'posted', meta_post_id = ${postResult.post_id}, posted_at = NOW(), retry_count = 0
+          WHERE id = ${postId}
+        `;
+        autoPublished++;
+        results.push({ post_id: postId, platform, outcome: "auto_published", detail: postResult.post_id });
+        console.log(`[watchdog] ✅ Auto-published ${platform} post ${postId} → ${postResult.post_id}`);
+
+        // Log to watchdog_alerts
+        await sql`
+          INSERT INTO watchdog_alerts (alert_type, severity, message, checks_data)
+          VALUES ('missed_slot_auto_published', 'info', ${`Auto-published missed ${platform} post ${postId} (${MISSED_SLOT_THRESHOLD_MINUTES}min past due)`}, ${JSON.stringify({ post_id: postId, platform, meta_post_id: postResult.post_id })})
+        `.catch(() => {});
+
+      } catch (err: any) {
+        const newRetryCount = retryCount + 1;
+        console.error(`[watchdog] ❌ Auto-publish failed for ${platform} post ${postId}: ${err.message}`);
+
+        if (newRetryCount >= MISSED_SLOT_MAX_RETRIES) {
+          // Exhausted retries — mark as failed
+          await sql`
+            UPDATE scheduled_posts
+            SET status = 'failed', error_message = ${err.message || String(err)}, retry_count = ${newRetryCount}
+            WHERE id = ${postId}
+          `;
+          failed++;
+          results.push({ post_id: postId, platform, outcome: "failed", detail: err.message });
+
+          alerts.push({
+            type: "missed_slot_failed_permanent",
+            severity: "critical",
+            message: `CRITICAL: Missed post ${postId} (${platform}) failed auto-failover after ${newRetryCount} attempts: ${err.message}`,
+            timestamp: now.toISOString(),
+          });
+        } else {
+          // Increment retry count but leave pending for another attempt
+          await sql`
+            UPDATE scheduled_posts
+            SET retry_count = ${newRetryCount}, error_message = ${err.message || String(err)}
+            WHERE id = ${postId}
+          `;
+          console.log(`[watchdog] 🔄 Post ${postId} retry ${newRetryCount}/${MISSED_SLOT_MAX_RETRIES} — leaving pending`);
+
+          alerts.push({
+            type: "missed_slot_retry",
+            severity: "warning",
+            message: `WARNING: Missed post ${postId} (${platform}) auto-failover attempt ${newRetryCount}/${MISSED_SLOT_MAX_RETRIES} failed: ${err.message}`,
+            timestamp: now.toISOString(),
+          });
+        }
+
+        // Log to watchdog_alerts
+        await sql`
+          INSERT INTO watchdog_alerts (alert_type, severity, message, checks_data)
+          VALUES ('missed_slot_publish_failed', ${newRetryCount >= MISSED_SLOT_MAX_RETRIES ? 'critical' : 'warning'}, ${`Auto-failover failed for ${platform} post ${postId}: ${err.message}`}, ${JSON.stringify({ post_id: postId, platform, retry_count: newRetryCount, error: err.message })})
+        `.catch(() => {});
+      }
+    }
+  } catch (err: any) {
+    console.error(`[watchdog] ❌ checkMissedSlots query/loop error: ${err.message}`);
+    alerts.push({
+      type: "missed_slots_check_error",
+      severity: "warning",
+      message: `Failed to run missed-slots check: ${err.message}`,
+      timestamp: now.toISOString(),
+    });
+    return {
+      name: "missed_slots",
+      ok: false,
+      details: { checked: 0, auto_published: autoPublished, failed, skipped, results },
+      alerts,
+    };
+  }
+
+  return {
+    name: "missed_slots",
+    ok: failed === 0,
+    details: {
+      checked: rows.length ?? 0,
+      auto_published: autoPublished,
+      failed,
+      skipped,
+      results,
+    },
+    alerts,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MASTER: RUN ALL WATCHDOG CHECKS
 // ═══════════════════════════════════════════════════════════════════
 
@@ -567,7 +792,7 @@ export async function runWatchdogChecks(): Promise<WatchdogStatusReport> {
   console.log(`[watchdog] 🐕 Running all checks at ${now.toISOString()} (${estTimeStr})`);
 
   // Run all checks in parallel
-  const [cronHealth, postSuccess, metaToken, stalePublishing, upcomingPosts, businessPaused] =
+  const [cronHealth, postSuccess, metaToken, stalePublishing, upcomingPosts, businessPaused, missedSlots] =
     await Promise.all([
       checkCronHealth(),
       checkPostSuccess(),
@@ -575,6 +800,7 @@ export async function runWatchdogChecks(): Promise<WatchdogStatusReport> {
       detectStalePublishing(),
       checkUpcomingPosts(),
       checkBusinessPaused(),
+      checkMissedSlots(),
     ]);
 
   // Collect all alerts
@@ -585,6 +811,7 @@ export async function runWatchdogChecks(): Promise<WatchdogStatusReport> {
     ...stalePublishing.alerts,
     ...upcomingPosts.alerts,
     ...businessPaused.alerts,
+    ...missedSlots.alerts,
   ];
 
   // Determine overall status
@@ -646,6 +873,7 @@ export async function runWatchdogChecks(): Promise<WatchdogStatusReport> {
       upcoming_posts: upcomingPosts,
       business_paused: businessPaused,
     },
+    missed_slots: missedSlots,
     last_post_published_utc: postSuccess.details.last_post_published_utc as string | null,
     posts_published_24h: postSuccess.details.posts_succeeded_24h as number,
     posts_failed_24h: postSuccess.details.cron_reported_failed_24h as number,
