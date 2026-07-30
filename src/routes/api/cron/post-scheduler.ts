@@ -270,13 +270,15 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
                   `IDs: [${staleIds.join(", ")}]`,
               );
 
-              // Reset stuck 'publishing' posts back to 'pending' so they can be retried
+              // Reset stuck 'publishing' posts back to 'pending' so they can be retried.
+              // Bump due_at to NOW() so the 5-min watchdog grace period restarts
+              // and checkMissedPosts() doesn't immediately flag them as failed.
               let resetCount = 0;
               for (const row of staleRows) {
                 if (row.status === "publishing") {
                   await sql`
                     UPDATE scheduled_posts
-                    SET status = 'pending', posted_at = NULL, locked_at = NULL
+                    SET status = 'pending', posted_at = NULL, locked_at = NULL, due_at = NOW()
                     WHERE id = ${row.id}
                   `;
                   resetCount++;
