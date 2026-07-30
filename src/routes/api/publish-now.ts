@@ -10,7 +10,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
-import { publishPost, deleteInstagramPost, NoMediaError } from "~/lib/meta-poster";
+import { publishPost, deleteInstagramPost, listInstagramMedia, NoMediaError } from "~/lib/meta-poster";
 
 // ── MetroReach Media account defaults ──
 // Used when client_id === "metroreach" so publish-now works via curl
@@ -21,6 +21,57 @@ const DEFAULT_IG_USER_ID = "17841472858895937";
 export const Route = createFileRoute("/api/publish-now")({
   server: {
     handlers: {
+      GET: async ({ request }) => {
+        const url = new URL(request.url);
+        const action = url.searchParams.get("action");
+
+        if (action === "list") {
+          const igUserId =
+            url.searchParams.get("ig_user_id") || DEFAULT_IG_USER_ID;
+          const limit = parseInt(url.searchParams.get("limit") || "25", 10);
+
+          try {
+            console.log(
+              `[publish-now] Listing Instagram media for user ${igUserId}...`,
+            );
+
+            const media = await listInstagramMedia(igUserId, limit);
+
+            return new Response(JSON.stringify({ media }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          } catch (err: any) {
+            console.error(
+              `[publish-now] ❌ List failed: ${err.message}`,
+            );
+
+            return new Response(
+              JSON.stringify({
+                error: "Failed to list Instagram media",
+                detail: err.message,
+              }),
+              {
+                status: 500,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            error: "Missing or invalid action",
+            usage:
+              "Use ?action=list to list recent Instagram media. Optional: &ig_user_id=...&limit=25",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      },
+
       POST: async ({ request }) => {
         let body: Record<string, unknown>;
         try {
