@@ -450,6 +450,26 @@ export const STRIPE_PRODUCT_MAP: StripeProductMapping[] = [
     recurring: false,
     priceLabel: "From $600 one-time",
   },
+  {
+    slug: "vip-daily",
+    stripePriceId: "price_1Txrn51v80UmMrLIol8Tln4b",
+    stripeProductId: "prod_UxEawjHXDUZA8g",
+    name: "Aggressive Daily Organic — VIP",
+    category: "organic-content",
+    amount: 850000,
+    recurring: true,
+    priceLabel: "$8,500/month",
+  },
+  {
+    slug: "premium-growth-audit",
+    stripePriceId: "price_1TwKxKDGk9TbScamUD3JHGFO",
+    stripeProductId: "prod_UwDOA7SlmyFndE",
+    name: "Premium Growth Audit",
+    category: "strategy",
+    amount: 49500,
+    recurring: false,
+    priceLabel: "$495 one-time",
+  },
 ];
 
 /** Lookup a mapping by service slug */
@@ -507,4 +527,6 @@ export const PRICE_TO_SERVICE: Record<string, { name: string; slug: string }> = 
   "price_1TwsEB1v80UmMrLI6PY5T1Bi": { name: "Platform Setup & Optimization", slug: "platform-setup-community" },
   "price_1TwsEC1v80UmMrLIUqPV21WV": { name: "Social Inbox Management", slug: "social-inbox-management" },
   "price_1TwsEC1v80UmMrLIU8rpLrcd": { name: "Social Inbox Design", slug: "social-inbox-design" },
+  "price_1Txrn51v80UmMrLIol8Tln4b": { name: "Aggressive Daily Organic — VIP", slug: "vip-daily" },
+  "price_1TwKxKDGk9TbScamUD3JHGFO": { name: "Premium Growth Audit", slug: "premium-growth-audit" },
 };

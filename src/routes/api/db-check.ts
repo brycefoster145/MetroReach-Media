@@ -25,14 +25,14 @@ export const Route = createFileRoute("/api/db-check")({
         // ── Full listing mode: ?list=fb,ig returns all Facebook + Instagram posts ──
         if (listParam) {
           const platforms = listParam.split(",").map(s => s.trim());
-          const validPlatforms = platforms.filter(p => ["fb", "ig", "facebook", "instagram"].includes(p));
+          const validPlatforms = platforms.filter(p => ["fb", "ig", "x", "facebook", "instagram", "twitter"].includes(p));
           if (validPlatforms.length === 0) {
-            return new Response(JSON.stringify({ error: "Use ?list=fb,ig" }), { status: 400, headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({ error: "Use ?list=fb,ig,x" }), { status: 400, headers: { "Content-Type": "application/json" } });
           }
           try {
             if (!url) throw new Error("DATABASE_URL not set");
             const n = neon(url);
-            const dbPlatforms = validPlatforms.map(p => p === "fb" ? "facebook" : p === "ig" ? "instagram" : p);
+            const dbPlatforms = validPlatforms.map(p => p === "fb" ? "facebook" : p === "ig" ? "instagram" : p === "twitter" ? "x" : p);
             const posts = await n`
               SELECT id, platform, status, due_at, created_at, posted_at, content
               FROM scheduled_posts
@@ -407,7 +407,7 @@ async function handleCleanupOldName(): Promise<Response> {
     `;
     report.after_fb_ig_count = Number(afterCount[0]?.cnt);
 
-    // Verify zero "MetroReach Digital" posts remain
+    // Verify zero "MetroReach Media" posts remain
     const oldNameCheck = await pg`
       SELECT COUNT(*) as cnt FROM scheduled_posts
       WHERE LOWER(content) LIKE '%metroreach digital%'

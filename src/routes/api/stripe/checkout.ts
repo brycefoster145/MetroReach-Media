@@ -1,5 +1,5 @@
 /**
- * Stripe Checkout Session API — MetroReach Digital
+ * Stripe Checkout Session API — MetroReach Media
  *
  * POST /api/stripe/checkout
  * Creates a Stripe Checkout session for a single service purchase.
@@ -9,12 +9,13 @@
  * One-time services → payment mode
  * Monthly services    → subscription mode
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
 import { getMappingBySlug } from "~/lib/stripe-product-map";
+import { getSiteUrl } from "~/lib/site-url";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -23,16 +24,6 @@ function getStripe(): Stripe {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
   return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
-}
-
-// ── Determine the site's public URL ──
-function getSiteUrl(): string {
-  // Vercel provides this at build time
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // Fallback for local dev
-  return process.env.SITE_URL || "http://localhost:3000";
 }
 
 export const Route = createFileRoute("/api/stripe/checkout")({
@@ -113,7 +104,8 @@ export const Route = createFileRoute("/api/stripe/checkout")({
                   },
                 }
               : {
-                  // For one-time payments
+                  // For one-time payments — should also allow promo codes
+                  allow_promotion_codes: true,
                   payment_intent_data: {
                     metadata: {
                       service_slug: slug,

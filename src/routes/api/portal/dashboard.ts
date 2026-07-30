@@ -1,7 +1,7 @@
 /**
  * GET /api/portal/dashboard — Returns dashboard data for authenticated portal client
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -21,10 +21,10 @@ export const Route = createFileRoute("/api/portal/dashboard")({
         }
 
         try {
-          // Fetch client profile
+          // Fetch client profile (including onboarding_data for frontend banner)
           const clientRows = await sql`
             SELECT id, email, name, company, service, service_slug, status,
-                   pipeline_status, created_at
+                   pipeline_status, onboarding_data, created_at
             FROM clients WHERE id = ${client.sub} LIMIT 1
           `;
 

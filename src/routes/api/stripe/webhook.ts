@@ -1,10 +1,10 @@
 /**
- * Stripe Webhook Handler — MetroReach Digital
+ * Stripe Webhook Handler — MetroReach Media
  *
  * Receives Stripe webhook events, verifies signatures, and triggers the
  * automated client delivery pipeline on checkout.session.completed.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -17,10 +17,14 @@ import {
   sendInternalNewClientAlert,
   sendPurchaseConfirmation,
 } from "~/lib/email-sequences";
+import { sendEmail } from "~/lib/email";
 import { createOrder } from "~/lib/order-router";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
-import { PRICE_TO_SERVICE } from "~/lib/stripe-product-map";
+import { PRICE_TO_SERVICE, getMappingBySlug } from "~/lib/stripe-product-map";
+import { generatePortalToken } from "~/lib/portal-auth";
+import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
+import { markPurchased } from "~/lib/lead-store";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -31,7 +35,7 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request: Request): Promise<void> {
   const customerEmail = session.customer_details?.email || session.customer_email;
   const customerName = session.customer_details?.name || "Valued Client";
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
@@ -42,16 +46,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }
 
   // Determine which service was purchased
-  const lineItemId = session.metadata?.service_slug;
   let serviceName = "MetroReach Service";
   let serviceSlug = "unknown";
 
-  // Try metadata first, then fall back to line items
-  if (lineItemId && PRICE_TO_SERVICE[lineItemId]) {
-    serviceName = PRICE_TO_SERVICE[lineItemId].name;
-    serviceSlug = PRICE_TO_SERVICE[lineItemId].slug;
-  } else if (session.line_items?.data?.length) {
-    // Look up from line items' price IDs
+  // Try metadata service_slug first (supports dynamically-priced services like Premium Growth Audit)
+  const serviceSlugMeta = session.metadata?.service_slug;
+  if (serviceSlugMeta) {
+    const mapping = getMappingBySlug(serviceSlugMeta);
+    if (mapping) {
+      serviceName = mapping.name;
+      serviceSlug = mapping.slug;
+    }
+  }
+
+  // Fall back to line items' price IDs (for services that don't set service_slug metadata)
+  if (serviceSlug === "unknown" && session.line_items?.data?.length) {
     for (const item of session.line_items.data) {
       const priceId = item.price?.id;
       if (priceId && PRICE_TO_SERVICE[priceId]) {
@@ -63,6 +72,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }
 
   const clientId = `client-${randomBytes(8).toString("hex")}`;
+  const portalToken = generatePortalToken();
   const company = session.metadata?.company || "";
 
   // Insert client record
@@ -71,12 +81,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       INSERT INTO clients (
         id, email, name, company, service, service_slug,
         status, stripe_customer_id, stripe_subscription_id,
-        pipeline_status, created_at, updated_at
+        pipeline_status, portal_token, created_at, updated_at
       ) VALUES (
         ${clientId}, ${customerEmail}, ${customerName}, ${company || null},
         ${serviceName}, ${serviceSlug},
         'onboarding', ${customerId || null}, ${session.subscription as string || null},
-        'pending', NOW(), NOW()
+        'pending', ${portalToken}, NOW(), NOW()
       )
     `;
   } catch (err: any) {
@@ -114,6 +124,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     stripe_customer_id: customerId || undefined,
     stripe_subscription_id: (session.subscription as string) || undefined,
     pipeline_status: "pending",
+    portal_token: portalToken,
   };
 
   // ── Trigger delivery pipeline (non-blocking, fire-and-forget) ──
@@ -153,7 +164,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   // 4. Telegram notification
   const tgLines = [
-    "🎉 <b>New Client — MetroReach Digital</b>",
+    "🎉 <b>New Client — MetroReach Media</b>",
     "",
     `Name: ${customerName}`,
     `Email: ${customerEmail}`,
@@ -161,7 +172,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     `Service: ${serviceName}`,
     `Status: Onboarding`,
     "",
-    `<a href="https://metroreachagency.com/dashboard?client=${clientId}">View Client →</a>`,
+    `<a href="https://metroreachagency.com/portal?token=${portalToken}">View Client →</a>`,
   ];
   sendTelegramMessage(tgLines.join("\n")).catch(() => {});
 
@@ -169,6 +180,55 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   executePipeline(client).catch((e) =>
     console.error("Pipeline execution failed:", e.message),
   );
+
+  // ── 6. Write conversion event with attribution (fire-and-forget) ──
+  resolveAttribution(request)
+    .then((attribution) => {
+      // Override client_id to the one we just created/updated
+      attribution.client_id = clientId;
+      return writeConversionEvent(
+        attribution,
+        "purchase",
+        session.amount_total || 0,
+        customerName,
+        customerEmail,
+      );
+    })
+    .catch((e) => console.error("Conversion event write failed:", e.message));
+
+  // ── 7. Premium Growth Audit: mark lead as paid + send report email ──
+  if (serviceSlug === "premium-growth-audit") {
+    const leadId = session.metadata?.lead_id;
+    if (leadId) {
+      try {
+        await markPurchased(leadId);
+        console.log(`Premium audit lead marked paid: ${leadId}`);
+      } catch (e: any) {
+        console.error("Failed to mark premium audit lead as paid:", e.message);
+      }
+
+      // Send report-access email with direct link
+      const reportUrl = `https://metroreachagency.com/premium-audit/report?id=${leadId}&email=${encodeURIComponent(customerEmail)}`;
+      sendEmail({
+        to: customerEmail,
+        from: "reports@metroreachagency.com",
+        subject: "Your Premium Growth Audit Report Is Ready",
+        body: [
+          `Hi ${customerName},`,
+          "",
+          "Your Premium Growth Audit report is ready to view.",
+          "",
+          `View your report: ${reportUrl}`,
+          "",
+          "This comprehensive analysis includes 12-category scoring, a priority matrix, and a phased growth roadmap — all evidence-based and built by our team of marketing specialists.",
+          "",
+          "If you have any questions about your report or the service recommendations, just reply to this email — our team is here to help.",
+          "",
+          "— The MetroReach Media Team",
+        ].join("\n"),
+      }).catch((e) => console.error("Premium audit report email failed:", e.message));
+    }
+  }
 
   console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
 }
@@ -229,7 +289,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             case "checkout.session.completed": {
               const session = event.data.object as Stripe.Checkout.Session;
               // Process async — acknowledge webhook immediately
-              handleCheckoutCompleted(session).catch((err) =>
+              handleCheckoutCompleted(session, request).catch((err) =>
                 console.error("handleCheckoutCompleted failed:", err.message),
               );
               break;

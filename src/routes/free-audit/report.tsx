@@ -195,9 +195,33 @@ function ConfidenceBadge({ confidence }: { confidence: "high" | "moderate" | "li
 // ---------------------------------------------------------------------------
 
 function FreeAuditReportPage() {
-  const [audit, setAudit] = useState<AuditResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+      const [audit, setAudit] = useState<AuditResult | null>(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState("");
+      const [checkoutLoading, setCheckoutLoading] = useState(false);
+      const [checkoutError, setCheckoutError] = useState("");
+
+      async function handleCheckout(slug: string) {
+        setCheckoutLoading(true);
+        setCheckoutError("");
+        try {
+          const res = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.error || "Failed to create checkout session. Please try again.");
+          }
+          const { url } = await res.json();
+          if (!url) throw new Error("No checkout URL returned. Please try again.");
+          window.location.href = url;
+        } catch (err: any) {
+          setCheckoutError(err.message || "Something went wrong. Please try again.");
+          setCheckoutLoading(false);
+        }
+      }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -749,37 +773,44 @@ function FreeAuditReportPage() {
               engagement, and analytics — so you get the results without the overhead.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {primaryRec?.stripeLink ? (
-                <a
-                  href={primaryRec.stripeLink}
-                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
-                >
-                  Start My Growth Plan
-                  <ArrowRight size={18} weight="bold" />
-                </a>
-              ) : (
-                <div className="w-full sm:w-auto">
-                  <a
-                    href="/contact"
-                    className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
-                  >
-                    Start My Growth Plan
-                    <ArrowRight size={18} weight="bold" />
-                  </a>
-                  {primaryRec && (
-                    <p className="text-xs text-text-muted mt-3 max-w-sm mx-auto leading-relaxed">
-                      We're preparing {primaryRec.name.toLowerCase()} for instant checkout. 
-                      In the meantime, our team will reach out within 24 hours to discuss your 
-                      personalized growth plan.
-                    </p>
+              {primaryRec?.serviceSlug ? (
+                    <button
+                      onClick={() => handleCheckout(primaryRec.serviceSlug!)}
+                      disabled={checkoutLoading}
+                      className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-wait"
+                    >
+                      {checkoutLoading ? (
+                        <>Redirecting to secure checkout… <Spinner size={18} className="animate-spin" /></>
+                      ) : (
+                        <>Start My Growth Plan <ArrowRight size={18} weight="bold" /></>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="w-full sm:w-auto">
+                      <a
+                        href="/contact"
+                        className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
+                      >
+                        Start My Growth Plan
+                        <ArrowRight size={18} weight="bold" />
+                      </a>
+                      {primaryRec && (
+                        <p className="text-xs text-text-muted mt-3 max-w-sm mx-auto leading-relaxed">
+                          We're preparing {primaryRec.name.toLowerCase()} for instant checkout.
+                          In the meantime, our team will reach out within 24 hours to discuss your
+                          personalized growth plan.
+                        </p>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
+                  {checkoutError && (
+                    <p className="text-sm text-red-400 mt-2">{checkoutError}</p>
+                  )}
               <a
-                href="/services"
+                href="/pricing"
                 className="border border-border-emphasis text-text-primary rounded-full px-6 py-2.5 text-sm hover:border-brand-primary hover:text-brand-primary inline-flex items-center gap-2 font-semibold transition-all duration-200"
               >
-                Compare All Services
+                Compare All Packages
               </a>
             </div>
             <p className="text-xs text-text-muted mt-8 pt-8 border-t border-border-subtle">

@@ -21,3 +21,4 @@ node_modules
 src/routeTree.gen.ts
 .vercel
 .env*
+STRIPE_SECRET_KEY

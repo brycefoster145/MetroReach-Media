@@ -1,32 +1,53 @@
 /**
- * Database client — Neon Postgres via the `postgres` package.
- * MetroReach Digital
+ * Database client — Neon Postgres via @neondatabase/serverless.
+ * MetroReach Media
  *
  * Creates a `sql` tagged-template client connected to DATABASE_URL.
- * Eager initialization — no Proxy, no lazy loading, no bundler pitfalls.
+ * Uses HTTP-based queries (fetch API) — compatible with Vite SSR and edge runtimes.
+ * Lazy initialization — connection is only created on first use.
  *
  * Use only inside server-side code (API route handlers, createServerFn).
  */
-import postgres from "postgres";
-import type { Sql } from "postgres";
+import { neon } from "@neondatabase/serverless";
+import type { NeonQueryFunction } from "@neondatabase/serverless";
 
-const url = process.env.DATABASE_URL;
+let _sql: NeonQueryFunction | null = null;
 
-function createSql(): Sql {
+function createSql(): NeonQueryFunction {
+  const url = process.env.DATABASE_URL;
   if (!url) {
-    // Dummy that throws on use — allows importing db.ts
-    // in environments without DATABASE_URL without crashing.
-    const errFn = (() => {
-      throw new Error("DATABASE_URL is not set");
-    }) as unknown as Sql;
-    return errFn;
+    throw new Error("DATABASE_URL is not set");
   }
-  return postgres(url, {
-    max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
-    ssl: "require",
-  });
+  // neon() validates the URL internally — let it handle validation
+  return neon(url);
 }
 
-export const sql: Sql = createSql();
+function getSql(): NeonQueryFunction {
+  if (!_sql) {
+    _sql = createSql();
+  }
+  return _sql;
+}
+
+/**
+ * Proxy that forwards tagged-template calls and property access to the
+ * underlying NeonQueryFunction. This gives us:
+ *   sql`SELECT ...`           — tagged template
+ *   sql.transaction([...])    — property access
+ */
+function createProxy(): NeonQueryFunction {
+  const target = () => {};
+  return new Proxy(target, {
+    apply(_target, _thisArg, args) {
+      const db = getSql();
+      return (db as any)(...args);
+    },
+    get(_target, prop) {
+      const db = getSql();
+      const val = (db as any)[prop];
+      return typeof val === "function" ? val.bind(db) : val;
+    },
+  }) as unknown as NeonQueryFunction;
+}
+
+export const sql = createProxy();

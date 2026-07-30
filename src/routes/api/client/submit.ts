@@ -5,7 +5,7 @@
  * Saves files to public/uploads/<client-name>/<YYYY-MM-DD>/
  * Stores metadata alongside in a JSON manifest.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

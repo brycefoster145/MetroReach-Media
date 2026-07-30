@@ -1,13 +1,14 @@
 /**
  * POST /api/client/onboarding — Submit onboarding data
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
 import { getClientFromRequest } from "~/lib/client-auth";
 import { sql } from "~/lib/db";
 import { sendEmail } from "~/lib/email";
+import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 
 export const Route = createFileRoute("/api/client/onboarding")({
   server: {
@@ -55,6 +56,36 @@ export const Route = createFileRoute("/api/client/onboarding")({
 
         const clientName = (existing[0]?.name as string) || "Client";
 
+        // ── Write conversion event if this is the FIRST onboarding submission ──
+        const isFirstSubmission = !current || Object.keys(current).length === 0;
+        if (isFirstSubmission) {
+          resolveAttribution(request)
+            .then((attribution) => {
+              attribution.client_id = client.sub;
+              return writeConversionEvent(
+                attribution,
+                "onboarding_complete",
+              );
+            })
+            .catch((e) =>
+              console.error("Onboarding conversion event write failed:", e.message),
+            );
+
+          // ── Trigger automatic content generation ──
+          // Fire-and-forget: don't block the onboarding response.
+          // The content pipeline will generate a 30-day calendar, copy, and images.
+          const siteUrl = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : process.env.SITE_URL || "http://localhost:3000";
+          fetch(`${siteUrl}/api/content/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ client_id: client.sub }),
+          }).catch((e) =>
+            console.error("[onboarding] Content generation trigger failed:", e.message),
+          );
+        }
+
         // Notify team
         sendEmail({
           to: "bryce@metroreachagency.com",
@@ -64,7 +95,7 @@ export const Route = createFileRoute("/api/client/onboarding")({
 <!DOCTYPE html>
 <html>
 <body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
-  <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;">MetroReach Digital</p>
+  <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;">MetroReach Media</p>
   <h2 style="color:#1a1a1a;font-size:20px;font-weight:700;">Onboarding Update Received</h2>
   <p style="font-size:15px;color:#374151;"><strong>${clientName}</strong> submitted onboarding data.</p>
   <p style="font-size:14px;color:#6b7280;">Log in to the dashboard to review.</p>

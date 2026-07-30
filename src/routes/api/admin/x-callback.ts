@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/admin/x-callback")({
           `;
 
           return new Response(
-            `<h1>✅ X Connected!</h1><p>${user.name} (@${user.username}) — your X account is now connected to MetroReach Digital.</p><p><a href="/">Back to site</a></p>`,
+            `<h1>✅ X Connected!</h1><p>${user.name} (@${user.username}) — your X account is now connected to MetroReach Media.</p><p><a href="/">Back to site</a></p>`,
             { status: 200, headers: { "Content-Type": "text/html" } },
           );
         } catch (err: any) {

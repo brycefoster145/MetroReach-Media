@@ -74,6 +74,11 @@ function Security() {
                 >
                   <h4 className="text-sm font-semibold font-heading text-text-primary mb-2">
                     {item.name}
+                    {(item as any).comingSoon && (
+                      <span className="ml-2 inline-block text-[10px] font-semibold uppercase tracking-wider text-text-muted bg-bg-root border border-border-subtle rounded-full px-2 py-0.5">
+                        Coming Soon
+                      </span>
+                    )}
                   </h4>
                   <p className="text-sm text-text-secondary leading-relaxed">
                     {item.text}

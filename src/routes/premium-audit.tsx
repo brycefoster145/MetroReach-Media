@@ -1,9 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect } from "react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import {
-  ArrowRight,
-  CaretDown,
-  Spinner,
   ChartBar,
   MagnifyingGlass,
   Lightning,
@@ -37,159 +34,16 @@ const primaryGoals = [
   "All of the above",
 ] as const;
 
-interface FormState {
-  businessName: string;
-  websiteUrl: string;
-  industry: string;
-  location: string;
-  primaryGoal: string;
-  facebookUrl: string;
-  instagramUrl: string;
-  linkedinUrl: string;
-  tiktokUrl: string;
-  googleBusinessUrl: string;
-  contactName: string;
-  email: string;
-  phone: string;
-  consent: boolean;
-}
-
-const initialForm: FormState = {
-  businessName: "",
-  websiteUrl: "",
-  industry: "",
-  location: "",
-  primaryGoal: "",
-  facebookUrl: "",
-  instagramUrl: "",
-  linkedinUrl: "",
-  tiktokUrl: "",
-  googleBusinessUrl: "",
-  contactName: "",
-  email: "",
-  phone: "",
-  consent: false,
-};
-
-type FieldName = keyof FormState;
-
 export const Route = createFileRoute("/premium-audit")({
   component: PremiumAudit,
 });
 
+const inputClass =
+  "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
+const labelClass = "block text-sm font-medium text-text-secondary mb-2";
+const optionalClass = "text-text-muted font-normal";
+
 function PremiumAudit() {
-  const [form, setForm] = useState<FormState>(initialForm);
-  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
-  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const update = (field: FieldName, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-  };
-
-  const validate = (): boolean => {
-    const errs: Partial<Record<FieldName, string>> = {};
-
-    const required: { field: FieldName; label: string }[] = [
-      { field: "businessName", label: "Business name" },
-      { field: "websiteUrl", label: "Website URL" },
-      { field: "industry", label: "Industry" },
-      { field: "location", label: "Business location" },
-      { field: "primaryGoal", label: "Primary goal" },
-      { field: "contactName", label: "Contact name" },
-      { field: "email", label: "Email address" },
-    ];
-
-    for (const { field, label } of required) {
-      if (typeof form[field] === "string" && !(form[field] as string).trim()) {
-        errs[field] = `${label} is required.`;
-      }
-    }
-
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errs.email = "Enter a valid email address.";
-    }
-
-    if (form.websiteUrl.trim()) {
-      try {
-        const url = new URL(form.websiteUrl.trim());
-        if (url.protocol !== "http:" && url.protocol !== "https:") {
-          errs.websiteUrl = "Enter a valid URL starting with http:// or https://";
-        }
-      } catch {
-        errs.websiteUrl = "Enter a valid URL (e.g., https://yourbusiness.com)";
-      }
-    }
-
-    const socialUrls: { field: FieldName; label: string }[] = [
-      { field: "facebookUrl", label: "Facebook URL" },
-      { field: "instagramUrl", label: "Instagram URL" },
-      { field: "linkedinUrl", label: "LinkedIn URL" },
-      { field: "tiktokUrl", label: "TikTok URL" },
-      { field: "googleBusinessUrl", label: "Google Business Profile URL" },
-    ];
-    for (const { field, label } of socialUrls) {
-      const val = form[field] as string;
-      if (val.trim()) {
-        try {
-          const url = new URL(val.trim());
-          if (url.protocol !== "http:" && url.protocol !== "https:") {
-            errs[field] = `Enter a valid ${label}.`;
-          }
-        } catch {
-          errs[field] = `Enter a valid ${label}.`;
-        }
-      }
-    }
-
-    if (!form.consent) {
-      errs.consent = "Please confirm your consent to continue.";
-    }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    setStatus("submitting");
-    setErrorMessage("");
-
-    try {
-      const res = await fetch("/api/premium-audit/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Something went wrong. Please try again.");
-      }
-
-      // Redirect to Stripe payment
-      window.location.href = data.paymentUrl;
-    } catch (err: any) {
-      setStatus("error");
-      setErrorMessage(err.message || "An unexpected error occurred. Please try again.");
-    }
-  };
-
-  const inputClass =
-    "w-full rounded-xl bg-bg-surface-raised border border-border-subtle px-4 py-3.5 text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/30 transition-all duration-200 text-base";
-  const labelClass = "block text-sm font-medium text-text-secondary mb-2";
-  const errorClass = "text-xs text-error mt-1.5";
-  const optionalClass = "text-text-muted font-normal";
-
   return (
     <main>
       {/* Hero */}
@@ -268,15 +122,26 @@ function PremiumAudit() {
               </ul>
             </div>
 
-            {/* Error message */}
-            {status === "error" && (
-              <div className="mb-8 p-4 rounded-xl bg-error/10 border border-error/30 text-error text-sm">
-                {errorMessage}
-              </div>
-            )}
+            {/* Error banner — hidden by default, shown via JS */}
+            <div
+              id="form-error"
+              className="hidden bg-error/10 border border-error/30 text-error rounded-xl p-4 mb-8"
+              role="alert"
+            >
+              <p className="text-sm font-medium flex items-start gap-2">
+                <span className="text-base flex-shrink-0">⚠</span>
+                <span id="form-error-msg"></span>
+              </p>
+            </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-8" noValidate>
+            {/* FORM — hybrid: pure HTML fallback, JS-enhanced for error handling */}
+            <form
+              id="premium-audit-form"
+              action="/api/premium-audit/submit"
+              method="POST"
+              encType="application/x-www-form-urlencoded"
+              className="space-y-8"
+            >
               {/* ── Business Information ── */}
               <fieldset className="space-y-5">
                 <legend className="text-lg font-semibold font-heading text-text-primary mb-1">
@@ -289,14 +154,12 @@ function PremiumAudit() {
                   </label>
                   <input
                     id="businessName"
+                    name="businessName"
                     type="text"
                     className={inputClass}
                     placeholder="Your company name"
-                    value={form.businessName}
-                    onChange={(e) => update("businessName", e.target.value)}
                     required
                   />
-                  {errors.businessName && <p className={errorClass}>{errors.businessName}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -306,43 +169,32 @@ function PremiumAudit() {
                     </label>
                     <input
                       id="websiteUrl"
+                      name="websiteUrl"
                       type="url"
                       className={inputClass}
                       placeholder="https://yourbusiness.com"
-                      value={form.websiteUrl}
-                      onChange={(e) => update("websiteUrl", e.target.value)}
                       required
                     />
-                    {errors.websiteUrl && <p className={errorClass}>{errors.websiteUrl}</p>}
                   </div>
                   <div>
                     <label htmlFor="industry" className={labelClass}>
                       Industry <span className="text-error">*</span>
                     </label>
-                    <div className="relative">
-                      <select
-                        id="industry"
-                        className={`${inputClass} appearance-none pr-10`}
-                        value={form.industry}
-                        onChange={(e) => update("industry", e.target.value)}
-                        required
-                      >
-                        <option value="" disabled>
-                          Select your industry
+                    <select
+                      id="industry"
+                      name="industry"
+                      className={inputClass}
+                      required
+                    >
+                      <option value="" disabled selected>
+                        Select your industry
+                      </option>
+                      {industries.map((ind) => (
+                        <option key={ind} value={ind}>
+                          {ind}
                         </option>
-                        {industries.map((ind) => (
-                          <option key={ind} value={ind}>
-                            {ind}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={16}
-                        weight="bold"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-                      />
-                    </div>
-                    {errors.industry && <p className={errorClass}>{errors.industry}</p>}
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -353,43 +205,32 @@ function PremiumAudit() {
                     </label>
                     <input
                       id="location"
+                      name="location"
                       type="text"
                       className={inputClass}
                       placeholder="Austin, TX"
-                      value={form.location}
-                      onChange={(e) => update("location", e.target.value)}
                       required
                     />
-                    {errors.location && <p className={errorClass}>{errors.location}</p>}
                   </div>
                   <div>
                     <label htmlFor="primaryGoal" className={labelClass}>
                       Primary Goal <span className="text-error">*</span>
                     </label>
-                    <div className="relative">
-                      <select
-                        id="primaryGoal"
-                        className={`${inputClass} appearance-none pr-10`}
-                        value={form.primaryGoal}
-                        onChange={(e) => update("primaryGoal", e.target.value)}
-                        required
-                      >
-                        <option value="" disabled>
-                          What's your top priority?
+                    <select
+                      id="primaryGoal"
+                      name="primaryGoal"
+                      className={inputClass}
+                      required
+                    >
+                      <option value="" disabled selected>
+                        What's your top priority?
+                      </option>
+                      {primaryGoals.map((goal) => (
+                        <option key={goal} value={goal}>
+                          {goal}
                         </option>
-                        {primaryGoals.map((goal) => (
-                          <option key={goal} value={goal}>
-                            {goal}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={16}
-                        weight="bold"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-                      />
-                    </div>
-                    {errors.primaryGoal && <p className={errorClass}>{errors.primaryGoal}</p>}
+                      ))}
+                    </select>
                   </div>
                 </div>
               </fieldset>
@@ -404,28 +245,78 @@ function PremiumAudit() {
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {([
-                    { key: "facebookUrl" as FieldName, label: "Facebook URL", placeholder: "https://facebook.com/yourpage" },
-                    { key: "instagramUrl" as FieldName, label: "Instagram URL", placeholder: "https://instagram.com/yourhandle" },
-                    { key: "linkedinUrl" as FieldName, label: "LinkedIn URL", placeholder: "https://linkedin.com/company/yourcompany" },
-                    { key: "tiktokUrl" as FieldName, label: "TikTok URL", placeholder: "https://tiktok.com/@yourhandle" },
-                    { key: "googleBusinessUrl" as FieldName, label: "Google Business Profile URL", placeholder: "https://maps.google.com/..." },
-                  ]).map(({ key, label, placeholder }) => (
-                    <div key={key} className={key === "googleBusinessUrl" ? "sm:col-span-2" : ""}>
-                      <label htmlFor={key} className={labelClass}>
-                        {label} <span className={optionalClass}>(optional)</span>
-                      </label>
-                      <input
-                        id={key}
-                        type="url"
-                        className={inputClass}
-                        placeholder={placeholder}
-                        value={form[key] as string}
-                        onChange={(e) => update(key, e.target.value)}
-                      />
-                      {errors[key] && <p className={errorClass}>{errors[key]}</p>}
-                    </div>
-                  ))}
+                  <div>
+                    <label htmlFor="facebookUrl" className={labelClass}>
+                      Facebook URL <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="facebookUrl"
+                      name="facebookUrl"
+                      type="url"
+                      className={inputClass}
+                      placeholder="https://facebook.com/yourpage"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="instagramUrl" className={labelClass}>
+                      Instagram URL <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="instagramUrl"
+                      name="instagramUrl"
+                      type="url"
+                      className={inputClass}
+                      placeholder="https://instagram.com/yourhandle"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="xUrl" className={labelClass}>
+                      X URL <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="xUrl"
+                      name="xUrl"
+                      type="url"
+                      className={inputClass}
+                      placeholder="https://x.com/yourhandle"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="linkedinUrl" className={labelClass}>
+                      LinkedIn URL <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="linkedinUrl"
+                      name="linkedinUrl"
+                      type="url"
+                      className={inputClass}
+                      placeholder="https://linkedin.com/company/yourcompany"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tiktokUrl" className={labelClass}>
+                      TikTok URL <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="tiktokUrl"
+                      name="tiktokUrl"
+                      type="url"
+                      className={inputClass}
+                      placeholder="https://tiktok.com/@yourhandle"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="googleBusinessUrl" className={labelClass}>
+                      Google Business Profile URL <span className={optionalClass}>(optional)</span>
+                    </label>
+                    <input
+                      id="googleBusinessUrl"
+                      name="googleBusinessUrl"
+                      type="url"
+                      className={inputClass}
+                      placeholder="https://maps.google.com/..."
+                    />
+                  </div>
                 </div>
               </fieldset>
 
@@ -441,14 +332,12 @@ function PremiumAudit() {
                   </label>
                   <input
                     id="contactName"
+                    name="contactName"
                     type="text"
                     className={inputClass}
                     placeholder="Your full name"
-                    value={form.contactName}
-                    onChange={(e) => update("contactName", e.target.value)}
                     required
                   />
-                  {errors.contactName && <p className={errorClass}>{errors.contactName}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -458,14 +347,12 @@ function PremiumAudit() {
                     </label>
                     <input
                       id="email"
+                      name="email"
                       type="email"
                       className={inputClass}
                       placeholder="you@company.com"
-                      value={form.email}
-                      onChange={(e) => update("email", e.target.value)}
                       required
                     />
-                    {errors.email && <p className={errorClass}>{errors.email}</p>}
                   </div>
                   <div>
                     <label htmlFor="phone" className={labelClass}>
@@ -473,11 +360,10 @@ function PremiumAudit() {
                     </label>
                     <input
                       id="phone"
+                      name="phone"
                       type="tel"
                       className={inputClass}
                       placeholder="(555) 555-5555"
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
                     />
                   </div>
                 </div>
@@ -488,37 +374,33 @@ function PremiumAudit() {
                 <div className="flex items-start gap-3">
                   <input
                     id="consent"
+                    name="consent"
                     type="checkbox"
+                    value="on"
+                    required
                     className="mt-1 w-4 h-4 rounded border-border-emphasis bg-bg-surface-raised text-brand-primary focus:ring-brand-primary/30 cursor-pointer"
-                    checked={form.consent}
-                    onChange={(e) => update("consent", e.target.checked)}
                   />
                   <label htmlFor="consent" className="text-sm text-text-secondary cursor-pointer">
                     I consent to MetroReach Media analyzing publicly accessible business information{" "}
                     <span className="text-error">*</span>
                   </label>
                 </div>
-                {errors.consent && <p className={errorClass}>{errors.consent}</p>}
               </fieldset>
 
               {/* ── Submit ── */}
               <div className="pt-4">
                 <button
+                  id="submit-btn"
                   type="submit"
-                  disabled={status === "submitting"}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-10 py-4 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-10 py-4 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
                 >
-                  {status === "submitting" ? (
-                    <>
-                      <Spinner size={20} weight="bold" className="animate-spin" />
-                      Preparing Your Premium Audit...
-                    </>
-                  ) : (
-                    <>
-                      Get My Premium Audit — $495
-                      <ArrowRight size={18} weight="bold" />
-                    </>
-                  )}
+                  <span id="submit-btn-text">Get My Premium Audit — $495</span>
+                  <span id="submit-btn-spinner" className="hidden" aria-hidden="true">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </span>
                 </button>
                 <p className="text-xs text-text-muted mt-4">
                   You'll be redirected to Stripe for secure payment. After purchase,
@@ -582,6 +464,108 @@ function PremiumAudit() {
       </section>
 
       <Outlet />
+      <FormEnhancer />
     </main>
   );
+}
+
+function FormEnhancer() {
+  useEffect(() => {
+    const form = document.getElementById("premium-audit-form") as HTMLFormElement | null;
+    const errorDiv = document.getElementById("form-error") as HTMLDivElement | null;
+    const errorMsg = document.getElementById("form-error-msg") as HTMLSpanElement | null;
+    const btn = document.getElementById("submit-btn") as HTMLButtonElement | null;
+    const btnText = document.getElementById("submit-btn-text") as HTMLSpanElement | null;
+    const btnSpinner = document.getElementById("submit-btn-spinner") as HTMLSpanElement | null;
+
+    if (!form || !errorDiv || !errorMsg || !btn || !btnText || !btnSpinner) return;
+
+    const show = (msg: string) => {
+      errorMsg.textContent = msg;
+      errorDiv.classList.remove("hidden");
+      errorDiv.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    const hide = () => errorDiv.classList.add("hidden");
+    const loading = (on: boolean) => {
+      btn.disabled = on;
+      if (on) {
+        btnText.textContent = "Processing...";
+        btnSpinner.classList.remove("hidden");
+      } else {
+        btnText.textContent = "Get My Premium Audit — $495";
+        btnSpinner.classList.add("hidden");
+      }
+    };
+
+    // Show error from URL param on load (if SSR preserved it)
+    const q = new URLSearchParams(window.location.search);
+    const e = q.get("error");
+    if (e) {
+      show(decodeURIComponent(e));
+      history.replaceState({}, "", window.location.pathname);
+    }
+
+    const onSubmit = async (e: Event) => {
+      e.preventDefault();
+      hide();
+      loading(true);
+
+      try {
+        const fd = new FormData(form);
+        const body = new URLSearchParams(fd as any).toString();
+
+        // Don't follow redirects — we want the 302 itself
+        const res = await fetch(form.action, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+          redirect: "manual",
+        });
+
+        if (res.type === "opaqueredirect" || res.status === 302 || res.status === 301) {
+          const location = res.headers.get("Location") || "";
+          if (location.includes("checkout.stripe.com")) {
+            window.location.href = location;
+            return;
+          }
+          if (location.includes("?error=")) {
+            const parts = location.split("?");
+            const ep = new URLSearchParams(parts[1] || "");
+            const err = ep.get("error");
+            show(err ? decodeURIComponent(err) : "An unexpected error occurred.");
+            loading(false);
+            return;
+          }
+          // Unknown redirect — follow it
+          window.location.href = location || "/premium-audit";
+          return;
+        }
+
+        // Non-redirect response — try JSON
+        try {
+          const data = await res.json();
+          if (data.url) {
+            window.location.href = data.url;
+          } else if (data.error) {
+            show(data.error);
+          } else {
+            show("An unexpected error occurred. Please try again.");
+          }
+        } catch {
+          show("An unexpected error occurred. Please try again.");
+        }
+      } catch {
+        show("A network error occurred. Please check your connection and try again.");
+      } finally {
+        if (btn.disabled && btnText.textContent === "Processing...") {
+          loading(false);
+        }
+      }
+    };
+
+    form.addEventListener("submit", onSubmit);
+    return () => form.removeEventListener("submit", onSubmit);
+  }, []);
+
+  return null;
 }

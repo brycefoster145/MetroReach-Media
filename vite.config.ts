@@ -13,6 +13,29 @@ export default defineConfig({
     // rejects a proxied request with "Blocked request".
     allowedHosts: true,
   },
+  ssr: {
+    // Externalize heavy Node.js dependencies to prevent OOM during SSR build.
+    // These are re-bundled by `bun build` in the Vercel deployment pipeline.
+    // Without this, Vite tries to bundle stripe (2MB+), openai (3MB+), postgres,
+    // and neon into the SSR chunks, consuming ~400MB+ of heap and crashing.
+    external: [
+      "stripe",
+      "openai",
+      "postgres",
+      "@neondatabase/serverless",
+      "@sendgrid/mail",
+      "@phosphor-icons/react",
+      "sharp",
+    ],
+    noExternal: [
+      // TanStack Router MUST be bundled — the server.js references internal
+      // router APIs that are not available via package exports.
+      "@tanstack/react-router",
+      "@tanstack/react-start",
+      "@tanstack/router-core",
+      "@tanstack/history",
+    ],
+  },
   build: {
     rollupOptions: {
       onwarn(warning, warn) {

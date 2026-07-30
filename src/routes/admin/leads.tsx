@@ -4,7 +4,7 @@
  * Shows all clients with aggregated lead stats, clicks, conversions,
  * and total commission owed across all clients.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

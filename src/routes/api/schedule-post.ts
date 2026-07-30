@@ -8,7 +8,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
-import { generateImage } from "~/lib/generate-image";
+import { getSiteUrl } from "~/lib/site-url";
 
 export const Route = createFileRoute("/api/schedule-post")({
   server: {
@@ -44,34 +44,38 @@ export const Route = createFileRoute("/api/schedule-post")({
           due_at?: string;
         };
 
-        // Validate required fields
-        if (!platform || !page_id || !content || !due_at) {
+        // ── Apply MetroReach Media defaults ──
+        const resolvedPageId = page_id || (client_id === "metroreach" ? "623055204204992" : undefined);
+
+        // Validate required fields — due_at is always required
+        const needsPageId = platform && ["facebook", "instagram", "fb", "ig"].includes(platform.toLowerCase());
+        const missingFields = !platform || (needsPageId && !resolvedPageId) || !content || !due_at;
+
+        if (missingFields) {
+          const fields = needsPageId
+            ? "platform, page_id, content, due_at"
+            : "platform, content, due_at";
           return new Response(
-            JSON.stringify({
-              error: "Missing required fields: platform, page_id, content, due_at",
-            }),
+            JSON.stringify({ error: `Missing required fields: ${fields}` }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
 
         // ── Validate due_at is in the future ──
-        const dueAtDate = new Date(due_at);
+        const dueAtDate = new Date(due_at as string);
         if (isNaN(dueAtDate.getTime())) {
           return new Response(
-            JSON.stringify({
-              error: "Invalid due_at: must be a valid ISO-8601 datetime string",
-            }),
+            JSON.stringify({ error: "Invalid due_at: must be a valid ISO-8601 datetime string" }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
         if (dueAtDate.getTime() <= Date.now()) {
           return new Response(
-            JSON.stringify({
-              error: "due_at must be in the future — cannot schedule posts for a past time",
-            }),
+            JSON.stringify({ error: "due_at must be in the future — cannot schedule posts for a past time" }),
             { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
+        const resolvedDueAt = due_at as string;
 
         const validPlatforms = [
           "facebook",
@@ -90,27 +94,44 @@ export const Route = createFileRoute("/api/schedule-post")({
           );
         }
 
-        // ── Auto-generate image for Instagram posts without media ──
-        // Instagram REQUIRES images — never let a text-only IG post through.
-        // Facebook posts without images pass through (FB supports text-only).
-        let finalMediaUrls: string[] = (media_urls || []) as string[];
+        // ── Hard validation: Instagram posts REQUIRE media_urls ──
+        // AI-generated images undermine the premium agency brand.
+        // All Instagram images must be human-crafted by the Designer.
+        const finalMediaUrls: string[] = (media_urls || []) as string[];
         if (platform === "instagram" && finalMediaUrls.length === 0) {
-          try {
-            const generatedUrl = await generateImage(content as string);
-            finalMediaUrls = [generatedUrl];
-          } catch (imgErr: any) {
-            return new Response(
-              JSON.stringify({
-                error:
-                  "Instagram posts require an image, and auto-generation failed. Provide media_urls or try again.",
-                detail: imgErr.message,
-              }),
-              {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              },
-            );
-          }
+          return new Response(
+            JSON.stringify({
+              error: "Instagram posts require media_urls",
+              detail:
+                "Each Instagram post must include at least one image URL (1024x1024 PNG recommended). Coordinate with the Designer before scheduling.",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        // ── Hashtag minimum validation per platform (LOCKED IN — 2026-07-29) ──
+        // Enforces the mandatory hashtag minimums from the business plan / CONTENT-RULES.md.
+        // Never under-tag a post. Hashtag counts include #MetroReachMedia.
+        const HASHTAG_MINIMUMS: Record<string, number> = {
+          instagram: 20,
+          facebook: 3,
+          linkedin: 3,
+          x: 1,
+          tiktok: 3,
+          google: 3,
+        };
+        const minHashtags = HASHTAG_MINIMUMS[platform] ?? 0;
+        const hashtagCount = ((hashtags as string) || "").split(" ").filter((t) => t.startsWith("#")).length;
+        if (minHashtags > 0 && hashtagCount < minHashtags) {
+          return new Response(
+            JSON.stringify({
+              error: `Insufficient hashtags for ${platform}`,
+              detail: `${platform} requires at least ${minHashtags} hashtags. Post has ${hashtagCount}. Add ${minHashtags - hashtagCount} more. Every post on every platform must include #MetroReachMedia.`,
+              required: minHashtags,
+              actual: hashtagCount,
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
         }
 
         try {
@@ -121,7 +142,7 @@ export const Route = createFileRoute("/api/schedule-post")({
           const existing = await sql`
             SELECT id FROM scheduled_posts
             WHERE platform = ${platform}
-              AND due_at = ${due_at}::timestamptz
+              AND due_at = ${resolvedDueAt}::timestamptz
               AND status = 'pending'
             LIMIT 1
           `;
@@ -130,7 +151,7 @@ export const Route = createFileRoute("/api/schedule-post")({
             return new Response(
               JSON.stringify({
                 error: "Duplicate time slot",
-                detail: `A pending post already exists for ${platform} at ${due_at}. Cancel it first or pick a different time.`,
+                detail: `A pending post already exists for ${platform} at ${resolvedDueAt}. Cancel it first or pick a different time.`,
                 existingPostId: existing[0].id,
               }),
               { status: 409, headers: { "Content-Type": "application/json" } },
@@ -139,33 +160,93 @@ export const Route = createFileRoute("/api/schedule-post")({
 
           const id = `post-${randomBytes(8).toString("hex")}`;
 
-          await sql`
-            INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
-            VALUES (
-              ${id},
-              ${client_id as string},
-              ${platform},
-              ${page_id as string},
-              ${ig_user_id ? (ig_user_id as string) : null},
-              ${content as string},
-              ${sql.json(finalMediaUrls)},
-              ${hashtags as string},
-              ${due_at}::timestamptz,
-              'pending'
-            )
-          `;
+          // ── Generate UTM-tagged click-tracking link ──
+          let utmLink: string | null = null;
+          try {
+            const clientRows = await sql`
+              SELECT service_slug FROM clients WHERE id = ${client_id as string} LIMIT 1
+            `;
+            const clientSlug =
+              clientRows.length > 0
+                ? (clientRows[0].service_slug as string)
+                : (client_id as string);
+            const params = new URLSearchParams({
+              utm_source: platform,
+              utm_medium: "social",
+              utm_campaign: clientSlug,
+              utm_content: id,
+            });
+            utmLink = `${getSiteUrl()}/go/${encodeURIComponent(clientSlug)}/${encodeURIComponent(id)}?${params.toString()}`;
+          } catch (utmErr: any) {
+            console.error(
+              "[schedule-post] UTM link generation error:",
+              utmErr.message,
+            );
+          }
+
+          // Generate the INSERT with utm_link only if the column exists
+          let insertResult;
+          try {
+            insertResult = await sql`
+              INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status, utm_link)
+              VALUES (
+                ${id},
+                ${client_id as string},
+                ${platform},
+                ${resolvedPageId},
+                ${ig_user_id ? (ig_user_id as string) : null},
+                ${content as string},
+                ${JSON.stringify(finalMediaUrls)}::jsonb,
+                ${hashtags as string},
+                ${resolvedDueAt}::timestamptz,
+                'pending',
+                ${utmLink || null}
+              )
+            `;
+          } catch (insertErr: any) {
+            // If utm_link column doesn't exist, fall back to insert without it
+            if (insertErr.message?.includes('utm_link')) {
+              insertResult = await sql`
+                INSERT INTO scheduled_posts (id, client_id, platform, page_id, ig_user_id, content, media_urls, hashtags, due_at, status)
+                VALUES (
+                  ${id},
+                  ${client_id as string},
+                  ${platform},
+                  ${resolvedPageId},
+                  ${ig_user_id ? (ig_user_id as string) : null},
+                  ${content as string},
+                  ${JSON.stringify(finalMediaUrls)}::jsonb,
+                  ${hashtags as string},
+                  ${resolvedDueAt}::timestamptz,
+                  'pending'
+                )
+              `;
+            } else {
+              throw insertErr;
+            }
+          }
 
           return new Response(
             JSON.stringify({
               success: true,
               id,
               platform,
-              due_at,
-              message: `Post scheduled for ${due_at}`,
+              due_at: resolvedDueAt,
+              message: `Post scheduled for ${resolvedDueAt}`,
             }),
             { status: 201, headers: { "Content-Type": "application/json" } },
           );
         } catch (err: any) {
+          // H1: Catch unique constraint violation from idx_scheduled_posts_slot
+          if (err.code === '23505' || err.message?.includes('duplicate key') || err.message?.includes('unique')) {
+            return new Response(
+              JSON.stringify({
+                error: "Duplicate time slot",
+                detail: `A pending post already exists for ${platform} at ${resolvedDueAt}. Cancel it first or pick a different time.`,
+              }),
+              { status: 409, headers: { "Content-Type": "application/json" } },
+            );
+          }
           console.error("[schedule-post] Insert error:", err.message);
           return new Response(
             JSON.stringify({ error: "Failed to schedule post", detail: err.message }),

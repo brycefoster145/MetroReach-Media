@@ -172,9 +172,33 @@ function PriorityBadge({ priority }: { priority: string }) {
 // ---------------------------------------------------------------------------
 
 function PremiumAuditReportPage() {
-  const [audit, setAudit] = useState<PremiumAuditResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+      const [audit, setAudit] = useState<PremiumAuditResult | null>(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState("");
+      const [checkoutLoading, setCheckoutLoading] = useState(false);
+      const [checkoutErrorMsg, setCheckoutErrorMsg] = useState("");
+
+      async function handleCheckout(slug: string) {
+        setCheckoutLoading(true);
+        setCheckoutErrorMsg("");
+        try {
+          const res = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.error || "Failed to create checkout session. Please try again.");
+          }
+          const { url } = await res.json();
+          if (!url) throw new Error("No checkout URL returned. Please try again.");
+          window.location.href = url;
+        } catch (err: any) {
+          setCheckoutErrorMsg(err.message || "Something went wrong. Please try again.");
+          setCheckoutLoading(false);
+        }
+      }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -226,12 +250,13 @@ function PremiumAuditReportPage() {
             For security, report links are personalized and sent to your email. Please use the exact link from your email to access your report.
           </p>
         ) : isPaymentRequired ? (
-          <a
-            href="https://buy.stripe.com/7sY6oH3iYd1Q69ad891ck0m"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
-          >
-            Complete Your Purchase →
-          </a>
+              <button
+                onClick={() => handleCheckout("premium-growth-audit")}
+                disabled={checkoutLoading}
+                className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 disabled:opacity-60 disabled:cursor-wait"
+              >
+                {checkoutLoading ? "Redirecting to secure checkout…" : "Complete Your Purchase →"}
+              </button>
         ) : (
           <a href="/premium-audit" className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200">
             Purchase Premium Audit →
@@ -696,23 +721,30 @@ function PremiumAuditReportPage() {
               engagement, and analytics — so you get the results without the overhead.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {primaryRec?.stripeLink ? (
-                <a
-                  href={primaryRec.stripeLink}
-                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
-                >
-                  Start My Growth Plan
-                  <ArrowRight size={18} weight="bold" />
-                </a>
-              ) : (
-                <a
-                  href="/contact"
-                  className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
-                >
-                  Start My Growth Plan
-                  <ArrowRight size={18} weight="bold" />
-                </a>
-              )}
+              {primaryRec?.serviceSlug ? (
+                    <button
+                      onClick={() => handleCheckout(primaryRec.serviceSlug!)}
+                      disabled={checkoutLoading}
+                      className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-wait"
+                    >
+                      {checkoutLoading ? (
+                        <>Redirecting to secure checkout… <Spinner size={18} className="animate-spin" /></>
+                      ) : (
+                        <>Start My Growth Plan <ArrowRight size={18} weight="bold" /></>
+                      )}
+                    </button>
+                  ) : (
+                    <a
+                      href="/contact"
+                      className="inline-flex items-center gap-2 font-semibold transition-all duration-200 ease-out bg-brand-primary text-text-primary rounded-full px-8 py-3.5 text-base hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] hover:scale-[1.02]"
+                    >
+                      Start My Growth Plan
+                      <ArrowRight size={18} weight="bold" />
+                    </a>
+                  )}
+                  {checkoutErrorMsg && (
+                    <p className="text-sm text-red-400 mt-2">{checkoutErrorMsg}</p>
+                  )}
               <a
                 href="/services"
                 className="border border-border-emphasis text-text-primary rounded-full px-6 py-2.5 text-sm hover:border-brand-primary hover:text-brand-primary inline-flex items-center gap-2 font-semibold transition-all duration-200"

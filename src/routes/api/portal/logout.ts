@@ -1,7 +1,7 @@
 /**
  * POST /api/portal/logout — Clear client portal auth cookie
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

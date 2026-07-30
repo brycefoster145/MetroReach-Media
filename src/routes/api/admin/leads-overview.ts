@@ -1,7 +1,7 @@
 /**
  * /api/admin/leads-overview — Admin: all clients with lead stats
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

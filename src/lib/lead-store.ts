@@ -1,14 +1,19 @@
 /**
  * Lead Store — PostgreSQL-backed persistent storage.
- * MetroReach Digital
+ * MetroReach Media
  *
  * All leads and audit results are stored in Neon Postgres.
  * This ensures reports are accessible from any browser, any device,
  * across all Vercel serverless instances.
  */
 
-import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
+
+function randomHex(bytes: number): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,7 +74,7 @@ export interface LeadRecord {
 // ---------------------------------------------------------------------------
 
 export function generateLeadId(): string {
-  return `lead-${randomBytes(8).toString("hex")}`;
+  return `lead-${randomHex(8)}`;
 }
 
 function sanitizeId(id: string): string {
@@ -120,7 +125,7 @@ export async function createLead(formData: LeadFormData): Promise<LeadRecord> {
 
   await sql`
     INSERT INTO leads (id, email, form_data)
-    VALUES (${id}, ${email}, ${sql.json(lead)})
+    VALUES (${id}, ${email}, ${JSON.stringify(lead)}::jsonb)
   `;
 
   return lead;
@@ -153,7 +158,7 @@ export async function updateLead(
 
   await sql`
     UPDATE leads
-    SET form_data = ${sql.json(updated)}
+    SET form_data = ${JSON.stringify(updated)}::jsonb
     WHERE id = ${safeId}
   `;
 
@@ -239,7 +244,7 @@ export async function saveAuditResult(id: string, resultJson: string): Promise<v
   // Upsert into audit_results
   await sql`
     INSERT INTO audit_results (id, lead_id, result_json)
-    VALUES (${`audit-${safeId}`}, ${safeId}, ${sql.json(JSON.parse(resultJson))})
+    VALUES (${`audit-${safeId}`}, ${safeId}, ${resultJson}::jsonb)
     ON CONFLICT (id) DO UPDATE SET result_json = EXCLUDED.result_json
   `;
 }

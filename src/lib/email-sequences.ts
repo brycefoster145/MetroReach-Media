@@ -1,6 +1,6 @@
 /**
- * Automated email sequences for MetroReach Digital client delivery pipeline.
- * MetroReach Digital
+ * Automated email sequences for MetroReach Media client delivery pipeline.
+ * MetroReach Media
  *
  * Uses the existing sendEmail() from ~/lib/email (SendGrid primary, Graph API fallback).
  * All templates are premium, human-crafted — no AI/automation language in client-facing copy.
@@ -21,6 +21,7 @@ export interface Client {
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
   pipeline_status: string;
+  portal_token?: string;
   onboarding_data?: Record<string, unknown>;
 }
 
@@ -43,10 +44,40 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
   reporting: "Performance Reporting",
 };
 
-const FROM_ADDRESS = "bryce@metroreachagency.com";
+const CONTACT_ADDRESS = "contact@metroreachagency.com";
 const SUPPORT_ADDRESS = "support@metroreachagency.com";
+const REPORTS_ADDRESS = "reports@metroreachagency.com";
 
 // ── Helpers ──
+
+/**
+ * Returns true if the service slug represents a one-time deliverable
+ * (audit, strategy doc, setup, template, research, profile work, landing page review)
+ * rather than an ongoing/recurring service.
+ */
+function isOneTimeService(slug: string): boolean {
+  const oneTimeSlugs = [
+    // Audits
+    "social-media-audit", "social-media-audit-strategy", "premium-growth-audit",
+    // Strategy docs
+    "social-media-strategy", "content-strategy", "campaign-strategy",
+    // Setup services
+    "platform-setup-optimization", "platform-setup-community",
+    "ad-account-setup", "pixel-conversion-tracking",
+    "kpi-dashboard-setup",
+    // Templates
+    "community-engagement-templates",
+    // Research
+    "hashtag-research", "audience-research", "competitor-analysis",
+    // Profile work
+    "brand-voice-development", "profile-bio-optimization",
+    // Landing page reviews
+    "landing-page-review",
+    // Other one-time design/setup
+    "social-inbox-design",
+  ];
+  return oneTimeSlugs.includes(slug);
+}
 
 function emailShell(title: string, content: string): string {
   return `
@@ -57,7 +88,7 @@ function emailShell(title: string, content: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
     <tr>
       <td style="padding:32px 32px 8px;">
-        <p style="font-size:13px;font-weight:600;color:#7c3aed;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Digital</p>
+        <p style="font-size:13px;font-weight:600;color:#7c3aed;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Media</p>
       </td>
     </tr>
     <tr>
@@ -68,7 +99,7 @@ function emailShell(title: string, content: string): string {
     </tr>
     <tr>
       <td style="padding:20px 32px;background:#f5f3ff;font-size:13px;color:#6b7280;border-top:1px solid #e5e0f0;">
-        <p style="margin:0 0 4px;">MetroReach Digital — Premium Social Media Marketing</p>
+        <p style="margin:0 0 4px;">MetroReach Media — Premium Social Media Marketing</p>
         <p style="margin:0;">Need help? Reply to this email or reach us at ${SUPPORT_ADDRESS}</p>
       </td>
     </tr>
@@ -80,22 +111,32 @@ function emailShell(title: string, content: string): string {
 // ── Sequence 1: Welcome (sent immediately after payment) ──
 
 export async function sendWelcomeEmail(client: Client): Promise<void> {
+  const isOneTime = isOneTimeService(client.service_slug);
+
+  const timelineItems = isOneTime
+    ? `<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
+  <li>You'll receive an onboarding form within the next hour — this helps us understand your business goals and requirements.</li>
+  <li>Once we have your details, our team begins work on your deliverable within 24 hours.</li>
+  <li>Your deliverable will be ready within 48 hours.</li>
+</ol>`
+    : `<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
+  <li>You'll receive an onboarding form within the next hour — this helps us gather access to your platforms and understand your business goals.</li>
+  <li>Once we have your details, our strategy team builds your custom plan within 2 business days.</li>
+  <li>Content creation begins immediately after strategy approval.</li>
+  <li>Your first campaign goes live within 5-7 business days.</li>
+</ol>`;
+
   const content = `
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Hi ${escapeHtml(client.name)},
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-  Welcome to MetroReach Digital. Your ${escapeHtml(client.service)} package is now active, and our team is preparing your account for onboarding.
+  Welcome to MetroReach Media. Your ${escapeHtml(client.service)} package is now active, and our team is preparing your account for onboarding.
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Here's what happens next:
 </p>
-<ol style="font-size:15px;line-height:1.8;color:#374151;margin:0 0 16px;padding-left:20px;">
-  <li>You'll receive an onboarding form within the next hour — this helps us gather access to your platforms and understand your business goals.</li>
-  <li>Once we have your details, our strategy team builds your custom plan within 2 business days.</li>
-  <li>Content creation begins immediately after strategy approval.</li>
-  <li>Your first campaign goes live within 5-7 business days.</li>
-</ol>
+${timelineItems}
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   We'll keep you updated at every stage. If you have questions before then, just reply to this email — our team monitors this inbox directly.
 </p>
@@ -105,7 +146,7 @@ export async function sendWelcomeEmail(client: Client): Promise<void> {
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: CONTACT_ADDRESS,
     subject: `Welcome to MetroReach — ${client.service}`,
     body: emailShell(`Welcome to MetroReach`, content),
   });
@@ -114,14 +155,22 @@ export async function sendWelcomeEmail(client: Client): Promise<void> {
 // ── Sequence 2: Onboarding Request ──
 
 export async function sendOnboardingRequest(client: Client): Promise<void> {
-  const onboardingUrl = `https://metroreachagency.com/onboarding?id=${client.id}`;
+  const onboardingUrl = client.portal_token
+    ? `https://metroreachagency.com/portal?token=${client.portal_token}`
+    : `https://metroreachagency.com/portal`;
+
+  const isOneTime = isOneTimeService(client.service_slug);
+
+  const platformAccessItem = isOneTime
+    ? ""
+    : `<li>Social media account logins or admin access (Facebook, Instagram, TikTok, etc.)</li>`;
 
   const content = `
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
   Hi ${escapeHtml(client.name)},
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-  To get your ${escapeHtml(client.service)} package up and running, we need access to a few things. Please complete the onboarding form below — it takes about 5 minutes.
+  To get your ${escapeHtml(client.service)} package up and running, we need a few details. Please complete the onboarding form below — it takes about 5 minutes.
 </p>
 <div style="text-align:center;margin:24px 0;">
   <a href="${onboardingUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">Complete Onboarding →</a>
@@ -130,7 +179,7 @@ export async function sendOnboardingRequest(client: Client): Promise<void> {
   You'll need:
 </p>
 <ul style="font-size:14px;line-height:1.8;color:#6b7280;margin:0 0 16px;padding-left:20px;">
-  <li>Social media account logins or admin access (Facebook, Instagram, TikTok, etc.)</li>
+  ${platformAccessItem}
   <li>Your brand guidelines or logo files (if available)</li>
   <li>Any existing marketing materials or past campaign data</li>
   <li>A brief overview of your top 3 business goals for this quarter</li>
@@ -141,7 +190,7 @@ export async function sendOnboardingRequest(client: Client): Promise<void> {
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: SUPPORT_ADDRESS,
     subject: `Next step: Complete your onboarding — MetroReach`,
     body: emailShell(`Let's get you set up`, content),
   });
@@ -177,7 +226,7 @@ ${detailHtml}
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: SUPPORT_ADDRESS,
     subject: `Update: ${stageLabel} — MetroReach`,
     body: emailShell(`Your project: ${stageLabel}`, content),
   });
@@ -199,7 +248,7 @@ export async function sendDeliverableReady(
   Hi ${escapeHtml(client.name)},
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-  Your latest deliverable from MetroReach Digital is ready for review.
+  Your latest deliverable from MetroReach Media is ready for review.
 </p>
 ${descriptionHtml}
 <div style="text-align:center;margin:24px 0;">
@@ -214,9 +263,63 @@ ${descriptionHtml}
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: REPORTS_ADDRESS,
     subject: `Your deliverable is ready — MetroReach`,
     body: emailShell(`Your deliverable is ready`, content),
+  });
+}
+
+// ── Sequence 4b: Premium Audit Ready ──
+
+export async function sendPremiumAuditReady(
+  client: Client,
+  reportUrl: string,
+  overallScore: number,
+): Promise<void> {
+  const scoreColor = overallScore >= 70 ? "#10b981" : overallScore >= 40 ? "#f59e0b" : "#ef4444";
+  const scoreLabel = overallScore >= 70 ? "Strong" : overallScore >= 40 ? "Needs Work" : "Needs Attention";
+
+  const content = `
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Hi ${escapeHtml(client.name)},
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
+  Your <strong>Premium Growth Audit</strong> from MetroReach Media is complete. Our team has analyzed your digital presence across 12 marketing dimensions and produced a comprehensive report with scored insights, prioritized recommendations, and a phased growth roadmap.
+</p>
+
+<div style="background:#f5f3ff;border-radius:12px;padding:24px;margin:20px 0;text-align:center;">
+  <p style="font-size:13px;font-weight:600;color:#7c3aed;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Your Overall Marketing Score</p>
+  <p style="font-size:48px;font-weight:800;color:${scoreColor};margin:0 0 4px;line-height:1;">${overallScore}</p>
+  <p style="font-size:14px;font-weight:600;color:${scoreColor};margin:0;">out of 100 — ${scoreLabel}</p>
+</div>
+
+<div style="text-align:center;margin:24px 0;">
+  <a href="${reportUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">View Your Premium Audit →</a>
+</div>
+
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 8px;">
+  <strong>Your report includes:</strong>
+</p>
+<ul style="font-size:14px;line-height:1.8;color:#6b7280;margin:0 0 16px;padding-left:20px;">
+  <li>12-category marketing assessment with scored breakdowns</li>
+  <li>Brand identity, website, social media, and competitive analysis</li>
+  <li>Priority action matrix — what to fix first and why</li>
+  <li>Phased growth roadmap with expected outcomes</li>
+  <li>Service recommendations tailored to your specific gaps</li>
+</ul>
+
+<p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0 0 16px;">
+  Your report is accessible anytime from the link above. If you'd like to discuss the findings or explore how MetroReach Media can implement the recommendations, reply to this email — our strategy team reviews every response personally.
+</p>
+<p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
+  — The MetroReach Team
+</p>`;
+
+  await sendEmail({
+    to: client.email,
+    from: REPORTS_ADDRESS,
+    subject: `Your Premium Growth Audit is ready — MetroReach`,
+    body: emailShell(`Your Premium Growth Audit is ready`, content),
   });
 }
 
@@ -255,7 +358,7 @@ export async function sendPurchaseConfirmation(client: Client, amountCents: numb
 
   await sendEmail({
     to: client.email,
-    from: FROM_ADDRESS,
+    from: CONTACT_ADDRESS,
     subject: `Purchase confirmed: ${client.service} — MetroReach`,
     body: emailShell(`Your purchase is confirmed`, content),
   });
@@ -275,7 +378,8 @@ export async function sendInternalNewClientAlert(client: Client): Promise<void> 
     <tr><td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Status</td><td>${escapeHtml(client.status)}</td></tr>
   </table>
 </div>
-<p style="font-size:14px;color:#6b7280;margin:8px 0 0;">Client ID: ${escapeHtml(client.id)}</p>`;
+<p style="font-size:14px;color:#6b7280;margin:8px 0 0;">Client ID: ${escapeHtml(client.id)}</p>
+${client.portal_token ? `<p style="font-size:14px;color:#6b7280;margin:8px 0 0;"><a href="https://metroreachagency.com/portal?token=${escapeHtml(client.portal_token)}">View Client Portal →</a></p>` : ""}`;
 
   await sendEmail({
     to: "bryce@metroreachagency.com",

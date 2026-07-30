@@ -5,7 +5,7 @@
  * Exchanges the authorization code for an access token, fetches the
  * user's TikTok account info, and stores tokens in client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

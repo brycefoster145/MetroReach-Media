@@ -1,0 +1,49 @@
+# ── REDUNDANT CRON KICKER ──
+# GitHub Actions scheduled trigger — completely independent of Vercel infrastructure.
+# If Vercel's native cron AND the self-kicker both fail, this still fires.
+#
+# Schedule: every 5 minutes (tightest GitHub allows). Combined with Vercel's
+# 1-minute cron + the 62-second self-kicker, this guarantees at least one
+# publish cycle every 60 seconds as long as any one of the three is alive.
+#
+# Also runs on push to main — verifies the endpoint works after deploy.
+name: Cron Kicker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # every 5 minutes
+  workflow_dispatch:        # manual trigger
+  push:
+    branches: [main]
+
+jobs:
+  kick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kick post-scheduler
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "https://www.metroreachagency.com/api/cron/post-scheduler")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Post-scheduler returned HTTP $HTTP_CODE"
+            echo "$BODY"
+            exit 1
+          fi
+          
+          echo "Post-scheduler OK (HTTP $HTTP_CODE)"
+          echo "$BODY" | head -c 500
+
+      - name: Check cron health
+        run: |
+          HEALTH=$(curl -s "https://www.metroreachagency.com/api/cron/health")
+          CRON_STALE=$(echo "$HEALTH" | grep -o '"cron_stale":[^,}]*' | cut -d: -f2)
+          LAST_RUN_SEC=$(echo "$HEALTH" | grep -o '"seconds_ago":[^,}]*' | cut -d: -f2)
+          
+          echo "Cron stale: $CRON_STALE"
+          echo "Seconds since last run: $LAST_RUN_SEC"
+          
+          if [ "$CRON_STALE" = "true" ] && [ "$LAST_RUN_SEC" -gt 300 ]; then
+            echo "::warning::Cron is stale — last run was ${LAST_RUN_SEC}s ago (>5 min)"
+          fi

@@ -2,7 +2,7 @@
  * GET /api/portal/messages — Fetch messages for authenticated client
  * POST /api/portal/messages — Send a new message from client
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";

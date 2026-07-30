@@ -5,7 +5,7 @@
  * via Meta OAuth. After authorization, we exchange the code for
  * a long-lived page access token and store it in client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -118,8 +118,8 @@ interface ConnectedAccount {
 export const Route = createFileRoute("/portal/connect")({
   head: () => ({
     meta: [
-      { title: "Connect Accounts — MetroReach Digital Portal" },
-      { name: "description", content: "Connect your social media accounts to MetroReach Digital." },
+      { title: "Connect Accounts — MetroReach Media Portal" },
+      { name: "description", content: "Connect your social media accounts to MetroReach Media." },
     ],
   }),
   component: PortalConnect,
@@ -240,6 +240,20 @@ function PortalConnect() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        {/* ── Onboarding nudge ── */}
+        <div className="mb-6 p-4 rounded-xl bg-brand-primary/5 border border-brand-primary/15 flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm text-text-secondary">
+            Haven't completed onboarding yet? Set up your business profile, share your goals, and tell us about your brand.
+          </p>
+          <a
+            href="/portal/onboarding"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-primary text-text-primary text-sm font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 whitespace-nowrap"
+          >
+            Start Onboarding
+            <ArrowRight size={14} weight="bold" />
+          </a>
+        </div>
+
         {/* OAuth success banner */}
         {oauthStatus === "success" && (
           <div className="mb-6 p-4 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-start gap-3 animate-fade-in">
@@ -733,7 +747,7 @@ function PortalConnect() {
       <footer className="border-t border-border-subtle py-5 mt-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-xs text-text-muted">
-            &copy; {new Date().getFullYear()} MetroReach Digital. Premium Social Media Marketing.
+            &copy; {new Date().getFullYear()} MetroReach Media. Premium Social Media Marketing.
           </p>
         </div>
       </footer>

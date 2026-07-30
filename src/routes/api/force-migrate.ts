@@ -38,6 +38,7 @@ export const Route = createFileRoute("/api/force-migrate")({
               due_at TIMESTAMPTZ NOT NULL,
               status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'posted', 'failed', 'skipped_no_media', 'missed')),
               meta_post_id TEXT,
+              utm_link TEXT,
               created_at TIMESTAMPTZ DEFAULT NOW(),
               posted_at TIMESTAMPTZ
             )
@@ -49,6 +50,14 @@ export const Route = createFileRoute("/api/force-migrate")({
 
           await n`CREATE INDEX IF NOT EXISTS idx_scheduled_posts_client ON scheduled_posts(client_id, status)`;
           results.push("✓ idx_scheduled_posts_client index ready");
+
+          // ── Add utm_link column (for click tracking) ──
+          try {
+            await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS utm_link TEXT`;
+            results.push("✓ utm_link column ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ utm_link migration: ${fixErr.message}`);
+          }
 
           // ── Fix due_at column type (TEXT → TIMESTAMPTZ) ──
           try {
@@ -76,6 +85,22 @@ export const Route = createFileRoute("/api/force-migrate")({
             results.push("✓ status check constraint updated (includes publishing, skipped_no_media)");
           } catch (fixErr: any) {
             results.push(`ℹ status constraint migration: ${fixErr.message}`);
+          }
+
+          // ── Add locked_at column (for atomic claim scheduler) ──
+          try {
+            await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ`;
+            results.push("✓ locked_at column ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ locked_at migration: ${fixErr.message}`);
+          }
+
+          // ── Add retry_count column (for post retry logic) ──
+          try {
+            await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0`;
+            results.push("✓ retry_count column ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ retry_count migration: ${fixErr.message}`);
           }
 
           // Verify
@@ -118,6 +143,31 @@ export const Route = createFileRoute("/api/force-migrate")({
           await n`CREATE INDEX IF NOT EXISTS idx_watchdog_alerts_created ON watchdog_alerts(created_at DESC)`;
           await n`CREATE INDEX IF NOT EXISTS idx_watchdog_alerts_severity ON watchdog_alerts(severity)`;
           results.push("✓ watchdog_alerts table ready");
+
+          // ── Fix page_id for MetroReach Facebook posts ──
+          // Posts were created with wrong or null page_id. Set to correct FB page.
+          await n`
+            UPDATE scheduled_posts
+            SET page_id = '623055204204992'
+            WHERE page_id = '106170049067568' AND platform = 'facebook'
+          `;
+          results.push("✓ FB posts with wrong page_id (106170049067568 → 623055204204992) fixed");
+
+          // Also fix Facebook posts with NULL page_id
+          await n`
+            UPDATE scheduled_posts
+            SET page_id = '623055204204992'
+            WHERE page_id IS NULL AND platform = 'facebook'
+          `;
+          results.push("✓ FB posts with NULL page_id fixed");
+
+          // Fix Instagram posts with NULL ig_user_id
+          await n`
+            UPDATE scheduled_posts
+            SET ig_user_id = '17841472858895937'
+            WHERE ig_user_id IS NULL AND platform = 'instagram'
+          `;
+          results.push("✓ IG posts with NULL ig_user_id fixed");
 
           return new Response(
             JSON.stringify({ success: true, results }),

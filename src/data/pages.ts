@@ -12,7 +12,7 @@ export const aboutPage = {
   beliefs: [
     {
       heading: "Marketing should be relentless.",
-      text: "Your competitors don't take weekends off from showing up in your customers' feeds. Your marketing shouldn't either. We built a team that stays on top of your marketing — because the businesses we serve can't afford coverage gaps.",
+      text: "Your competitors don't take weekends off from showing up in your customers' feeds. Your marketing shouldn't either. We built a team that delivers consistent marketing — because the businesses we serve can't afford coverage gaps.",
     },
     {
       heading: "Quality and consistency aren't optional.",
@@ -24,26 +24,26 @@ export const aboutPage = {
     },
     {
       heading: "Trust is earned through transparency.",
-      text: "Every client gets a live dashboard. CPL, ROAS, lead volume — visible anytime. No waiting for a monthly call to find out if your money is working.",
+      text: "Every client gets regular performance updates. Engagement, reach, follower growth — reported clearly. No waiting for a monthly call to find out if your content is working.",
     },
   ],
   howWeOperate:
-    "MetroReach Media runs on a team of specialized roles — strategy, creative, media buying, analytics, community management — each focused on one function, working together continuously. No one person trying to do everything. No single point of failure.",
+    "MetroReach Media runs on a team of specialized roles — strategy, creative, analytics — each focused on one function, working together continuously. No one person trying to do everything. No single point of failure.",
   whoWereFor:
     "Service-based businesses that need local leads to survive. Contractors. Med spas. Real estate teams. Auto shops. Clinics. Salons. Businesses where the phone needs to ring and the pipeline needs to stay full.",
   cta: "See what dedicated marketing actually looks like.",
 };
 
 export const servicesPage = {
-  headline: "Seven platforms. Five services. One team dedicated to your account.",
+  headline: "Three platforms. Focused content.",
   subheadline:
-    "A full team of specialists managing every dimension of your social presence — organic, paid, strategy, analytics, and community. No gaps. No excuses.",
+    "A dedicated team of specialists managing your social presence on Facebook, Instagram, and X — organic content, strategy, and analytics. No gaps. No excuses.",
   services: [
     {
       icon: "Article",
       name: "Organic Content Management",
       bullets: [
-        "Platform-native content for Facebook, Instagram, TikTok, LinkedIn, X, and YouTube",
+        "Platform-native content for Facebook, Instagram, and X",
         "Custom content calendar aligned with your business goals and seasonality",
         "Brand voice development, visual direction, and content guidelines",
         "Consistent posting schedule that algorithms reward and audiences trust",
@@ -54,17 +54,16 @@ export const servicesPage = {
         { name: "Profile & Bio Optimization", description: "First-impression polish across all platforms" },
         { name: "Hashtag Research", description: "Ranked hashtag bank by industry, location, and niche" },
         { name: "Posting Schedule Optimization", description: "Timing and cadence that algorithms reward" },
-        { name: "Platform Setup", description: "Facebook, Instagram, LinkedIn, TikTok business configuration" },
+        { name: "Platform Setup", description: "Facebook, Instagram, X business configuration" },
       ],
     },
     {
       icon: "Target",
       name: "Paid Advertising",
       bullets: [
-        "Full-service campaign management across Meta, TikTok, Google, LinkedIn, and X",
-        "Ad creative — static, carousel, video scripts, and YouTube pre-roll",
-        "Continuous A/B testing, bid optimization, and audience refinement",
-        "Live performance dashboards with real-time CPL and ROAS tracking",
+        "Coming Soon — Full-service campaign management across Meta, TikTok, Google, LinkedIn, and X",
+        "Coming Soon — Ad creative, A/B testing, bid optimization, and audience refinement",
+        "Coming Soon — Live performance dashboards with real-time CPL and ROAS tracking",
       ],
       subServices: [
         { name: "Meta Ads Management", description: "Campaign strategy, build, optimization, reporting" },
@@ -96,7 +95,7 @@ export const servicesPage = {
       icon: "ChartLineUp",
       name: "Analytics & Reporting",
       bullets: [
-        "Live dashboards with CPL, ROAS, engagement, and attribution tracking",
+        "Monthly performance summaries with engagement, reach, and follower growth",
         "Weekly performance summaries and monthly deep-dive reports",
         "Actionable insights surfaced by a dedicated performance analyst",
         "Transparent metrics — no vanity numbers, no hidden slippage",
@@ -104,8 +103,6 @@ export const servicesPage = {
       subServices: [
         { name: "Monthly Performance Reports", description: "Deep-dive analysis with insights and recommendations" },
         { name: "Weekly Performance Summaries", description: "Snapshots of key metrics and trends" },
-        { name: "KPI Dashboard Setup", description: "Live dashboard with CPL, ROAS, engagement tracking" },
-        { name: "Competitor Benchmark Reports", description: "How you stack up against your market" },
         { name: "Executive Reports", description: "Boardroom-ready summaries for leadership" },
       ],
     },
@@ -113,37 +110,29 @@ export const servicesPage = {
       icon: "ChatCircleText",
       name: "Community Management",
       bullets: [
-        "Daily monitoring of comments, DMs, and brand mentions across all platforms",
-        "Prompt, on-brand responses that build trust and engagement",
-        "Review management and reputation monitoring",
-        "No customer interaction goes unanswered — period",
+        "Coming Soon — Daily monitoring of comments, DMs, and brand mentions",
+        "Coming Soon — Prompt, on-brand responses that build trust and engagement",
+        "Coming Soon — Review management and reputation monitoring",
       ],
       subServices: [
-        { name: "Daily Engagement", description: "Proactive outbound engagement with target accounts" },
-        { name: "Comment & DM Management", description: "No interaction goes unanswered" },
-        { name: "Reputation Monitoring", description: "Review tracking across platforms" },
-        { name: "Review Response", description: "Professional, on-brand responses to every review" },
-        { name: "Review Generation Campaign", description: "Systematic review collection from happy clients" },
-        { name: "Social Listening", description: "Brand mentions, competitor activity, industry trends" },
+        { name: "Daily Engagement", description: "Coming Soon — Proactive outbound engagement with target accounts" },
+        { name: "Comment & DM Management", description: "Coming Soon — No interaction goes unanswered" },
+        { name: "Reputation Monitoring", description: "Coming Soon — Review tracking across platforms" },
       ],
     },
   ],
   platforms: [
     "Facebook",
     "Instagram",
-    "TikTok",
-    "Google",
-    "YouTube",
-    "LinkedIn",
     "X",
   ],
   cta: "See what a full marketing team can do.",
 };
 
 export const pricingPage = {
-  headline: "One retainer. Full team. Clear results.",
+  headline: "One retainer. Full team. Consistent execution.",
   subheadline:
-    "Every package includes strategy, creative, posting, optimization, and reporting.",
+    "Every package includes strategy, creative, and consistent posting.",
   addonNote: "",
   tiers: [
     {
@@ -152,33 +141,30 @@ export const pricingPage = {
       period: "/month",
       description: "For businesses ready to establish their social presence and start generating leads.",
       features: [
-        "Facebook + Instagram (organic)",
-        "X/Twitter (organic)",
+        "Up to 2 platforms (organic)",
         "12 original posts per month",
         "Monthly strategy report + performance review",
-        "Live dashboard access on day one",
+        "Monthly performance summary starting month one",
       ],
       bestFor: "Auto shops, salons, small contractors getting started with social.",
       featured: false,
-      paymentLink: "https://buy.stripe.com/cNifZh06M5zoeFGecd1ck0l",
+      serviceSlug: "monthly-content-calendar",
     },
     {
       name: "Growth",
       price: "$3,000",
       period: "/month",
-      description: "For businesses that need multi-platform presence and aggressive lead generation.",
+      description: "For businesses that need multi-platform presence and consistent lead generation.",
       comingSoon: true,
       features: [
-        "Up to 4 platforms (organic on all, paid on 2)",
+        "Up to 4 platforms — organic on all",
         "20 original posts per month",
-        "3 paid campaigns",
-        "A/B testing on creative and audiences",
         "Weekly performance snapshots + monthly deep-dive",
         "Community engagement included",
       ],
       bestFor: "Med spas, mid-size contractors, real estate teams, clinics.",
       featured: true,
-      paymentLink: "",
+      serviceSlug: "multi-platform-management",
     },
     {
       name: "Scale",
@@ -187,18 +173,14 @@ export const pricingPage = {
       description: "For businesses that want to dominate their market across all relevant channels.",
       comingSoon: true,
       features: [
-        "Up to 7 platforms (organic on all, paid on up to 4)",
+        "Up to 7 platforms — organic on all",
         "30+ original posts per month",
-        "Unlimited paid campaigns",
-        "Advanced A/B testing and funnel optimization",
         "Short-form video scripts",
-        "Influencer research and partnership strategy",
-        "Priority strategy adjustments",
-        "Bi-weekly strategy calls + custom reporting",
+        "Custom reporting",
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
       featured: false,
-      paymentLink: "",
+      serviceSlug: "vip-daily",
     },
   ],
   noLockPledge:
@@ -210,16 +192,15 @@ export const contactPage = {
   subheadline:
     "Tell us about your business and what you need. We'll tell you honestly whether we can help — and exactly how.",
   contactInfo: {
-    email: "hello@metroreachagency.com",
+    email: "contact@metroreachagency.com",
     phone: "",
     location: "Austin, TX — serving clients nationwide",
   },
   serviceOptions: [
     "Organic Content Management",
-    "Paid Advertising",
     "Social Strategy",
     "Analytics & Reporting",
-    "Community Management",
+    "Community Management (Coming Soon)",
     "Full-Service (All of the Above)",
     "Not Sure Yet",
   ],
@@ -259,9 +240,9 @@ export const contactPage = {
 };
 
 export const demoPage = {
-  headline: "30 minutes. Straight answers. No pitch.",
+  headline: "Straight answers. No pitch.",
   subheadline:
-    "Book a call with our strategy team. We'll look at what you're doing now, what's missing, and whether MetroReach Media makes sense for your business. If it doesn't, we'll tell you.",
+    "Submit a free audit request. Our team will review your marketing — what's working, what's missing, and whether MetroReach Media makes sense for your business. If it doesn't, we'll tell you.",
   takeaways: [
     "An honest assessment of your current marketing — what's working, what's not, what's costing you money you don't know about",
     "A realistic timeline for what results look like in your industry and market",
@@ -269,134 +250,73 @@ export const demoPage = {
     "No obligation. No contract waiting in your inbox. No follow-up pressure campaign.",
   ],
   prepare: [
-    "A rough sense of your current marketing: what platforms you're on, what you're spending, what's frustrating you",
-    "Your top business goal for the next 6 months (more leads? more listings? more booked consults?)",
-    "That's it. Don't build a deck. Don't pull reports. Just show up.",
+    "Share your website and social profiles — we'll pull what we need from there",
+    "Tell us your top business goal for the next 6 months (more leads? more listings? more booked consults?)",
+    "That's it. Don't build a deck. Don't pull reports. Just fill out the form.",
   ],
-  timeCommitment: "30 minutes. We'll end on time. If we need more time to dig into something, we'll schedule a follow-up — we won't hold you hostage on a Zoom call.",
-  bookingUrl: "/book",
-  confirmation: "You're in. Check your email for the calendar invite and a quick note on what to expect.",
+  timeCommitment: "Async — no calls, no meetings. We review your presence, build your audit, and deliver the report. If we need clarification, we'll email you.",
+  bookingUrl: "/free-audit",
+  confirmation: "Your audit request is in. Our team will review your presence and deliver your report. No waiting on a calendar invite.",
 };
 
 export const caseStudiesPage = {
-  headline: "Three businesses. Three industries. One common result: more leads.",
+  headline: "We're building our first case studies. Be one of them.",
   subheadline:
-    "Three businesses. Three industries. One thing in common: they trusted MetroReach Media with their pipeline — and it paid off.",
-  studies: [
-    {
-      name: "Ridgeway Heating & Cooling",
-      industry: "HVAC — Residential service and replacement",
-      challenge:
-        "Ridgeway had built a solid reputation over 15 years — but it was all word of mouth. When competitors started running aggressive Google Local Services ads and posting daily on Facebook, Ridgeway's phone went from steady to sporadic.",
-      approach: [
-        "Built a Facebook and Instagram presence from scratch — educational content, seasonal offers, behind-the-scenes from job sites",
-        "Launched Meta lead gen campaigns targeting homeowners within a 20-mile radius",
-        "Optimized Google Business Profile with weekly posts, review management, and service-area targeting",
-        "Created a content calendar aligned with HVAC seasonality",
-      ],
-      results: {
-        before: "8–12 leads/month (mostly referrals)",
-        after: "~18 leads/month, CPL ~$28, Facebook reach ~8,500/month",
-      },
-      quote:
-        "We went from 2-3 leads a week to 15-20. Our phone rings every day now. I haven't thought about marketing in three months.",
-      personName: "Mike R.",
-      title: "Owner",
-    },
-    {
-      name: "Lumina Aesthetics",
-      industry: "Med Spa — Injectables, laser treatments, skin rejuvenation",
-      challenge:
-        "Lumina had a strong local reputation but growth had stalled. Their previous agency charged $6,000/month and delivered generic content. Patient acquisition cost was creeping up.",
-      approach: [
-        "Developed a distinct brand voice: clinical authority meets approachable luxury",
-        "Built consistent Instagram and TikTok content: treatment explainers, patient journey stories, provider spotlights",
-        "Launched Meta and TikTok conversion campaigns targeting high-intent aesthetic audiences",
-        "Implemented compliance guardrails for medical claims",
-      ],
-      results: {
-        before: "12–18 consults/month from social, ~$85 CPL",
-        after: "28–34 consults/month from social, ~$52 CPL, Instagram +40% followers",
-      },
-      quote:
-        "The content looks better than what our $6,000/month agency was producing — and it actually goes out on schedule.",
-      personName: "Dr. Sarah C.",
-      title: "Medical Director",
-    },
-    {
-      name: "The Keller Group",
-      industry: "Real Estate — Residential sales team (18 agents)",
-      challenge:
-        "The Keller Group was doing $40M+ in annual volume almost entirely on referrals and Zillow leads. Zillow costs were rising and conversion was dropping. The team brand was invisible online.",
-      approach: [
-        "Built a multi-platform brand presence: Instagram for listings, YouTube for neighborhood guides, LinkedIn for agent recruitment",
-        "Created a listing marketing package: professional posts, neighborhood compilations, video walkthrough scripts",
-        "Launched Meta and Google Ads targeting seller intent",
-        "Developed agent content kits: pre-written posts and shareable assets",
-      ],
-      results: {
-        before: "~4 seller leads/month, ~15 buyer leads/month",
-        after: "~11 seller leads/month, ~31 buyer leads/month, listing win rate 60% → 80%",
-      },
-      quote:
-        "The listing marketing alone is worth the retainer. We're winning listings because sellers can see we have a real marketing operation behind us.",
-      personName: "David K.",
-      title: "Team Lead",
-    },
-  ],
-  cta: "Your results could be next.",
+    "We're looking for service businesses ready to grow with consistent, professional social media management. Your success will be our first case study.",
+  studies: [] as any[],
+  cta: "Be our first success story.",
 };
 
 export const platformsPage = {
-  headline: "Seven platforms. One team. Zero gaps.",
+  headline: "Three platforms. One team. Consistent delivery.",
   subheadline:
-    "We manage organic content and paid advertising across every platform that matters to service businesses. No subcontractors. No handoffs. No \"we don't really do TikTok.\"",
+    "We manage organic content across Facebook, Instagram, and X. When you're ready to expand, we'll be ready too.",
   platformBlocks: [
     {
       name: "Facebook",
       tagline: "The backbone of local service marketing.",
       description:
-        "Facebook is where your customers live — especially homeowners 35+. We manage your business page, run lead gen and conversion campaigns through Meta Ads Manager, and build the kind of consistent presence that builds trust before someone picks up the phone.",
-      items: ["Organic: daily posts, community engagement, review management", "Paid: lead gen ads, offer promotion, retargeting, lookalike audiences", "Formats: static posts, carousels, video, event-based campaigns"],
+        "Facebook is where your customers live — especially homeowners 35+. We manage your business page with consistent, professional content that builds trust before someone picks up the phone.",
+      items: ["Organic: daily posts, community engagement", "Formats: static posts, carousels, video, event-based campaigns"],
     },
     {
       name: "Instagram",
       tagline: "Where your brand looks as good as your work.",
       description:
         "Instagram is the showroom. For med spas, salons, real estate, and any business where visuals sell, we create platform-native content that stops the scroll.",
-      items: ["Organic: Reels, Stories, feed posts, engagement with local accounts", "Paid: Story ads, feed ads, Reels ads, shopping ads", "Formats: short-form video, before/after carousels, behind-the-scenes, client features"],
-    },
-    {
-      name: "TikTok",
-      tagline: "Where attention goes first.",
-      description:
-        "TikTok isn't optional for businesses targeting under-45 audiences. We produce short-form video concepts, scripts, and direction that fit the platform's native tone.",
-      items: ["Organic: video concepts, trending audio integration, community duets and stitches", "Paid: Spark Ads, In-Feed Ads, lead gen campaigns", "Formats: 15–60 second video, text-overlay explainers, day-in-the-life, quick tips"],
-    },
-    {
-      name: "Google",
-      tagline: "Where intent becomes a lead.",
-      description:
-        "When someone searches \"HVAC repair near me\" or \"best med spa Denver,\" you need to be there. We manage Google Search Ads, Local Services Ads, Display retargeting, and YouTube pre-roll.",
-      items: ["Search: keyword strategy, ad copy, bid management, Local Services Ads", "Display: retargeting, local awareness, competitor geo-fencing", "YouTube: pre-roll and in-stream ads, channel content strategy, video SEO"],
-    },
-    {
-      name: "LinkedIn",
-      tagline: "For B2B services and professional trust.",
-      description:
-        "If you sell to other businesses — commercial contractors, B2B clinics, real estate teams recruiting agents — LinkedIn is your platform.",
-      items: ["Organic: company page posts, thought leadership articles, industry commentary", "Paid: lead gen forms, sponsored content, InMail campaigns", "Formats: text posts, document carousels, video, sponsored articles"],
+      items: ["Organic: Reels, Stories, feed posts, engagement with local accounts", "Formats: short-form video, before/after carousels, behind-the-scenes, client features"],
     },
     {
       name: "X (Twitter)",
       tagline: "Real-time presence for brands that move fast.",
       description:
         "X is optional for most service businesses — but powerful for real estate teams, industry authority building, and brands that want to engage in real-time.",
-      items: ["Organic: daily posts, thread-based content, community engagement", "Paid: promoted posts, trend takeover (selective, high-impact)", "Formats: short text posts, threads, video clips, polls"],
+      items: ["Organic: daily posts, thread-based content, community engagement", "Formats: short text posts, threads, video clips, polls"],
+    },
+    {
+      name: "TikTok",
+      tagline: "Coming Soon — Where attention goes first.",
+      description:
+        "We'll offer TikTok content as our platform capabilities expand. Short-form video concepts, scripts, and direction that fit the platform's native tone.",
+      items: ["Coming Soon: video concepts, trending audio integration", "Coming Soon: 15–60 second video, text-overlay explainers"],
+    },
+    {
+      name: "Google",
+      tagline: "Coming Soon — Where intent becomes a lead.",
+      description:
+        "We'll offer Google Search Ads, Local Services Ads, Display retargeting, and YouTube content as we expand our platform capabilities.",
+      items: ["Coming Soon: keyword strategy, ad copy, bid management", "Coming Soon: retargeting, local awareness campaigns"],
+    },
+    {
+      name: "LinkedIn",
+      tagline: "Coming Soon — For B2B services and professional trust.",
+      description:
+        "LinkedIn Company Page and content management will be available once our platform is fully configured.",
+      items: ["Coming Soon: company page posts, thought leadership", "Coming Soon: lead gen forms, sponsored content"],
     },
   ],
   philosophy:
-    "We don't recommend all seven platforms for every client. During onboarding, we identify the 2–4 platforms where your customers actually spend time — and we dominate those. Adding platforms is easy when you're ready.",
+    "We focus on Facebook, Instagram, and X right now — the platforms where your customers actually spend time. As we expand our capabilities, we'll add more platforms without disrupting your existing presence.",
   cta: "Your customers are on these platforms right now. Are you?",
 };
 
@@ -404,7 +324,7 @@ export const faqPage = {
   headline: "What business owners ask before they trust us with their pipeline.",
   items: [
     {
-      question: "How does one team manage seven platforms without dropping the ball?",
+      question: "How does one team manage three platforms without dropping the ball?",
       answer:
         "Most agencies assign one person to handle 4–5 accounts across multiple platforms. That's how things slip. We run a dedicated team structure — each specialist focuses on their function across your accounts. No single point of failure. No 'sorry, your account manager is on vacation.'",
     },
@@ -416,7 +336,7 @@ export const faqPage = {
     {
       question: "When will I actually see leads?",
       answer:
-        "Paid ads: 2–4 weeks to dial in targeting and creative. By month two, you should see your CPL approaching target. Organic: 60–90 days to build meaningful momentum. No agency can guarantee overnight results. But we can guarantee we won't waste time.",
+        "Organic social takes 60–90 days to build meaningful momentum. Algorithms reward consistency, and we deliver it. No agency can guarantee overnight results — but we can guarantee consistent execution that grows your presence.",
     },
     {
       question: "What industries do you specialize in?",
@@ -431,7 +351,7 @@ export const faqPage = {
     {
       question: "Why shouldn't I just hire a freelancer?",
       answer:
-        "Freelancers are one person trying to do everything — strategy, writing, design, posting, optimization. We run a full team of specialists. Your strategy is built by someone who studies your market. Your copy is written by a dedicated writer. Your performance is tracked by an analyst who flags what's working and what's not. You get the output of an entire agency, not one person's best effort.",
+        "Freelancers are one person trying to do everything — strategy, writing, design, posting. We run a full team of specialists. Your strategy is built by someone who studies your market. Your copy is written by a dedicated writer. Your performance is tracked by a dedicated analyst. You get the output of an entire team, not one person's best effort.",
     },
     {
       question: "Do you handle compliance-sensitive industries?",
@@ -466,14 +386,17 @@ export const securityPage = {
     {
       name: "Google (Search, Display, YouTube)",
       text: "We adhere to Google Ads policies including restricted content categories, local service ad requirements, and Google Business Profile guidelines. For industries with Google's verification requirements, we guide you through verification.",
+      comingSoon: true,
     },
     {
       name: "TikTok",
       text: "We follow TikTok's advertising policies and branded content guidelines. For restricted industries, we apply the appropriate content limitations and disclaimers.",
+      comingSoon: true,
     },
     {
       name: "LinkedIn",
       text: "We comply with LinkedIn's advertising policies and professional community guidelines, including industry-specific restrictions for healthcare, legal, and financial services.",
+      comingSoon: true,
     },
     {
       name: "X",
@@ -504,7 +427,7 @@ export const privacyPage = {
   sections: [
     {
       heading: "Information We Collect",
-      text: "We collect information you provide directly: name, email, phone number, business details, and marketing preferences when you fill out our contact form or book a strategy call. We also collect standard web analytics data: pages visited, referrer, device type, and approximate location — all anonymized.",
+      text: "We collect information you provide directly: name, email, phone number, business details, and marketing preferences when you fill out our contact form or request a free audit. We also collect standard web analytics data: pages visited, referrer, device type, and approximate location — all anonymized.",
     },
     {
       heading: "How We Use Your Information",
@@ -520,11 +443,11 @@ export const privacyPage = {
     },
     {
       heading: "Your Rights",
-      text: "You can request access to, correction of, or deletion of your personal data at any time by contacting us at hello@metroreachagency.com.",
+      text: "You can request access to, correction of, or deletion of your personal data at any time by contacting us at contact@metroreachagency.com.",
     },
     {
       heading: "Contact",
-      text: "For privacy-related questions, reach us at hello@metroreachagency.com.",
+      text: "For privacy-related questions, reach us at contact@metroreachagency.com.",
     },
   ],
 };
@@ -559,16 +482,16 @@ export const termsPage = {
     },
     {
       heading: "Contact",
-      text: "For questions about these terms, contact us at hello@metroreachagency.com.",
+      text: "For questions about these terms, contact us at contact@metroreachagency.com.",
     },
   ],
 };
 
 export const dashboardPage = {
-  title: "Client Dashboard — MetroReach Media",
-  description: "Real-time performance dashboard for Ridgeway Heating & Cooling.",
-  clientName: "Ridgeway Heating & Cooling",
-  month: "June 2026",
+  title: "Client Dashboard — MetroReach Media (DEMO)",
+  description: "Demo performance dashboard. Not real data — for demonstration purposes only.",
+  clientName: "DEMO — Not Real Data",
+  month: "Demo Data",
 };
 
 export const subServices = [
@@ -584,7 +507,7 @@ export const subServices = [
   { slug: "dm-management", category: "organic-content", name: "DM Management", description: "We manage your inbox with fast, professional responses that improve customer experience and capture more leads.", price: "From $400/month", pipelineStatus: "verified" },
   { slug: "social-listening", category: "organic-content", name: "Social Listening", description: "We track conversations around your brand and industry to identify opportunities, feedback, and potential issues. This helps you stay ahead of trends and respond strategically.", price: "From $500/month", pipelineStatus: "verified" },
   { slug: "single-platform-management", category: "organic-content", name: "Single-Platform Management", description: "We fully manage one social platform — content, posting, engagement, and optimization. This gives you a polished, consistent presence without any extra work.", price: "From $800/month", pipelineStatus: "verified" },
-  { slug: "multi-platform-management", category: "organic-content", name: "Multi-Platform Management — 2 Platforms", description: "We manage up to two platforms simultaneously to maximize reach and brand impact. Your content stays consistent, professional, and aligned across both channels.", price: "From $1,200/month", pipelineStatus: "verified" },
+  { slug: "multi-platform-management", category: "organic-content", name: "Multi-Platform Management — 5 Platforms", description: "We manage up to five platforms simultaneously to maximize reach and brand impact. Your content stays consistent, professional, and aligned across every channel.", price: "From $2,000/month", pipelineStatus: "verified" },
   { slug: "platform-setup-optimization", category: "organic-content", name: "Platform Setup & Optimization", description: "We professionally set up and optimize your social profiles for clarity, trust, and discoverability. This ensures your brand makes a strong first impression.", price: "From $750 one-time", pipelineStatus: "verified" },
   { slug: "profile-bio-optimization", category: "organic-content", name: "Profile/Bio Optimization", description: "We refine your profile and bio to communicate your value clearly and attract the right audience. This increases conversions and strengthens brand positioning.", price: "$400 one-time", pipelineStatus: "verified" },
 
@@ -619,8 +542,8 @@ export const subServices = [
   { slug: "competitor-benchmarking", category: "analytics-reporting", name: "Competitor Benchmarking", description: "We will compare your performance against top competitors to identify strengths and opportunities. This helps you stay competitive and informed.", price: "From $500/month", pipelineStatus: "verified" },
 
   // Community Management
-  { slug: "community-management", category: "community-management", name: "Community Management", description: "We will oversee your community to strengthen relationships and improve brand loyalty. This ensures your audience feels supported and engaged.", price: "From $1,200/month", pipelineStatus: "coming-soon" },
-  { slug: "daily-monitoring-engagement", category: "community-management", name: "Daily Monitoring & Engagement", description: "We will interact with your audience daily to keep your community active and responsive. This builds trust and improves algorithm performance.", price: "From $600/month", pipelineStatus: "coming-soon" },
+  { slug: "community-management", category: "community-management", name: "Community Management", description: "We will oversee your community to strengthen relationships and improve brand loyalty. This ensures your audience feels supported and engaged.", price: "From $1,200/month", pipelineStatus: "verified" },
+  { slug: "daily-monitoring-engagement", category: "community-management", name: "Daily Monitoring & Engagement", description: "We will interact with your audience daily to keep your community active and responsive. This builds trust and improves algorithm performance.", price: "From $600/month", pipelineStatus: "verified" },
   { slug: "comment-dm-response", category: "community-management", name: "Comment & DM Response", description: "We respond to comments and messages quickly and professionally. This improves customer experience and builds stronger relationships.", price: "From $400/month", pipelineStatus: "verified" },
   { slug: "review-management", category: "community-management", name: "Review Management", description: "We monitor and respond to reviews to protect and strengthen your reputation. This helps you maintain trust and credibility.", price: "From $350/month", pipelineStatus: "verified" },
   { slug: "social-listening-community", category: "community-management", name: "Social Listening", description: "We track conversations around your brand to identify opportunities and feedback. This helps you stay ahead of trends and customer needs.", price: "From $500/month", pipelineStatus: "verified" },
@@ -663,7 +586,7 @@ export const cookiePolicyPage = {
     },
     {
       heading: "Third-Party Cookies",
-      text: "We embed a scheduling tool for strategy call bookings. When you use the booking widget, the scheduling provider may set its own cookies for functionality. These are governed by the provider's own cookie policy.",
+      text: "We use cookies for analytics and site functionality. No third-party scheduling widgets or tracking cookies are embedded on this site.",
     },
     {
       heading: "How to Control Cookies",
@@ -671,7 +594,7 @@ export const cookiePolicyPage = {
     },
     {
       heading: "Contact",
-      text: "If you have questions about this policy, contact us at hello@metroreachagency.com.",
+      text: "If you have questions about this policy, contact us at contact@metroreachagency.com.",
     },
   ],
 };

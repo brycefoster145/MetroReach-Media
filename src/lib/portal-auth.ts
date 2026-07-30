@@ -1,5 +1,5 @@
 /**
- * Portal Auth — MetroReach Digital
+ * Portal Auth — MetroReach Media
  *
  * Invite-code-based authentication for the new /portal.
  * MetroReach creates a client with a unique portal_token,

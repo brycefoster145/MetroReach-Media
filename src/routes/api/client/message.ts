@@ -1,7 +1,7 @@
 /**
  * POST /api/client/message — Send message from client to team
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/client/message")({
 <!DOCTYPE html>
 <html>
 <body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
-  <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;">MetroReach Digital</p>
+  <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;">MetroReach Media</p>
   <h2 style="color:#1a1a1a;font-size:20px;font-weight:700;">New Client Message</h2>
   <p style="font-size:15px;color:#374151;"><strong>${clientName}</strong> (${clientEmail})</p>
   <div style="background:#f5f3ff;padding:16px;border-radius:8px;margin:16px 0;">

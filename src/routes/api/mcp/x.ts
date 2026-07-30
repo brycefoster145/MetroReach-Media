@@ -4,7 +4,7 @@
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/x.
  * Wraps the X API v2 for direct posting and account management.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  *
  * Tools exposed:
  *   x_list_accounts  — list connected X accounts

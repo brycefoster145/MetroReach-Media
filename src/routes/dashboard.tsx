@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowUp,
   ArrowDown,
@@ -10,6 +11,7 @@ import {
   Target,
   Megaphone,
   PaintBrush,
+  Warning,
 } from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
 import { dashboardPage } from "~/data/pages";
@@ -398,8 +400,24 @@ function ActivityFeed() {
 // ── Main component ─────────────────────────────────────────────────────
 
 function Dashboard() {
+  const [showMonthMsg, setShowMonthMsg] = useState(false);
+
   return (
     <main className="min-h-dvh bg-bg-root">
+      {/* DEMO BANNER */}
+      <div className="bg-amber-900/30 border-b border-amber-700/50 px-4 py-3">
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <Warning size={20} weight="fill" className="text-amber-400 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-200">
+              DEMO — Not Real Data
+            </p>
+            <p className="text-xs text-amber-400/80">
+              This dashboard uses placeholder data for demonstration purposes only. No real client metrics are shown.
+            </p>
+          </div>
+        </div>
+      </div>
       <Container className="py-10">
         {/* ── Header ──────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
@@ -424,13 +442,20 @@ function Dashboard() {
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={() => setShowMonthMsg((v) => !v)}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-text-secondary border border-border-subtle rounded-xl bg-bg-surface hover:border-border-emphasis transition-colors"
             >
               {dashboardPage.month}
               <CaretDown size={14} />
             </button>
+            {showMonthMsg && (
+              <span className="text-xs text-text-muted absolute mt-12 bg-bg-surface border border-border-subtle rounded-lg px-3 py-1.5 shadow-lg z-10">
+                Historical reports coming soon
+              </span>
+            )}
             <button
               type="button"
+              onClick={() => window.print()}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-text-primary bg-brand-primary rounded-xl hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
             >
               <DownloadSimple size={16} />

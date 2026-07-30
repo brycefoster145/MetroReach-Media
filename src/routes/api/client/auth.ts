@@ -6,7 +6,7 @@
  * 3. Generate a signed JWT
  * 4. Send magic link email
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -14,6 +14,7 @@ import { createClientToken } from "~/lib/client-auth";
 import { sendEmail } from "~/lib/email";
 import { sql } from "~/lib/db";
 import { rateLimit, getClientIp } from "~/lib/rate-limit";
+import { getSiteUrl } from "~/lib/site-url";
 
 function magicLinkEmail(clientName: string, magicUrl: string): string {
   return `
@@ -23,7 +24,7 @@ function magicLinkEmail(clientName: string, magicUrl: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
     <tr>
       <td style="padding:32px 32px 8px;">
-        <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Digital</p>
+        <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;margin:0;">MetroReach Media</p>
       </td>
     </tr>
     <tr>
@@ -33,7 +34,7 @@ function magicLinkEmail(clientName: string, magicUrl: string): string {
           Hi ${escapeHtml(clientName)},
         </p>
         <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">
-          Click the button below to access your MetroReach Digital client portal. This link expires in 1 hour.
+          Click the button below to access your MetroReach Media client portal. This link expires in 1 hour.
         </p>
         <div style="text-align:center;margin:24px 0;">
           <a href="${magicUrl}" style="display:inline-block;background:#3B82F6;color:#ffffff;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:600;font-size:15px;">Access Your Portal →</a>
@@ -45,7 +46,7 @@ function magicLinkEmail(clientName: string, magicUrl: string): string {
     </tr>
     <tr>
       <td style="padding:20px 32px;background:#0D1117;font-size:13px;color:#94A3B8;border-top:1px solid #1E293B;">
-        <p style="margin:0 0 4px;">MetroReach Digital — Premium Social Media Marketing</p>
+        <p style="margin:0 0 4px;">MetroReach Media — Premium Social Media Marketing</p>
         <p style="margin:0;">Need help? Reply to this email.</p>
       </td>
     </tr>
@@ -110,16 +111,14 @@ export const Route = createFileRoute("/api/client/auth")({
 
         const client = rows[0];
         const token = createClientToken(client.id as string, client.email as string);
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : "https://metroreachagency.com";
+        const baseUrl = getSiteUrl();
         const magicUrl = `${baseUrl}/api/client/verify?token=${encodeURIComponent(token)}`;
 
         // Send magic link email (non-blocking)
         sendEmail({
           to: client.email as string,
           from: "bryce@metroreachagency.com",
-          subject: "Your MetroReach Digital Client Portal Login",
+          subject: "Your MetroReach Media Client Portal Login",
           body: magicLinkEmail((client.name as string) || "there", magicUrl),
         }).catch((e) => console.error("Magic link email failed:", e.message));
 

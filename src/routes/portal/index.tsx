@@ -4,7 +4,7 @@
  * Invite-code based access. Clients enter their unique portal token
  * or click an invite link with ?token=XXX in the URL.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -21,8 +21,8 @@ import {
 export const Route = createFileRoute("/portal/")({
   head: () => ({
     meta: [
-      { title: "Client Portal — MetroReach Digital" },
-      { name: "description", content: "Secure client portal for MetroReach Digital clients. Access your campaign dashboard, messages, and content approvals." },
+      { title: "Client Portal — MetroReach Media" },
+      { name: "description", content: "Secure client portal for MetroReach Media clients. Access your campaign dashboard, messages, and content approvals." },
       { property: "og:url", content: "https://metroreachagency.com/portal" },
     ],
     links: [
@@ -277,7 +277,7 @@ function PortalLogin() {
 
         {/* Footer */}
         <p className="text-xs text-text-muted text-center mt-8">
-          &copy; {new Date().getFullYear()} MetroReach Digital. All rights reserved.
+          &copy; {new Date().getFullYear()} MetroReach Media. All rights reserved.
         </p>
       </div>
     </main>

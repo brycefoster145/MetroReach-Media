@@ -4,7 +4,7 @@
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/google.
  * Wraps Google My Business API v4 and YouTube Data API v3.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  *
  * Tools exposed:
  *   google_list_accounts         — list connected GMB + YouTube accounts

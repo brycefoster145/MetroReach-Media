@@ -8,6 +8,8 @@ const ALLOWED_FROM: ReadonlySet<string> = new Set([
   "ads@metroreachagency.com",
   "reports@metroreachagency.com",
   "support@metroreachagency.com",
+  "contact@metroreachagency.com",
+  "info@metroreachagency.com",
 ]);
 
 const SENDGRID_DEFAULT_FROM = "bryce@metroreachagency.com";
@@ -93,7 +95,7 @@ async function getAccessToken(): Promise<string> {
  * Otherwise falls back to Microsoft 365 / Graph API using client credentials.
  *
  * `from` must be one of the agency's verified addresses:
- * bryce@, ads@, reports@, support@metroreachagency.com
+ * bryce@, ads@, reports@, support@, contact@, info@metroreachagency.com
  */
 export async function sendEmail({
   to,
@@ -134,7 +136,8 @@ export async function sendEmail({
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return { success: false, error: `SendGrid error: ${message}` };
+      console.warn(`SendGrid failed, falling back to Microsoft Graph: ${message}`);
+      // Fall through to Microsoft Graph below
     }
   }
 

@@ -6,7 +6,7 @@
  * access token, fetches the user's X account info, and stores tokens in
  * client_platform_tokens.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -195,19 +195,20 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
 
           const effectiveClientId = isAdminFlow ? "metroreach" : (client?.sub || "unknown");
 
-          // Insert if not exists
+          // Insert if not exists (with refresh_token)
           await sql`
-            INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at)
-            VALUES (${effectiveClientId}, 'x', ${tokenData.access_token}, ${userInfo.id}, ${accountName}, ${
+            INSERT INTO client_platform_tokens (client_id, platform, access_token, refresh_token, page_id, account_name, expires_at)
+            VALUES (${effectiveClientId}, 'x', ${tokenData.access_token}, ${tokenData.refresh_token}, ${userInfo.id}, ${accountName}, ${
               expiresAt?.toISOString() ?? null
             })
             ON CONFLICT DO NOTHING
           `.catch(() => {});
 
-          // Update if already exists
+          // Update if already exists (with refresh_token)
           await sql`
             UPDATE client_platform_tokens
             SET access_token = ${tokenData.access_token},
+                refresh_token = ${tokenData.refresh_token},
                 account_name = ${accountName},
                 expires_at = ${expiresAt?.toISOString() ?? null}
             WHERE client_id = ${effectiveClientId}
@@ -223,7 +224,7 @@ export const Route = createFileRoute("/api/portal/x-oauth-callback")({
 
           if (isAdminFlow) {
             return new Response(
-              `<h1>✅ X Connected!</h1><p>${userInfo.name} (@${userInfo.username}) — your X account is now connected to MetroReach Digital.</p><p><a href="/">Back to site</a></p>`,
+              `<h1>✅ X Connected!</h1><p>${userInfo.name} (@${userInfo.username}) — your X account is now connected to MetroReach Media.</p><p><a href="/">Back to site</a></p>`,
               {
                 status: 200,
                 headers: {

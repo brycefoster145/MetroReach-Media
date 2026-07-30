@@ -138,7 +138,7 @@ function Checkout() {
       clearCart();
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please try again or contact us directly at hello@metroreachagency.com.");
+      setError("Something went wrong. Please try again or contact us directly at contact@metroreachagency.com.");
     } finally {
       setSubmitting(false);
     }

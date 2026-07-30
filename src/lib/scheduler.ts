@@ -1,11 +1,11 @@
 /**
- * Recurring Task Scheduler — MetroReach Digital
+ * Recurring Task Scheduler — MetroReach Media
  *
  * For ongoing monthly services, schedules recurring pipeline tasks.
  * Checks every hour for tasks due, executes pipeline steps on schedule,
  * and marks completed steps while queuing the next ones.
  *
- * MetroReach Digital — Premium Social Media Marketing Agency
+ * MetroReach Media — Premium Social Media Marketing Agency
  */
 
 import { sql } from "~/lib/db";
