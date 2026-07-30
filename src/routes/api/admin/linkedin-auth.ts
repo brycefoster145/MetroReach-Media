@@ -19,7 +19,7 @@ import {
 } from "~/lib/linkedin-oauth-helpers";
 
 const REDIRECT_URI = "https://metroreachagency.com/api/admin/linkedin-auth";
-const SCOPES = "w_member_social r_organization_social w_organization_social";
+const SCOPES = "r_organization_social w_organization_social";
 const METROREACH_ORG_ID = "136664371";
 const METROREACH_ORG_NAME = "MetroReach Media";
 
