@@ -19,7 +19,7 @@ interface GraphApiError {
 }
 
 async function graphApiRequest<T = unknown>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "DELETE",
   path: string,
   params?: Record<string, string>,
   body?: Record<string, unknown>,
@@ -40,7 +40,7 @@ async function graphApiRequest<T = unknown>(
     headers: { Accept: "application/json" },
   };
 
-  if (method === "POST" && body) {
+  if ((method === "POST" || method === "DELETE") && body) {
     fetchOpts.headers = {
       ...(fetchOpts.headers as Record<string, string>),
       "Content-Type": "application/json",
@@ -250,4 +250,26 @@ export async function publishPost(params: {
   }
 
   return postToFacebook(pageId, text, mediaUrls);
+}
+
+/**
+ * Delete an Instagram post by its media ID.
+ *
+ * Uses the Meta Graph API DELETE endpoint on the IG media object.
+ * The media ID is the one returned by the publish flow (e.g., "17977248051063831").
+ *
+ * Reference: https://developers.facebook.com/docs/instagram-api/reference/ig-media#delete
+ */
+export async function deleteInstagramPost(igMediaId: string): Promise<void> {
+  const token = process.env.META_ACCESS_TOKEN;
+  if (!token) {
+    throw new Error("META_ACCESS_TOKEN is not set");
+  }
+
+  console.log(`[meta-poster] Deleting Instagram post: ${igMediaId}`);
+
+  // DELETE /{ig-media-id}?access_token={token}
+  await graphApiRequest("DELETE", `/${igMediaId}`, undefined, undefined, token);
+
+  console.log(`[meta-poster] ✅ DELETED Instagram post: ${igMediaId}`);
 }

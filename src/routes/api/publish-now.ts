@@ -10,7 +10,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
-import { publishPost, NoMediaError } from "~/lib/meta-poster";
+import { publishPost, deleteInstagramPost, NoMediaError } from "~/lib/meta-poster";
 
 // ── MetroReach Media account defaults ──
 // Used when client_id === "metroreach" so publish-now works via curl
@@ -153,6 +153,62 @@ export const Route = createFileRoute("/api/publish-now")({
 
           return new Response(
             JSON.stringify({ error: "Failed to publish", detail: err.message }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+      },
+
+      DELETE: async ({ request }) => {
+        let body: Record<string, unknown>;
+        try {
+          body = await request.json();
+        } catch {
+          return new Response(
+            JSON.stringify({ error: "Invalid JSON" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        const { platform, meta_post_id } = body as {
+          platform?: string;
+          meta_post_id?: string;
+        };
+
+        if (!platform || !meta_post_id) {
+          return new Response(
+            JSON.stringify({ error: "Missing required fields: platform, meta_post_id" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        if (platform !== "instagram") {
+          return new Response(
+            JSON.stringify({ error: "Delete currently only supports instagram" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        try {
+          console.log(`[publish-now] Deleting ${platform} post ${meta_post_id}...`);
+
+          await deleteInstagramPost(meta_post_id);
+
+          console.log(`[publish-now] ✅ DELETED: ${platform} post ${meta_post_id}`);
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              deleted: meta_post_id,
+              platform,
+              message: `Deleted ${platform} post ${meta_post_id}`,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        } catch (err: any) {
+          console.error(`[publish-now] ❌ DELETE FAILED: ${err.message}`);
+
+          return new Response(
+            JSON.stringify({ error: "Failed to delete post", detail: err.message }),
             { status: 500, headers: { "Content-Type": "application/json" } },
           );
         }
