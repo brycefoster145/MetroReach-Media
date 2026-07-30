@@ -96,6 +96,53 @@ export const Route = createFileRoute("/api/cron/health")({
             is_due: r.is_due,
           }));
 
+          // ── Watchdog: last 24h post success check ──
+          const posts24h = await sql`
+            SELECT 
+              COUNT(*) FILTER (WHERE status = 'posted' AND posted_at >= NOW() - INTERVAL '24 hours') as posted_24h,
+              COUNT(*) FILTER (WHERE status = 'failed' AND posted_at >= NOW() - INTERVAL '24 hours') as failed_24h,
+              COUNT(*) FILTER (WHERE status = 'publishing') as publishing_now
+            FROM scheduled_posts
+          `;
+          report.watchdog = {
+            posts_published_24h: Number(posts24h[0]?.posted_24h ?? 0),
+            posts_failed_24h: Number(posts24h[0]?.failed_24h ?? 0),
+            posts_stuck_publishing: Number(posts24h[0]?.publishing_now ?? 0),
+          };
+
+          // Alert if zero posts in 24h
+          if (Number(posts24h[0]?.posted_24h ?? 0) === 0) {
+            const everRows = await sql`
+              SELECT COUNT(*) as cnt FROM scheduled_posts WHERE status = 'posted'
+            `;
+            const everPosted = Number(everRows[0]?.cnt ?? 0);
+            if (everPosted > 0) {
+              report.watchdog.alert = "ZERO_POSTS_24H";
+              report.watchdog.alert_message = "No posts published in last 24h — possible pipeline failure";
+            }
+          }
+
+          if (Number(posts24h[0]?.publishing_now ?? 0) > 0) {
+            report.watchdog.alert = report.watchdog.alert
+              ? report.watchdog.alert + ",STUCK_PUBLISHING"
+              : "STUCK_PUBLISHING";
+          }
+
+          // Recent watchdog alerts
+          const recentAlerts = await sql`
+            SELECT alert_type, severity, message, created_at
+            FROM watchdog_alerts
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            ORDER BY created_at DESC
+            LIMIT 5
+          `;
+          report.watchdog.recent_alerts = recentAlerts.map((r: any) => ({
+            type: r.alert_type,
+            severity: r.severity,
+            message: r.message,
+            at: String(r.created_at),
+          }));
+
         } catch (err: any) {
           report.status = "error";
           report.error = err.message;
