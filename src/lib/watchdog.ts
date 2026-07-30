@@ -370,7 +370,7 @@ async function detectStalePublishing(): Promise<WatchdogCheckResult> {
       FROM scheduled_posts
       WHERE status = 'publishing'
         AND posted_at IS NOT NULL
-        AND posted_at < NOW() - INTERVAL '${PUBLISHING_STALE_THRESHOLD_S} seconds'
+        AND posted_at < NOW() - INTERVAL '300 seconds'
     `;
 
     if (staleRows.length > 0) {
