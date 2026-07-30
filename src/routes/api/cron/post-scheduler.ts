@@ -269,6 +269,24 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
                 `[post-scheduler] ⚠️ STALE POSTS DETECTED: ${staleRows.length} post(s) 30+ min past due and still pending/publishing. ` +
                   `IDs: [${staleIds.join(", ")}]`,
               );
+
+              // Reset stuck 'publishing' posts back to 'pending' so they can be retried
+              let resetCount = 0;
+              for (const row of staleRows) {
+                if (row.status === "publishing") {
+                  await sql`
+                    UPDATE scheduled_posts
+                    SET status = 'pending', posted_at = NULL, locked_at = NULL
+                    WHERE id = ${row.id}
+                  `;
+                  resetCount++;
+                }
+              }
+              if (resetCount > 0) {
+                console.log(
+                  `[post-scheduler] 🔄 Reset ${resetCount} stuck publishing post(s) → pending`,
+                );
+              }
             }
           } catch (staleErr: any) {
             console.error("[post-scheduler] Stale detection query failed:", staleErr.message);
