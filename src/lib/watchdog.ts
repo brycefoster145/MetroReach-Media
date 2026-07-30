@@ -613,9 +613,9 @@ export async function checkMissedSlots(): Promise<MissedSlotsCheckResult> {
              content, media_urls, hashtags, retry_count
       FROM scheduled_posts
       WHERE status = 'pending'
-        AND due_at < NOW() - INTERVAL '${MISSED_SLOT_THRESHOLD_MINUTES} minutes'
-        AND platform = ANY(${ACTIVE_PLATFORMS})
-        AND retry_count < ${MISSED_SLOT_MAX_RETRIES}
+        AND due_at < NOW() - INTERVAL '10 minutes'
+        AND platform IN ('facebook', 'instagram', 'x', 'linkedin')
+        AND retry_count < 3
       ORDER BY due_at ASC
       LIMIT 5
     `;
