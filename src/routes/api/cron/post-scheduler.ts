@@ -91,6 +91,13 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
       GET: async () => {
         const handlerStartTime = Date.now();
 
+        // ⛔ EMERGENCY KILL SWITCH — mass posting prevention
+        // Remove this block to re-enable scheduled posting.
+        return new Response(
+          JSON.stringify({ published: 0, failed: 0, retried: 0, results: [], paused: true }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+
         try {
           // ── 1. Atomic claim — UPDATE … AND status = 'pending' prevents double-claims ──
           // Only one cron tick can claim each post: the second tick sees status != 'pending' and skips it.
