@@ -64,7 +64,7 @@ export async function publishToLinkedIn(
     author = rawPageId;
   } else {
     // Raw ID — wrap as personal profile URN
-    author = `urn:li:person:${rawPageId}`;
+    author = `urn:li:organization:${rawPageId}`;
   }
 
   // ── 3. Build the post body per LinkedIn REST API spec ──
