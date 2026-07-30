@@ -315,7 +315,7 @@ export async function migrate(): Promise<void> {
       ig_user_id TEXT,
       content TEXT NOT NULL,
       media_urls JSONB DEFAULT '[]',
-      hashtags TEXT DEFAULT '#MetroReachMedia',
+      hashtags TEXT,
       due_at TIMESTAMPTZ NOT NULL,
       status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'pending_review', 'pending', 'publishing', 'posted', 'failed', 'missed', 'skipped_no_media')),
       meta_post_id TEXT,
