@@ -109,6 +109,31 @@ export const Route = createFileRoute("/api/schedule-post")({
           );
         }
 
+        // ── Hashtag minimum validation per platform (LOCKED IN — 2026-07-29) ──
+        // Enforces the mandatory hashtag minimums from the business plan / CONTENT-RULES.md.
+        // Never under-tag a post. Hashtag counts include #MetroReachMedia.
+        const HASHTAG_MINIMUMS: Record<string, number> = {
+          instagram: 20,
+          facebook: 3,
+          linkedin: 3,
+          x: 1,
+          tiktok: 3,
+          google: 3,
+        };
+        const minHashtags = HASHTAG_MINIMUMS[platform] ?? 0;
+        const hashtagCount = ((hashtags as string) || "").split(" ").filter((t) => t.startsWith("#")).length;
+        if (minHashtags > 0 && hashtagCount < minHashtags) {
+          return new Response(
+            JSON.stringify({
+              error: `Insufficient hashtags for ${platform}`,
+              detail: `${platform} requires at least ${minHashtags} hashtags. Post has ${hashtagCount}. Add ${minHashtags - hashtagCount} more. Every post on every platform must include #MetroReachMedia.`,
+              required: minHashtags,
+              actual: hashtagCount,
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         try {
           // ── Dedup check: REJECT duplicate platform + time slot ──
           // A pending post already exists for this platform + due_at.

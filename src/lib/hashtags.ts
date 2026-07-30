@@ -5,8 +5,8 @@
  * hashtag sets. #MetroReachMedia is always included as the first hashtag.
  *
  * Counts per platform:
- *   Instagram: 5-7 (high discoverability)
- *   Facebook:  2-3 (minimal, professional)
+ *   Instagram: 20-25 (maximum discoverability — full allowance)
+ *   Facebook:  3-5 (targeted, professional)
  *   X:         1-2 (space-constrained)
  *   LinkedIn:  3-5 (professional networking)
  *   TikTok:    3-5
@@ -33,6 +33,21 @@ const HASHTAG_POOLS: Record<string, string[]> = {
     "#MarketingStrategy",
     "#SmallBusinessMarketing",
     "#ContentMarketing",
+    "#SocialMediaGrowth",
+    "#BrandStrategy",
+    "#MarketingLife",
+    "#BusinessOwner",
+    "#EntrepreneurLife",
+    "#OnlineMarketing",
+    "#ViralMarketing",
+    "#Marketing101",
+    "#GrowthHacking",
+    "#CreativeAgency",
+    "#B2BMarketing",
+    "#MarketingAgencyLife",
+    "#InstaMarketing",
+    "#ContentCreator",
+    "#BrandIdentity",
   ],
   facebook: [
     "#MetroReachMedia",
@@ -84,8 +99,8 @@ const HASHTAG_POOLS: Record<string, string[]> = {
 
 /** Number of hashtags per platform [min, max] */
 const HASHTAG_COUNTS: Record<string, [number, number]> = {
-  instagram: [5, 7],
-  facebook: [2, 3],
+  instagram: [20, 25],
+  facebook: [3, 5],
   x: [1, 2],
   linkedin: [3, 5],
   tiktok: [3, 5],

@@ -18,6 +18,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
 import { publishPost, NoMediaError } from "~/lib/meta-poster";
 import { publishToX } from "~/lib/x-poster";
+import { publishToLinkedIn } from "~/lib/linkedin-poster";
+import { checkMissedPosts } from "~/lib/post-watchdog";
 
 const MAX_RETRIES = 3;
 
@@ -34,9 +36,29 @@ interface NormalizedPost {
 }
 
 /**
+ * Platforms awaiting OAuth credentials from the owner.
+ * Posts for these platforms are held in "awaiting_credentials" status
+ * (not "failed") — they will be published once credentials are connected.
+ * This is NOT a transient error and should never be retried.
+ */
+class NotConnectedError extends Error {
+  constructor(platform: string) {
+    super(`Platform "${platform}" not yet connected — awaiting OAuth credentials`);
+    this.name = "NotConnectedError";
+  }
+}
+
+const PLATFORM_AWAITING_CREDENTIALS = new Set([
+  "tiktok",
+  "google",
+  "youtube",
+]);
+
+/**
  * Platform dispatch table.
- * Each publisher receives a NormalizedPost and returns { post_id: string }.
- * Adding a new platform = 3 lines here + the import.
+ * All 7 platforms we sell. Connected platforms use real API publishers.
+ * Awaiting-credentials platforms throw NotConnectedError — scheduler
+ * marks them as "awaiting_credentials" (NO retries).
  */
 const PUBLISHERS: Record<string, (post: NormalizedPost) => Promise<{ post_id: string }>> = {
   facebook: (post) =>
@@ -56,6 +78,11 @@ const PUBLISHERS: Record<string, (post: NormalizedPost) => Promise<{ post_id: st
     }),
   x: (post) =>
     publishToX(post.client_id || "metroreach", post.page_id || "", post.fullText),
+  linkedin: (post) =>
+    publishToLinkedIn(post.client_id || "metroreach", post.fullText),
+  tiktok: () => { throw new NotConnectedError("tiktok"); },
+  google: () => { throw new NotConnectedError("google"); },
+  youtube: () => { throw new NotConnectedError("youtube"); },
 };
 
 export const Route = createFileRoute("/api/cron/post-scheduler")({
@@ -161,6 +188,7 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
               });
             } catch (err: any) {
               const isNoMedia = err instanceof NoMediaError || err?.message?.includes("No media");
+              const isNotConnected = err instanceof NotConnectedError;
               const newRetryCount = post.retry_count + 1;
 
               if (isNoMedia) {
@@ -175,6 +203,19 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
                   id: post.id,
                   platform: post.platform,
                   status: "skipped_no_media",
+                  error: err.message || String(err),
+                });
+              } else if (isNotConnected) {
+                // Platform not yet connected — hold, don't retry, don't fail
+                await sql`
+                  UPDATE scheduled_posts
+                  SET status = 'awaiting_credentials', error_message = ${err.message || String(err)}
+                  WHERE id = ${post.id}
+                `;
+                results.push({
+                  id: post.id,
+                  platform: post.platform,
+                  status: "awaiting_credentials",
                   error: err.message || String(err),
                 });
               } else if (newRetryCount < MAX_RETRIES) {
@@ -233,7 +274,23 @@ export const Route = createFileRoute("/api/cron/post-scheduler")({
             console.error("[post-scheduler] Stale detection query failed:", staleErr.message);
           }
 
-          // ── 5. Log run to cron_runs for health monitoring ──
+          // ── 5. Post-failure watchdog — Telegram alerts for missed deadlines ──
+          // Catches posts 5+ min past due that the scheduler never claimed.
+          // Runs after every tick. Must never block the scheduler.
+          try {
+            console.log("[post-scheduler] Running post-failure watchdog...");
+            const watchdogResult = await checkMissedPosts();
+            if (watchdogResult.missed > 0) {
+              console.error(
+                `[post-scheduler] ⚠️ WATCHDOG: ${watchdogResult.missed} missed post(s) detected and alerted.`,
+              );
+            }
+            console.log("[post-scheduler] Watchdog check complete.");
+          } catch (watchdogErr: any) {
+            console.error("[post-scheduler] Watchdog check failed:", watchdogErr.message);
+          }
+
+          // ── 6. Log run to cron_runs for health monitoring ──
           const elapsedMs = Date.now() - handlerStartTime;
           const postsFound = rows.length;
           const postsProcessed = published + failed + retried;
