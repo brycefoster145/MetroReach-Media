@@ -223,8 +223,20 @@ export async function postToInstagram(
     pageToken,
   );
 
+  // Step 4: Resolve the REAL IG Media ID.
+  // The publish endpoint sometimes returns the container creation ID
+  // instead of the actual IG Media ID. Container IDs cannot be used for
+  // DELETE operations (Meta error 100: "Object does not exist").
+  // We query the media list and match by caption to find the real,
+  // delete-able media ID.
+  const realMediaId = await resolveRealIgMediaId(
+    igUserId,
+    publishResult.id,
+    text,
+  );
+
   return {
-    post_id: publishResult.id,
+    post_id: realMediaId,
     platform: "instagram",
     status: "published",
   };
@@ -252,11 +264,129 @@ export async function publishPost(params: {
   return postToFacebook(pageId, text, mediaUrls);
 }
 
+export interface InstagramMedia {
+  id: string;
+  caption?: string;
+  media_url?: string;
+  permalink?: string;
+  timestamp?: string;
+}
+
+/**
+ * List recent Instagram media for an IG Business Account.
+ *
+ * Calls GET /{ig-user-id}/media to retrieve published media objects.
+ * Returns real IG Media IDs that can be used for DELETE operations.
+ *
+ * Reference: https://developers.facebook.com/docs/instagram-api/reference/ig-user/media
+ */
+export async function listInstagramMedia(
+  igUserId: string,
+  limit = 25,
+): Promise<InstagramMedia[]> {
+  const token = process.env.META_ACCESS_TOKEN;
+  if (!token) {
+    throw new Error("META_ACCESS_TOKEN is not set");
+  }
+
+  console.log(`[meta-poster] Listing Instagram media for user ${igUserId}...`);
+
+  const data = await graphApiRequest<{
+    data: Array<{
+      id: string;
+      caption?: string;
+      media_url?: string;
+      permalink?: string;
+      timestamp?: string;
+    }>;
+  }>(
+    "GET",
+    `/${igUserId}/media`,
+    { fields: "id,caption,media_url,permalink,timestamp", limit: String(limit) },
+    undefined,
+    token,
+  );
+
+  console.log(`[meta-poster] Found ${data.data?.length ?? 0} IG media items`);
+
+  return (data.data ?? []).map((item) => ({
+    id: item.id,
+    caption: item.caption,
+    media_url: item.media_url,
+    permalink: item.permalink,
+    timestamp: item.timestamp,
+  }));
+}
+
+/**
+ * Resolve the real IG Media ID for a newly published post.
+ *
+ * After publishing via media_publish, Meta sometimes returns the container
+ * creation ID instead of the real IG Media ID. Container IDs cannot be used
+ * for DELETE operations (error code 100 "Object does not exist").
+ *
+ * This function queries the recent media list and matches by caption
+ * to find the actual, delete-able IG Media ID.
+ *
+ * Falls back gracefully: if listing fails, returns the publishResultId
+ * as-is so posting still succeeds even if deletion might not.
+ */
+async function resolveRealIgMediaId(
+  igUserId: string,
+  publishResultId: string,
+  caption: string,
+): Promise<string> {
+  // Normalize caption for comparison: first 80 chars, trim whitespace
+  const normalizedCaption = caption.trim().substring(0, 80);
+
+  try {
+    // Small delay to let Meta's systems propagate the new media
+    await new Promise((r) => setTimeout(r, 3000));
+
+    const media = await listInstagramMedia(igUserId, 10);
+
+    for (const item of media) {
+      const itemCaption = (item.caption ?? "").trim().substring(0, 80);
+      if (itemCaption === normalizedCaption) {
+        console.log(
+          `[meta-poster] Resolved real IG Media ID: ${item.id} (publish gave: ${publishResultId})`,
+        );
+        return item.id;
+      }
+    }
+
+    // If no caption match, check if publishResultId appears in the list at all
+    for (const item of media) {
+      if (item.id === publishResultId) {
+        console.log(
+          `[meta-poster] Publish result ID ${publishResultId} found in media list — using as-is`,
+        );
+        return publishResultId;
+      }
+    }
+
+    // No match found — log warning and return the publish result ID
+    console.warn(
+      `[meta-poster] ⚠️ Could not find real IG Media ID for caption "${normalizedCaption}". ` +
+        `Publish returned ${publishResultId}. Media list had ${media.length} items. ` +
+        `Storing publish result ID — deletion may fail if it's a container ID.`,
+    );
+  } catch (err: any) {
+    console.warn(
+      `[meta-poster] ⚠️ Failed to resolve real IG Media ID: ${err.message}. ` +
+        `Falling back to publish result ID ${publishResultId}.`,
+    );
+  }
+
+  return publishResultId;
+}
+
 /**
  * Delete an Instagram post by its media ID.
  *
  * Uses the Meta Graph API DELETE endpoint on the IG media object.
- * The media ID is the one returned by the publish flow (e.g., "17977248051063831").
+ * The media ID must be the real IG Media ID (from listInstagramMedia or
+ * resolved via resolveRealIgMediaId), NOT a container creation ID.
  *
  * Reference: https://developers.facebook.com/docs/instagram-api/reference/ig-media#delete
  */
