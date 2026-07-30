@@ -380,6 +380,37 @@ export async function migrate(): Promise<void> {
     console.log(`[migration] ℹ due_at column migration skipped: ${err.message}`);
   }
 
+    // ── Fix status check constraint to include 'publishing' ──
+    try {
+      await sql`
+        ALTER TABLE scheduled_posts
+        DROP CONSTRAINT IF EXISTS scheduled_posts_status_check
+      `;
+      await sql`
+        ALTER TABLE scheduled_posts
+        ADD CONSTRAINT scheduled_posts_status_check
+        CHECK (status IN ('pending', 'publishing', 'posted', 'failed', 'skipped_no_media', 'missed'))
+      `;
+      console.log("✓ status check constraint updated (includes publishing)");
+    } catch (err2: any) {
+      console.log(`ℹ status constraint migration skipped: ${err2.message}`);
+    }
+
+    // ── watchdog_alerts table ──
+    await sql`
+      CREATE TABLE IF NOT EXISTS watchdog_alerts (
+        id SERIAL PRIMARY KEY,
+        alert_type TEXT NOT NULL,
+        severity TEXT NOT NULL DEFAULT 'warning',
+        message TEXT NOT NULL,
+        checks_data JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_watchdog_alerts_created ON watchdog_alerts(created_at DESC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_watchdog_alerts_severity ON watchdog_alerts(severity)`;
+    console.log("✓ watchdog_alerts table ready");
+
   // ── orders table ──
   await sql`
     CREATE TABLE IF NOT EXISTS orders (

@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/force-migrate")({
             results.push(`ℹ due_at migration skipped: ${fixErr.message}`);
           }
 
-          // ── Fix status check constraint to include 'skipped_no_media' and 'publishing' ──
+          // ── Fix status check constraint to include 'publishing' and 'skipped_no_media' ──
           try {
             await n`
               ALTER TABLE scheduled_posts 
@@ -128,6 +128,21 @@ export const Route = createFileRoute("/api/force-migrate")({
             )
           `;
           results.push("✓ cron_runs table ready");
+
+          // ── watchdog_alerts table ──
+          await n`
+            CREATE TABLE IF NOT EXISTS watchdog_alerts (
+              id SERIAL PRIMARY KEY,
+              alert_type TEXT NOT NULL,
+              severity TEXT NOT NULL DEFAULT 'warning',
+              message TEXT NOT NULL,
+              checks_data JSONB DEFAULT '{}',
+              created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+          `;
+          await n`CREATE INDEX IF NOT EXISTS idx_watchdog_alerts_created ON watchdog_alerts(created_at DESC)`;
+          await n`CREATE INDEX IF NOT EXISTS idx_watchdog_alerts_severity ON watchdog_alerts(severity)`;
+          results.push("✓ watchdog_alerts table ready");
 
           // ── Fix page_id for MetroReach Facebook posts ──
           // Posts were created with wrong or null page_id. Set to correct FB page.
