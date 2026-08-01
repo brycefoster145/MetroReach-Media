@@ -351,6 +351,10 @@ export async function migrate(): Promise<void> {
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ`;
   console.log("[migration] ✓ scheduled_posts.locked_at column ready");
 
+  // ── C2b: error_message for publish failures (used by cron/publish + watchdog) ──
+  await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS error_message TEXT`;
+  console.log("[migration] ✓ scheduled_posts.error_message column ready");
+
   // ── Content pipeline: rejection tracking for the review→replace loop ──
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS rejection_count INTEGER DEFAULT 0`;
   await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS replaced_post_id TEXT`;

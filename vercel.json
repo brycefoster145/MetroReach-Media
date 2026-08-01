@@ -11,6 +11,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/publish",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/pipeline-worker",
       "schedule": "* * * * *"
     },
