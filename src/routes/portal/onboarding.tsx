@@ -119,34 +119,30 @@ function PortalOnboarding() {
   // publishing/account access, so we hide all admin-access UI for them.
   const isAuditOnly = profile?.service_slug === "premium-growth-audit";
 
-  // Auth check on mount — supports ?token=XXX for direct onboarding access
+  // Auth check on mount. Session wins; ?token= routes through /portal setup.
   useEffect(() => {
     async function checkAuth() {
       try {
-        // If a portal token is in the URL, authenticate first
-        const searchParams = new URLSearchParams(window.location.search);
-        const portalToken = searchParams.get("token");
-        if (portalToken && portalToken.length >= 8) {
-          const authRes = await fetch("/api/portal/auth", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-csrf-protection": "1" },
-            body: JSON.stringify({ token: portalToken }),
-          });
-          if (!authRes.ok) {
-            window.location.href = "/portal";
-            return;
-          }
-          // Clean the token from the URL after auth
-          window.history.replaceState(null, "", "/portal/onboarding");
-        }
-
-        // Verify session via dashboard endpoint
+        // Verify session via dashboard endpoint first — a valid session wins.
         const res = await fetch("/api/portal/dashboard");
         if (res.status === 401) {
-          window.location.href = "/portal";
+          // Not logged in. A ?token= link is now a one-time account-setup
+          // token (not a login), so route through /portal to set the
+          // password / log in; otherwise go to the login page.
+          const searchParams = new URLSearchParams(window.location.search);
+          const portalToken = searchParams.get("token");
+          if (portalToken && portalToken.length >= 8) {
+            window.location.href = `/portal?token=${encodeURIComponent(portalToken)}`;
+          } else {
+            window.location.href = "/portal";
+          }
           return;
         }
         if (!res.ok) throw new Error("Failed to verify session");
+        // Clean a stale ?token= from the URL now that we're authenticated
+        if (window.location.search) {
+          window.history.replaceState(null, "", "/portal/onboarding");
+        }
         const data = await res.json();
         setProfile(data?.profile || null);
       } catch {
