@@ -16,9 +16,23 @@ const TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 const COOKIE_NAME = "metroreach_client_token";
 
 function getJwtSecret(): string {
-  // Use dedicated CLIENT_AUTH_SECRET env var for production-grade secret
-  const base = process.env.CLIENT_AUTH_SECRET || process.env.MS_API_KEY || process.env.DATABASE_URL || "metroreach-dev-secret";
-  return `client-portal:v1:${base.slice(0, 64)}`;
+  // Production-grade signing secret. Use ONLY the dedicated CLIENT_AUTH_SECRET
+  // env var — never fall back to other secrets or a hardcoded default in
+  // production, since a leaked/guessable secret lets anyone forge client tokens.
+  const secret = process.env.CLIENT_AUTH_SECRET;
+  if (secret) {
+    return `client-portal:v1:${secret.slice(0, 64)}`;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("CLIENT_AUTH_SECRET must be set in production");
+  }
+
+  // Dev-only fallback so local work isn't blocked. Never relied on in production.
+  console.warn(
+    "[client-auth] CLIENT_AUTH_SECRET is not set — using insecure dev default. Set CLIENT_AUTH_SECRET before deploying.",
+  );
+  return "client-portal:v1:metroreach-dev-secret";
 }
 
 // ── Base64url helpers ──
