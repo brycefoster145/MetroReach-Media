@@ -55,6 +55,7 @@ interface OnboardingFormData {
   tiktokUrl: string;
   googleUrl: string;
   hasAdminAccess: boolean;
+  competitors: string; // audit-only: competitor names/URLs for benchmarking
   // Step 3: Brand & Goals
   brandGuidelines: string;
   targetAudience: string;
@@ -81,6 +82,7 @@ const INITIAL_DATA: OnboardingFormData = {
   tiktokUrl: "",
   googleUrl: "",
   hasAdminAccess: true,
+  competitors: "",
   brandGuidelines: "",
   targetAudience: "",
   brandVoice: "",
@@ -110,7 +112,12 @@ function PortalOnboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ service_slug?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Premium Growth Audit clients get a manual analysis — they never grant
+  // publishing/account access, so we hide all admin-access UI for them.
+  const isAuditOnly = profile?.service_slug === "premium-growth-audit";
 
   // Auth check on mount — supports ?token=XXX for direct onboarding access
   useEffect(() => {
@@ -140,6 +147,8 @@ function PortalOnboarding() {
           return;
         }
         if (!res.ok) throw new Error("Failed to verify session");
+        const data = await res.json();
+        setProfile(data?.profile || null);
       } catch {
         window.location.href = "/portal";
         return;
@@ -193,6 +202,17 @@ function PortalOnboarding() {
       case 1:
         return formData.businessName.trim().length > 0 && formData.contactName.trim().length > 0;
       case 2:
+        // Audit-only clients must provide at least one social URL for manual analysis
+        if (isAuditOnly) {
+          return [
+            formData.facebookUrl,
+            formData.instagramUrl,
+            formData.xUrl,
+            formData.linkedinUrl,
+            formData.tiktokUrl,
+            formData.googleUrl,
+          ].some((u) => u.trim().length > 0);
+        }
         return true; // All optional
       case 3:
         return true; // All optional
@@ -247,7 +267,7 @@ function PortalOnboarding() {
       }
 
       // 2. Submit onboarding data
-      const payload = {
+      const payload: Record<string, unknown> = {
         businessInfo: {
           businessName: formData.businessName,
           industry: formData.industry,
@@ -264,7 +284,6 @@ function PortalOnboarding() {
           tiktok: formData.tiktokUrl,
           google: formData.googleUrl,
         },
-        hasAdminAccess: formData.hasAdminAccess,
         brandInfo: {
           brandGuidelines: formData.brandGuidelines,
           targetAudience: formData.targetAudience,
@@ -274,6 +293,13 @@ function PortalOnboarding() {
           logo: logoAsset,
         },
       };
+      // Audit clients never grant admin/publishing access — don't send the field.
+      if (!isAuditOnly) {
+        payload.hasAdminAccess = formData.hasAdminAccess;
+      }
+      if (isAuditOnly && formData.competitors.trim()) {
+        payload.competitors = formData.competitors.trim();
+      }
 
       const res = await fetch("/api/client/onboarding", {
         method: "POST",
@@ -519,11 +545,19 @@ function PortalOnboarding() {
             <div className="space-y-5">
               <div>
                 <h2 className="text-xl font-bold font-heading text-text-primary mb-1">
-                  Social Media Access
+                  {isAuditOnly ? "Social Profiles" : "Social Media Access"}
                 </h2>
-                <p className="text-sm text-text-secondary">
-                  Share your profile URLs so we can review your current presence. All fields are optional.
-                </p>
+                {isAuditOnly ? (
+                  <p className="text-sm text-text-secondary">
+                    Share your public profile URLs so we can analyze your current presence. We&apos;ll
+                    analyze your publicly available profiles —{" "}
+                    <strong>no account access needed</strong>.
+                  </p>
+                ) : (
+                  <p className="text-sm text-text-secondary">
+                    Share your profile URLs so we can review your current presence. All fields are optional.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -593,41 +627,64 @@ function PortalOnboarding() {
                 />
               </div>
 
-              {/* Admin access toggle */}
-              <div className="bg-bg-surface-raised border border-border-subtle rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">
-                      Do you have admin access to these accounts?
-                    </p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      We'll need admin access to publish content on your behalf.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => updateField("hasAdminAccess", !formData.hasAdminAccess)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 flex-shrink-0 ${
-                      formData.hasAdminAccess ? "bg-success" : "bg-bg-surface-high border border-border-subtle"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                        formData.hasAdminAccess ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-                {!formData.hasAdminAccess && (
-                  <p className="text-xs text-warning mt-3 pt-3 border-t border-border-subtle">
-                    Once you submit this form, we'll send connection requests to your accounts. You can also connect them directly from the{" "}
-                    <Link to="/portal/connect" className="text-brand-primary underline hover:no-underline">
-                      Connect Accounts
-                    </Link>{" "}
-                    page.
+              {/* Competitors — audit clients only: used for benchmarking, never contacted */}
+              {isAuditOnly && (
+                <div>
+                  <label className={labelClass}>
+                    Competitors to Analyze
+                    <span className={optionalClass}>(optional but recommended)</span>
+                  </label>
+                  <textarea
+                    value={formData.competitors}
+                    onChange={(e) => updateField("competitors", e.target.value)}
+                    placeholder="List your main competitors — names or profile URLs, one per line. We'll benchmark your presence against theirs."
+                    rows={3}
+                    maxLength={2000}
+                    className={textareaClass}
+                  />
+                  <p className="text-xs text-text-muted mt-1.5">
+                    These are used for competitive analysis in your audit only — no account access needed.
                   </p>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Admin access toggle — managed services only; audits never need publishing access */}
+              {!isAuditOnly && (
+                <div className="bg-bg-surface-raised border border-border-subtle rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">
+                        Do you have admin access to these accounts?
+                      </p>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        We&apos;ll need admin access to publish content on your behalf.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateField("hasAdminAccess", !formData.hasAdminAccess)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 flex-shrink-0 ${
+                        formData.hasAdminAccess ? "bg-success" : "bg-bg-surface-high border border-border-subtle"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                          formData.hasAdminAccess ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {!formData.hasAdminAccess && (
+                    <p className="text-xs text-warning mt-3 pt-3 border-t border-border-subtle">
+                      Once you submit this form, we&apos;ll send connection requests to your accounts. You can also connect them directly from the{" "}
+                      <Link to="/portal/connect" className="text-brand-primary underline hover:no-underline">
+                        Connect Accounts
+                      </Link>{" "}
+                      page.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -823,7 +880,7 @@ function PortalOnboarding() {
               <div className="rounded-xl bg-bg-surface-raised border border-border-subtle p-5 space-y-3">
                 <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
                   <GlobeHemisphereWest size={16} className="text-brand-primary" weight="fill" />
-                  Social Media
+                  {isAuditOnly ? "Social Profiles — For Analysis Only" : "Social Media"}
                 </h3>
                 <div className="grid gap-2 text-sm">
                   <SummaryRow label="Facebook" value={formData.facebookUrl} />
@@ -832,11 +889,21 @@ function PortalOnboarding() {
                   <SummaryRow label="LinkedIn" value={formData.linkedinUrl} />
                   <SummaryRow label="TikTok" value={formData.tiktokUrl} />
                   <SummaryRow label="Google Business" value={formData.googleUrl} />
-                  <SummaryRow
-                    label="Admin Access"
-                    value={formData.hasAdminAccess ? "Yes" : "No — connection requests will be sent"}
-                  />
+                  {isAuditOnly && formData.competitors.trim() && (
+                    <SummaryRow label="Competitors" value={formData.competitors} lines={2} />
+                  )}
+                  {!isAuditOnly && (
+                    <SummaryRow
+                      label="Admin Access"
+                      value={formData.hasAdminAccess ? "Yes" : "No — connection requests will be sent"}
+                    />
+                  )}
                 </div>
+                {isAuditOnly && (
+                  <p className="text-xs text-text-muted pt-2 border-t border-border-subtle">
+                    No account access needed — we&apos;ll analyze your publicly available profiles only.
+                  </p>
+                )}
               </div>
 
               {/* Brand & Goals Summary */}

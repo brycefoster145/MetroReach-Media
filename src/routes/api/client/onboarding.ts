@@ -23,9 +23,12 @@ export const Route = createFileRoute("/api/client/onboarding")({
         }
 
         let body: {
+          businessInfo?: Record<string, string>;
           platformUrls?: Record<string, string>;
-          brandInfo?: Record<string, string>;
+          hasAdminAccess?: boolean;
+          brandInfo?: Record<string, unknown>;
           goals?: string[];
+          competitors?: string;
         };
         try {
           body = await request.json();
@@ -38,15 +41,44 @@ export const Route = createFileRoute("/api/client/onboarding")({
 
         // Merge with existing onboarding data
         const existing = await sql`
-          SELECT onboarding_data, name FROM clients WHERE id = ${client.sub} LIMIT 1
+          SELECT onboarding_data, name, service_slug FROM clients WHERE id = ${client.sub} LIMIT 1
         `;
 
         const current = (existing[0]?.onboarding_data as Record<string, unknown>) || {};
+        const serviceSlug = (existing[0]?.service_slug as string) || "";
+
+        // Premium Growth Audit is a manual analysis — the client never grants
+        // admin/publishing access and no social posts are generated.
+        const isAuditOnly = serviceSlug === "premium-growth-audit";
+        if (isAuditOnly) {
+          // Strip admin-access from the payload (never store it for audits)
+          if (body && "hasAdminAccess" in body) {
+            delete body.hasAdminAccess;
+          }
+        }
+
         const merged = {
           ...current,
           ...body,
           submitted_at: new Date().toISOString(),
         };
+
+        // Audit-only validation: business name + at least one social URL are required
+        if (isAuditOnly) {
+          const businessName = String((merged.businessInfo as Record<string, unknown> | undefined)?.businessName ?? "").trim();
+          const platformUrls = (merged.platformUrls as Record<string, unknown> | undefined) || {};
+          const hasSocialUrl = Object.values(platformUrls).some(
+            (u) => typeof u === "string" && u.trim().length > 0,
+          );
+          if (!businessName || !hasSocialUrl) {
+            return new Response(
+              JSON.stringify({
+                error: "Please provide your business name and at least one social profile URL so we can analyze your public presence.",
+              }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        }
 
         await sql`
           UPDATE clients
@@ -74,16 +106,19 @@ export const Route = createFileRoute("/api/client/onboarding")({
           // ── Trigger automatic content generation ──
           // Fire-and-forget: don't block the onboarding response.
           // The content pipeline will generate a 30-day calendar, copy, and images.
-          const siteUrl = process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : process.env.SITE_URL || "http://localhost:3000";
-          fetch(`${siteUrl}/api/content/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ client_id: client.sub }),
-          }).catch((e) =>
-            console.error("[onboarding] Content generation trigger failed:", e.message),
-          );
+          // Audits are manual analyses — never trigger social content generation for them.
+          if (!isAuditOnly) {
+            const siteUrl = process.env.VERCEL_URL
+              ? `https://${process.env.VERCEL_URL}`
+              : process.env.SITE_URL || "http://localhost:3000";
+            fetch(`${siteUrl}/api/content/generate`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ client_id: client.sub }),
+            }).catch((e) =>
+              console.error("[onboarding] Content generation trigger failed:", e.message),
+            );
+          }
         }
 
         // Notify team
