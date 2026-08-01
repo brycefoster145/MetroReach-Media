@@ -28,3 +28,6 @@ bash build-vercel.sh   # assembles .vercel/output (Build Output API v3)
 bun run dev       # starts Vite dev server
 bun run publish   # builds and serves on port 3000
 ```
+
+## Pipeline worker cron
+Content generation is queued in `pipeline_jobs` and processed one job per invocation. Configure cron-job.org to call `/api/cron/pipeline-worker` every 60 seconds (GET or POST), with the production site URL.

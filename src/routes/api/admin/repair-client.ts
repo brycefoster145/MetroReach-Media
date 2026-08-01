@@ -6,7 +6,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
-import { executePipeline } from "~/lib/pipeline-executor";
+import { randomBytes } from "node:crypto";
 import { getMappingBySlug } from "~/lib/stripe-product-map";
 
 export const Route = createFileRoute("/api/admin/repair-client")({
@@ -50,8 +50,9 @@ export const Route = createFileRoute("/api/admin/repair-client")({
           }
 
           const client = rows[0] as any;
-          await executePipeline(client);
-          return new Response(JSON.stringify({ success: true, client, pipeline_triggered: true }), {
+          const jobId = `pipeline-${randomBytes(12).toString("hex")}`;
+          await sql`INSERT INTO pipeline_jobs (id, client_id, service_slug, status, payload) VALUES (${jobId}, ${clientId}, ${serviceSlug}, 'pending', ${JSON.stringify({ client_id: clientId })}::jsonb)`;
+          return new Response(JSON.stringify({ success: true, client, pipeline_triggered: true, job_id: jobId }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
           });
