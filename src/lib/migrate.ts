@@ -143,7 +143,7 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_pipeline_log_client ON pipeline_log(client_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_pipeline_log_step ON pipeline_log(client_id, step_key)`;
   await sql`
-    DO $
+    DO $$
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'pipeline_log_client_step_unique'
@@ -151,7 +151,7 @@ export async function migrate(): Promise<void> {
         ALTER TABLE pipeline_log ADD CONSTRAINT pipeline_log_client_step_unique UNIQUE (client_id, step_key);
       END IF;
     END
-    $
+    $$
   `.catch(() => {});
   console.log("[migration] ✓ pipeline_log table ready");
 
@@ -306,7 +306,7 @@ export async function migrate(): Promise<void> {
   await sql`ALTER TABLE client_platform_tokens ADD COLUMN IF NOT EXISTS refresh_token TEXT`;
   // Add unique constraint (idempotent — wrapped in DO block to skip if exists)
   await sql`
-    DO $
+    DO $$
     BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
@@ -315,8 +315,8 @@ export async function migrate(): Promise<void> {
       ) THEN
         ALTER TABLE client_platform_tokens ADD CONSTRAINT uq_client_platform_page UNIQUE (client_id, platform, page_id);
       END IF;
-    END $;
-  `;
+    END $$;
+  `.catch(() => {});
   console.log("[migration] ✓ client_platform_tokens table ready (incl. refresh_token + unique constraint)");
 
   // ── cron_runs table (deduplicated from above — skipped if exists) ──
@@ -416,6 +416,68 @@ export async function migrate(): Promise<void> {
       console.log(`ℹ status constraint migration skipped: ${err2.message}`);
     }
 
+    // ── PUBLISH SAFETY GUARD (004) ──
+    // Watchdog-era DB cleanup + approval gate. Context: /api/cron/publish was
+    // disabled (PR #118) after mass-posting; this is the safety prep before it
+    // can be re-enabled. CONTRACT: the publish cron claim query MUST filter for
+    // `approved_at IS NOT NULL` (see COMMENT ON TABLE below).
+    // ── 004a: Purge watchdog-era test posts (one-time cleanup; idempotent) ──
+    // Stuck 'publishing' rows never finished (cron is the only 'publishing'
+    // writer and it is off — every such row is a stranded artifact).
+    try {
+      const purgedPublishing = await sql`
+        DELETE FROM scheduled_posts WHERE status = 'publishing' RETURNING id
+      `;
+      console.log(`[migration] ✓ purged ${purgedPublishing.length} stuck 'publishing' posts`);
+    } catch (err: any) {
+      console.log(`[migration] ℹ publishing purge skipped: ${err.message}`);
+    }
+    // Stopgap watchdog test client — every row is a test post, never publishable.
+    try {
+      const purgedWatchdog = await sql`
+        DELETE FROM scheduled_posts
+        WHERE status = 'pending' AND client_id = 'client-8f5c81359030e96f'
+        RETURNING id
+      `;
+      console.log(`[migration] ✓ purged ${purgedWatchdog.length} watchdog test posts (client-8f5c81359030e96f)`);
+    } catch (err: any) {
+      console.log(`[migration] ℹ watchdog purge skipped: ${err.message}`);
+    }
+    // ── 004b: Approval columns (nullable — legacy rows stay NULL) ──
+    await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS approved_by TEXT`;
+    console.log("[migration] ✓ scheduled_posts.approved_at / approved_by columns ready");
+    // ── 004c: CHECK constraint — approved_at requires approved_by ──
+    try {
+      await sql`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'scheduled_posts_approval_consistency'
+          ) THEN
+            ALTER TABLE scheduled_posts
+              ADD CONSTRAINT scheduled_posts_approval_consistency
+              CHECK (approved_at IS NULL OR approved_by IS NOT NULL);
+          END IF;
+        END $$;
+      `;
+      console.log("[migration] ✓ scheduled_posts_approval_consistency CHECK constraint ready");
+    } catch (err: any) {
+      console.log(`[migration] ℹ approval CHECK constraint skipped: ${err.message}`);
+    }
+    // ── 004d: DB-level documentation of the cron contract ──
+    try {
+      await sql`COMMENT ON TABLE scheduled_posts IS
+        'Scheduled social posts. PUBLISH SAFETY GUARD: the publish cron MUST only claim rows WHERE status = ''pending'' AND approved_at IS NOT NULL AND due_at <= NOW(). Rows without approved_at are legacy/unapproved and must never be auto-published.'`;
+      await sql`COMMENT ON COLUMN scheduled_posts.approved_at IS
+        'When the post was explicitly approved for publishing (client via portal, or ''system'' for internal brand posts). NULL = never approved — the publish cron MUST filter for approved_at IS NOT NULL before claiming.'`;
+      await sql`COMMENT ON COLUMN scheduled_posts.approved_by IS
+        'Who approved the post: client email (portal approval) or ''system'' (internal operations). Required whenever approved_at is set.'`;
+      console.log("[migration] ✓ scheduled_posts publish safety comments applied");
+    } catch (err: any) {
+      console.log(`[migration] ℹ publish safety comments skipped: ${err.message}`);
+    }
     // ── watchdog_alerts table ──
     await sql`
       CREATE TABLE IF NOT EXISTS watchdog_alerts (

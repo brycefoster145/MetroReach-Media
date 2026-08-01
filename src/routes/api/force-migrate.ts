@@ -186,6 +186,54 @@ export const Route = createFileRoute("/api/force-migrate")({
           `;
           results.push("✓ IG posts with NULL ig_user_id fixed");
 
+          // ── PUBLISH SAFETY GUARD (004) — watchdog-era cleanup + approval gate ──
+          // Purge: stuck 'publishing' rows (cron disabled since PR #118 — the only
+          // 'publishing' writer — so every such row is a stranded artifact).
+          const purgedPublishing = await n`DELETE FROM scheduled_posts WHERE status = 'publishing' RETURNING id`;
+          results.push(`✓ purged ${purgedPublishing.length} stuck 'publishing' posts`);
+          // Purge: watchdog stopgap test client — every row is a test post.
+          const purgedWatchdog = await n`
+            DELETE FROM scheduled_posts
+            WHERE status = 'pending' AND client_id = 'client-8f5c81359030e96f'
+            RETURNING id
+          `;
+          results.push(`✓ purged ${purgedWatchdog.length} watchdog test posts (client-8f5c81359030e96f)`);
+          // Approval columns (nullable — legacy rows stay NULL until approved).
+          await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ`;
+          await n`ALTER TABLE scheduled_posts ADD COLUMN IF NOT EXISTS approved_by TEXT`;
+          results.push("✓ approved_at / approved_by columns ready");
+          // CHECK constraint — approved_at requires approved_by (idempotent).
+          try {
+            await n`
+              DO $$
+              BEGIN
+                IF NOT EXISTS (
+                  SELECT 1 FROM pg_constraint
+                  WHERE conname = 'scheduled_posts_approval_consistency'
+                ) THEN
+                  ALTER TABLE scheduled_posts
+                    ADD CONSTRAINT scheduled_posts_approval_consistency
+                    CHECK (approved_at IS NULL OR approved_by IS NOT NULL);
+                END IF;
+              END $$;
+            `;
+            results.push("✓ scheduled_posts_approval_consistency CHECK constraint ready");
+          } catch (fixErr: any) {
+            results.push(`ℹ approval CHECK constraint: ${fixErr.message}`);
+          }
+          // DB-level documentation of the cron contract.
+          try {
+            await n`COMMENT ON TABLE scheduled_posts IS
+              'Scheduled social posts. PUBLISH SAFETY GUARD: the publish cron MUST only claim rows WHERE status = ''pending'' AND approved_at IS NOT NULL AND due_at <= NOW(). Rows without approved_at are legacy/unapproved and must never be auto-published.'`;
+            await n`COMMENT ON COLUMN scheduled_posts.approved_at IS
+              'When the post was explicitly approved for publishing (client via portal, or ''system'' for internal brand posts). NULL = never approved — the publish cron MUST filter for approved_at IS NOT NULL before claiming.'`;
+            await n`COMMENT ON COLUMN scheduled_posts.approved_by IS
+              'Who approved the post: client email (portal approval) or ''system'' (internal operations). Required whenever approved_at is set.'`;
+            results.push("✓ publish safety comments applied");
+          } catch (fixErr: any) {
+            results.push(`ℹ publish safety comments: ${fixErr.message}`);
+          }
+
           return new Response(
             JSON.stringify({ success: true, results }),
             { status: 200, headers: { "Content-Type": "application/json" } },
