@@ -103,6 +103,23 @@ export const Route = createFileRoute("/api/force-migrate")({
             results.push(`ℹ retry_count migration: ${fixErr.message}`);
           }
 
+          // ── pipeline_jobs table (async content-generation queue) ──
+          await n`
+            CREATE TABLE IF NOT EXISTS pipeline_jobs (
+              id TEXT PRIMARY KEY,
+              client_id TEXT NOT NULL,
+              service_slug TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
+              payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              error TEXT
+            )
+          `;
+          results.push("✓ pipeline_jobs table ready");
+          await n`CREATE INDEX IF NOT EXISTS pipeline_jobs_pending_idx ON pipeline_jobs (status, created_at)`;
+          await n`CREATE INDEX IF NOT EXISTS pipeline_jobs_client_idx ON pipeline_jobs (client_id, created_at DESC)`;
+          results.push("✓ pipeline_jobs indexes ready");
           // Verify
           const count = await n`SELECT COUNT(*) as cnt FROM scheduled_posts`;
           results.push(`Table has ${count[0]?.cnt} rows`);
