@@ -2,18 +2,15 @@
  * GET /api/portal/buffer-oauth-callback
  *
  * Handles the Buffer OAuth 2.0 redirect after the agency authorizes our app.
- * Validates CSRF state, exchanges the authorization code for an access token,
- * stores it in the buffer_credentials table (singleton row), and redirects
+ * Validates CSRF state, exchanges the authorization code + PKCE verifier for
+ * an access token, stores it in the buffer_credentials table, and redirects
  * back to the portal.
  *
- * Buffer OAuth 2.0:
- *   Authorize: https://login.buffer.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&state=...
- *   Token:     POST https://api.buffer.com/oauth2/token
- *              body: client_id, client_secret, code, redirect_uri, grant_type=authorization_code
- *   Response:  { access_token, token_type, ... }
- *
- * No client login required — this connects the agency's own Buffer account,
- * matching the X/Google admin oauth pattern.
+ * Buffer OAuth 2.0 with PKCE (per developers.buffer.com):
+ *   Authorize: https://auth.buffer.com/auth?client_id=...&redirect_uri=...&response_type=code&code_challenge=...&state=...
+ *   Token:     POST https://auth.buffer.com/token
+ *              body: client_id, client_secret, code, redirect_uri, grant_type, code_verifier
+ *   Response:  { access_token, refresh_token, token_type, expires_in, scope }
  *
  * MetroReach Media — Premium Social Media Marketing Agency
  */
@@ -24,14 +21,13 @@ import { sql } from "~/lib/db";
 const BUFFER_CLIENT_ID = process.env.BUFFER_CLIENT_ID || "";
 const BUFFER_CLIENT_SECRET = process.env.BUFFER_CLIENT_SECRET || "";
 const REDIRECT_URI = "https://www.metroreachagency.com/api/portal/buffer-oauth-callback";
-const TOKEN_URL = "https://api.buffer.com/oauth2/token";
+const TOKEN_URL = "https://auth.buffer.com/token";
 const PORTAL_BASE = "https://metroreachagency.com";
 
 /**
- * Exchange the authorization code for an access token.
- * Buffer expects application/x-www-form-urlencoded with grant_type=authorization_code.
+ * Exchange the authorization code + PKCE verifier for an access token.
  */
-async function exchangeCodeForToken(code: string): Promise<{
+async function exchangeCodeForToken(code: string, codeVerifier: string): Promise<{
   access_token: string;
   token_type?: string;
   refresh_token?: string;
@@ -44,6 +40,7 @@ async function exchangeCodeForToken(code: string): Promise<{
     code,
     redirect_uri: REDIRECT_URI,
     grant_type: "authorization_code",
+    code_verifier: codeVerifier,
   });
 
   const res = await fetch(TOKEN_URL, {
@@ -66,15 +63,11 @@ async function exchangeCodeForToken(code: string): Promise<{
   return json;
 }
 
-/** Redirect helper for error outcomes. */
 function errorRedirect(message: string): Response {
-  const redirectUrl = new URL(`${PORTAL_BASE}/portal/connect`);
-  redirectUrl.searchParams.set("oauth_result", "error");
-  redirectUrl.searchParams.set("error_msg", message);
-  return new Response(null, {
-    status: 302,
-    headers: { Location: redirectUrl.toString() },
-  });
+  const url = new URL(`${PORTAL_BASE}/portal/connect`);
+  url.searchParams.set("oauth_result", "error");
+  url.searchParams.set("error_msg", message);
+  return new Response(null, { status: 302, headers: { Location: url.toString() } });
 }
 
 export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
@@ -88,30 +81,37 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
           const errorDescription = url.searchParams.get("error_description");
           const returnedState = url.searchParams.get("state");
 
-          // CSRF state validation against the cookie set by buffer-oauth-start.
           const cookies = request.headers.get("cookie") ?? "";
-          const stateMatch = cookies.match(/(?:^|;\s*)buffer_oauth_state=([^;]*)/);
-          const expectedState = stateMatch ? decodeURIComponent(stateMatch[1]) : "";
-          const clearStateCookie =
-            "buffer_oauth_state=; path=/; max-age=0; SameSite=Lax; Secure; HttpOnly";
 
-          // User denied or Buffer returned an error
-          if (error || !code) {
-            return errorRedirect(
-              errorDescription || error || "Authorization was cancelled or failed.",
-            );
+          function getCookie(name: string): string {
+            const m = cookies.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+            return m ? decodeURIComponent(m[1]) : "";
           }
 
-          // State mismatch — possible CSRF
+          const expectedState = getCookie("buffer_oauth_state");
+          const codeVerifier = getCookie("buffer_code_verifier");
+
+          const clearCookies = [
+            "buffer_oauth_state=; Path=/; Max-Age=0; SameSite=Lax; Secure; HttpOnly",
+            "buffer_code_verifier=; Path=/; Max-Age=0; SameSite=Lax; Secure; HttpOnly",
+          ].join(", ");
+
+          if (error || !code) {
+            return errorRedirect(errorDescription || error || "Authorization was cancelled or failed.");
+          }
+
           if (expectedState && returnedState !== expectedState) {
             return errorRedirect("Security check failed. Please try again.");
           }
 
-          // Step 1: Exchange the code for an access token
-          const tokenData = await exchangeCodeForToken(code);
+          if (!codeVerifier) {
+            return errorRedirect("Session expired — missing PKCE verifier. Please start again.");
+          }
 
-          // Step 2: Store the token in buffer_credentials (singleton row).
-          // The MCP bridge reads this row when BUFFER_ACCESS_TOKEN is not set.
+          // Step 1: Exchange the code for an access token
+          const tokenData = await exchangeCodeForToken(code, codeVerifier);
+
+          // Step 2: Store the token in buffer_credentials (singleton row)
           const expiresAt = tokenData.expires_in
             ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
             : null;
@@ -128,20 +128,16 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
               updated_at = NOW()
           `;
 
-          console.log(
-            "[buffer-oauth-callback] Access token stored in buffer_credentials",
-          );
+          console.log("[buffer-oauth-callback] Access token stored in buffer_credentials");
 
-          // Step 3: Redirect back to the portal connect page
+          // Step 3: Redirect back to the portal
           const redirectUrl = new URL(`${PORTAL_BASE}/portal/connect`);
           redirectUrl.searchParams.set("oauth_result", "success");
           redirectUrl.searchParams.set("buffer", "connected");
+
           return new Response(null, {
             status: 302,
-            headers: {
-              Location: redirectUrl.toString(),
-              "Set-Cookie": clearStateCookie,
-            },
+            headers: { Location: redirectUrl.toString(), "Set-Cookie": clearCookies },
           });
         } catch (err: any) {
           console.error("Buffer OAuth callback error:", err.message);
