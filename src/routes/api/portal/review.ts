@@ -2,7 +2,7 @@
  * GET  /api/portal/review — Fetch posts pending client review
  * POST /api/portal/review — Approve or reject a post
  *
- * Approve: status changes from 'pending_review' → 'pending' (scheduler picks it up)
+ * Approve: status changes from 'pending_review' → 'pending' for Buffer scheduling
  * Reject:  triggers replacement generation, stores new post in 'pending_review'
  *
  * MetroReach Media — Premium Social Media Marketing Agency
@@ -228,7 +228,7 @@ export const Route = createFileRoute("/api/portal/review")({
           );
         }
 
-        // Verify post belongs to this client and is in pending_review
+        // Verify post belongs to this client and is awaiting review
         const existing = await sql`
           SELECT id, platform, content, media_urls, hashtags, due_at,
                  page_id, ig_user_id, rejection_count, content_prompt, client_id
