@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import crypto from "node:crypto";
 
 const X_CLIENT_ID = process.env.X_CLIENT_ID || "";
@@ -7,7 +8,9 @@ const REDIRECT_URI = "https://metroreachagency.com/api/portal/x-oauth-callback";
 export const Route = createFileRoute("/api/admin/x-auth")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         const codeVerifier = crypto.randomBytes(32).toString("base64url");
         const codeChallenge = crypto
           .createHash("sha256")

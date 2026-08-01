@@ -22,6 +22,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { requireMcpAuth } from "~/lib/mcp-auth";
 import { replyToTweet } from "~/lib/x-reply";
 import { replyToLinkedInComment } from "~/lib/linkedin-reply";
 import { sql } from "~/lib/db";
@@ -1063,6 +1064,8 @@ export const Route = createFileRoute("/api/mcp/social-inbox")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauthorized = requireMcpAuth(request);
+        if (unauthorized) return unauthorized;
         // Validate Content-Type
         const ct = request.headers.get("content-type") ?? "";
         if (!ct.includes("application/json")) {
@@ -1113,7 +1116,7 @@ export const Route = createFileRoute("/api/mcp/social-inbox")({
           headers: {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Headers": "Content-Type, x-api-key",
           },
         });
       },

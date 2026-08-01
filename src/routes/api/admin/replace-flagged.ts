@@ -11,6 +11,7 @@
  * Dry-run mode: add ?dry_run=true to preview matches without updating.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import { sql } from "~/lib/db";
 import { FLAGGED_REPLACEMENTS } from "~/data/flagged-replacements";
 
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/api/admin/replace-flagged")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         const apiKey = request.headers.get("x-api-key") ?? "";
         const expectedKey = process.env.MS_API_KEY ?? "";
         if (!apiKey || apiKey !== expectedKey) {

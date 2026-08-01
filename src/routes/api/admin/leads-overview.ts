@@ -5,12 +5,15 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import { sql } from "~/lib/db";
 
 export const Route = createFileRoute("/api/admin/leads-overview")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         try {
           // Get all clients
           const clients = await sql`

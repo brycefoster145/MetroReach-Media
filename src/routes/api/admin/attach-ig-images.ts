@@ -10,6 +10,7 @@
  * Mapping: IG posts ordered by due_at ASC → image NN (1-indexed, zero-padded).
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import { sql } from "~/lib/db";
 
 const BASE_URL = "https://metroreachagency.com/social";
@@ -21,7 +22,9 @@ function imageUrl(n: number): string {
 export const Route = createFileRoute("/api/admin/attach-ig-images")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         try {
           // Total Instagram posts in queue (any status)
           const totalResult = await sql`
@@ -100,6 +103,8 @@ export const Route = createFileRoute("/api/admin/attach-ig-images")({
       },
 
       POST: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         // ── Auth check ──
         const apiKey = request.headers.get("x-api-key") ?? "";
         const expectedKey = process.env.MS_API_KEY ?? "";
