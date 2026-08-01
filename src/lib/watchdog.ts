@@ -598,6 +598,15 @@ interface MissedSlotsCheckResult {
  * scheduler missed (e.g., cron gap, cold-start delay, DB blip).
  */
 export async function checkMissedSlots(): Promise<MissedSlotsCheckResult> {
+  // AUTO-PUBLISH DISABLED 2026-08-01 — all posts must go through manual review.
+  // This watchdog was auto-publishing unchecked content to production Instagram.
+  return {
+    name: "missed_slots",
+    ok: true,
+    details: { checked: 0, auto_published: 0, failed: 0, skipped: 0, results: [] },
+    alerts: [],
+  };
+
   const alerts: WatchdogAlert[] = [];
   const results: MissedSlotResult[] = [];
   const now = new Date();
