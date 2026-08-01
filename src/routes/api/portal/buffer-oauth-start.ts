@@ -1,8 +1,9 @@
 /**
  * GET /api/portal/buffer-oauth-start
  *
- * Initiates the Buffer OAuth 2.0 flow with PKCE for the agency's Buffer account.
- * Redirects the user to Buffer's consent screen.
+ * Initiates Buffer OAuth 2.0 with PKCE. The code_verifier is embedded
+ * in the state parameter (format: <csrf>.<verifier>) so no cookies
+ * are needed — Buffer echoes state back to the callback.
  *
  * MetroReach Media — Premium Social Media Marketing Agency
  */
@@ -33,11 +34,12 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-start")({
           });
         }
 
-        // PKCE: generate code_verifier and code_challenge
         const codeVerifier = base64url(crypto.randomBytes(32));
         const challengeHash = crypto.createHash("sha256").update(codeVerifier).digest();
         const codeChallenge = base64url(challengeHash);
-        const state = crypto.randomBytes(24).toString("hex");
+        const csrf = crypto.randomBytes(16).toString("hex");
+        // Embed the verifier in the state so Buffer echoes it back. No cookies needed.
+        const state = `${csrf}.${codeVerifier}`;
 
         const authUrl = new URL(AUTHORIZE_URL);
         authUrl.searchParams.set("client_id", BUFFER_CLIENT_ID);
@@ -49,15 +51,10 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-start")({
         authUrl.searchParams.set("code_challenge_method", "S256");
         authUrl.searchParams.set("prompt", "consent");
 
-        const stateCookie = `buffer_oauth_state=${state}; Path=/; Max-Age=600; SameSite=Lax; Secure; HttpOnly`;
-        const verifierCookie = `buffer_code_verifier=${codeVerifier}; Path=/; Max-Age=600; SameSite=Lax; Secure; HttpOnly`;
-
-        const headers = new Headers();
-        headers.set("Location", authUrl.toString());
-        headers.append("Set-Cookie", stateCookie);
-        headers.append("Set-Cookie", verifierCookie);
-
-        return new Response(null, { status: 302, headers });
+        return new Response(null, {
+          status: 302,
+          headers: { Location: authUrl.toString() },
+        });
       },
     },
   },
