@@ -1,16 +1,17 @@
 /**
- * POST /api/content/generate — Trigger auto content generation for a client
+ * Content generation for a client — calendar + per-image incremental execution.
  *
- * Reads client onboarding data, calls OpenAI to generate a 30-day content
- * calendar (12 posts across FB + IG), generates copy + images, and stores
- * everything in scheduled_posts with status 'pending_review'.
- *
- * Called automatically when client completes onboarding, or manually by admin.
+ * This module powers the async pipeline:
+ *   - `generateContentCalendar()`   — one OpenAI call to build the 30-day calendar (12 posts)
+ *   - `generateOneImage()`          — ONE post: image generation + hashtags + scheduled_posts insert.
+ *                                     Designed to run within Vercel's 60s function limit.
+ *   - `processContentGeneration()`  — full legacy run (calendar + all 12 posts + email),
+ *                                     kept for offline/one-shot use.
  *
  * MetroReach Media — Premium Social Media Marketing Agency
  */
 
-import { randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import OpenAI from "openai";
 import { sql } from "~/lib/db";
 import { getHashtags } from "~/lib/hashtags";
@@ -20,7 +21,7 @@ import { findLeadByEmail } from "~/lib/lead-store";
 
 // ── Types ──
 
-interface CalendarPost {
+export interface CalendarPost {
   platform: "facebook" | "instagram";
   day_offset: number; // days from today
   time_slot: string; // HH:MM in EST (e.g. "13:00", "17:00", "20:00", "21:00")
@@ -28,10 +29,31 @@ interface CalendarPost {
   image_prompt: string;
 }
 
-interface GeneratedCalendar {
+export interface GeneratedCalendar {
   client_name: string;
   client_industry: string;
   posts: CalendarPost[];
+}
+
+/** Everything the per-image step needs, resolved once from the clients table. */
+export interface ClientData {
+  client_id: string;
+  name: string;
+  email: string;
+  company: string;
+  industry: string;
+  businessName: string;
+  goalsText: string;
+  voiceText: string;
+  audienceText: string;
+}
+
+/** One completed post (image + copy + slot) ready for review. */
+export interface GeneratedPostResult {
+  id: string;
+  platform: string;
+  due_at: string;
+  image_url: string;
 }
 
 // ── Posting schedule (EST) ──
@@ -64,10 +86,12 @@ function buildDueAt(dayOffset: number, timeSlot: string): string {
 }
 
 /**
- * Generate a unique post ID.
+ * Deterministic post ID for a client + calendar index.
+ * Idempotent across retries: re-running the same step never creates a duplicate row
+ * (the INSERT below uses ON CONFLICT DO NOTHING).
  */
-function generatePostId(): string {
-  return `post-${randomBytes(8).toString("hex")}`;
+function postIdFor(clientId: string, index: number): string {
+  return `post-${createHash("sha1").update(`${clientId}:${index}`).digest("hex").slice(0, 16)}`;
 }
 
 /**
@@ -103,77 +127,87 @@ async function saveGeneratedImage(
   }
 }
 
-/** Execute the long-running content generation for one queued client. */
-export async function processContentGeneration(client_id: string) {
+// ── 1. Client data ──
+
+/** Fetch + flatten a client's onboarding data into what content generation needs. Throws if the client doesn't exist. */
+export async function loadClientData(client_id: string): Promise<ClientData> {
+  const clientRows = await sql`
+    SELECT id, email, name, company, service, service_slug, onboarding_data, portal_token
+    FROM clients WHERE id = ${client_id} LIMIT 1
+  `;
+
+  if (clientRows.length === 0) {
+    throw new Error("Client not found");
+  }
+
+  const client = clientRows[0] as any;
+  const onboarding = (client.onboarding_data as Record<string, any>) || {};
+  const clientName = (client.name as string) || "Client";
+  const clientEmail = (client.email as string) || "";
+
+  // Onboarding is persisted as { businessInfo, brandInfo, ... }. Keep the
+  // legacy flat reads as a compatibility fallback for older submissions.
+  const businessInfo = (onboarding.businessInfo as Record<string, any>) || {};
+  const brandInfo = (onboarding.brandInfo as Record<string, any>) || {};
+  let lead: Awaited<ReturnType<typeof findLeadByEmail>> = null;
+  if (Object.keys(onboarding).length === 0 && clientEmail) {
+    try {
+      lead = await findLeadByEmail(clientEmail);
+    } catch (err: any) {
+      console.error("[content-gen] Lead fallback lookup failed:", err.message);
+    }
+  }
+  const leadBusinessInfo = lead?.businessInfo || {};
+  const industry = (businessInfo.industry as string)
+    || (onboarding.industry as string)
+    || (leadBusinessInfo.industry as string)
+    || (client.service as string)
+    || "business";
+  const goals = (businessInfo.goals as string[])
+    || (onboarding.goals as string[])
+    || [];
+  const brandVoice = (brandInfo.brandVoice as string)
+    || (onboarding.brandVoice as string)
+    || "";
+  const targetAudience = (businessInfo.targetAudience as string)
+    || (onboarding.targetAudience as string)
+    || "local customers looking for quality services";
+  const businessName = (brandInfo.businessName as string)
+    || (businessInfo.businessName as string)
+    || (onboarding.businessName as string)
+    || (leadBusinessInfo.businessName as string)
+    || clientName;
+
+  return {
+    client_id,
+    name: clientName,
+    email: clientEmail,
+    company: (client.company as string) || "",
+    industry,
+    businessName,
+    goalsText: goals.length > 0 ? goals.join(", ") : "grow brand awareness and generate leads",
+    voiceText: brandVoice || "professional, confident, and approachable",
+    audienceText: targetAudience || "local customers looking for quality services",
+  };
+}
+
+// ── 2. Calendar generation (one OpenAI call) ──
+
+/** Generate the 30-day content calendar (12 posts: 6 IG + 6 FB). Throws on failure. */
+export async function generateContentCalendar(client: ClientData): Promise<GeneratedCalendar> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-// ── 1. Fetch client data ──
-const clientRows = await sql`
-  SELECT id, email, name, company, service, service_slug, onboarding_data, portal_token
-  FROM clients WHERE id = ${client_id} LIMIT 1
-`;
-
-if (clientRows.length === 0) {
-  return new Response(
-    JSON.stringify({ error: "Client not found" }),
-    { status: 404, headers: { "Content-Type": "application/json" } },
-  );
-}
-
-const client = clientRows[0];
-const onboarding = (client.onboarding_data as Record<string, any>) || {};
-const clientName = (client.name as string) || "Client";
-const clientEmail = (client.email as string) || "";
-
-// Onboarding is persisted as { businessInfo, brandInfo, ... }. Keep the
-// legacy flat reads as a compatibility fallback for older submissions.
-const businessInfo = (onboarding.businessInfo as Record<string, any>) || {};
-const brandInfo = (onboarding.brandInfo as Record<string, any>) || {};
-let lead: Awaited<ReturnType<typeof findLeadByEmail>> = null;
-if (Object.keys(onboarding).length === 0 && clientEmail) {
-  try {
-    lead = await findLeadByEmail(clientEmail);
-  } catch (err: any) {
-    console.error("[content-gen] Lead fallback lookup failed:", err.message);
-  }
-}
-const leadBusinessInfo = lead?.businessInfo || {};
-const industry = (businessInfo.industry as string)
-  || (onboarding.industry as string)
-  || (leadBusinessInfo.industry as string)
-  || (client.service as string)
-  || "business";
-const goals = (businessInfo.goals as string[])
-  || (onboarding.goals as string[])
-  || [];
-const brandVoice = (brandInfo.brandVoice as string)
-  || (onboarding.brandVoice as string)
-  || "";
-const targetAudience = (businessInfo.targetAudience as string)
-  || (onboarding.targetAudience as string)
-  || "local customers looking for quality services";
-const businessName = (brandInfo.businessName as string)
-  || (businessInfo.businessName as string)
-  || (onboarding.businessName as string)
-  || (leadBusinessInfo.businessName as string)
-  || clientName;
-
-// ── 2. Build the content calendar prompt ──
-const goalsText = goals.length > 0 ? goals.join(", ") : "grow brand awareness and generate leads";
-const voiceText = brandVoice || "professional, confident, and approachable";
-const audienceText = targetAudience || "local customers looking for quality services";
-
-const calendarPrompt = `You are a senior social media strategist at MetroReach Media, a premium marketing agency.
+  const calendarPrompt = `You are a senior social media strategist at MetroReach Media, a premium marketing agency.
 
 Create a 30-day organic social media content calendar for a client. Return ONLY valid JSON — no markdown, no explanation.
 
 CLIENT:
-- Business: ${businessName}
-- Industry: ${industry}
-- Goals: ${goalsText}
-- Brand voice: ${voiceText}
-- Target audience: ${audienceText}
+- Business: ${client.businessName}
+- Industry: ${client.industry}
+- Goals: ${client.goalsText}
+- Brand voice: ${client.voiceText}
+- Target audience: ${client.audienceText}
 
 REQUIREMENTS:
 - 12 posts total: 6 for Instagram, 6 for Facebook
@@ -187,8 +221,8 @@ REQUIREMENTS:
 
 Return this exact JSON structure:
 {
-  "client_name": "${businessName}",
-  "client_industry": "${industry}",
+  "client_name": "${client.businessName}",
+  "client_industry": "${client.industry}",
   "posts": [
     {
       "platform": "facebook",
@@ -206,145 +240,190 @@ IMPORTANT: Use valid time_slots only:
 
 Ensure day_offset values are spread across 0-30 with no two posts on the same day for the same platform.`;
 
-// ── 3. Call OpenAI to generate calendar ──
-let calendar: GeneratedCalendar;
-try {
-  const openai = new OpenAI({ apiKey, timeout: 60_000, maxRetries: 1 });
+  try {
+    const openai = new OpenAI({ apiKey, timeout: 60_000, maxRetries: 1 });
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: "You are a senior social media strategist. You output only valid JSON." },
-      { role: "user", content: calendarPrompt },
-    ],
-    temperature: 0.8,
-    max_tokens: 4000,
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "You are a senior social media strategist. You output only valid JSON." },
+        { role: "user", content: calendarPrompt },
+      ],
+      temperature: 0.8,
+      max_tokens: 4000,
+    });
+
+    const raw = completion.choices[0]?.message?.content || "";
+    // Strip any markdown code fences
+    const jsonStr = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const calendar = JSON.parse(jsonStr) as GeneratedCalendar;
+
+    if (!calendar.posts || !Array.isArray(calendar.posts) || calendar.posts.length === 0) {
+      throw new Error("Invalid calendar: no posts generated");
+    }
+    return calendar;
+  } catch (err: any) {
+    console.error("[content-gen] Calendar generation failed:", err.message);
+    throw err;
+  }
+}
+
+// ── 3. One image + one post (one worker tick) ──
+
+/**
+ * Generate ONE post at `index` from the calendar: image via gpt-image-2, hashtags,
+ * platform token lookup, then INSERT into scheduled_posts (status 'pending_review').
+ *
+ * Throws on image-generation failure so the pipeline worker can count retries.
+ * The insert is idempotent (deterministic id + ON CONFLICT DO NOTHING) so a
+ * retried step never duplicates a post.
+ */
+export async function generateOneImage(
+  client: ClientData,
+  calendar: GeneratedCalendar,
+  index: number,
+): Promise<GeneratedPostResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
+
+  const post = calendar.posts[index];
+  if (!post) throw new Error(`Calendar has no post at index ${index}`);
+
+  const postId = postIdFor(client.client_id, index);
+
+  // Validate platform
+  if (!["facebook", "instagram"].includes(post.platform)) {
+    throw new Error(`Invalid platform: ${post.platform}`);
+  }
+
+  // Validate time slot
+  const validSlots = post.platform === "instagram" ? IG_SLOTS : FB_SLOTS;
+  const timeSlot = validSlots.includes(post.time_slot) ? post.time_slot : validSlots[0];
+
+  // Build due_at
+  const dueAt = buildDueAt(post.day_offset, timeSlot);
+
+  // Generate image via gpt-image-2 — throws on failure so the worker can retry
+  const openai = new OpenAI({ apiKey, timeout: 50_000, maxRetries: 0 });
+  const imgResponse = await openai.images.generate({
+    model: "gpt-image-2",
+    prompt: `Premium social media graphic for a ${client.industry} business. ${post.image_prompt}. Clean, professional design with modern aesthetic. No text overlays. High contrast, brand-safe colors. Suitable for ${post.platform}.`,
+    size: "1024x1024",
+    quality: "high",
+    n: 1,
   });
+  const rawUrl = imgResponse.data[0]?.url;
+  if (!rawUrl) throw new Error("Image generation returned no URL");
+  const imageUrl = await saveGeneratedImage(rawUrl, postId);
 
-  const raw = completion.choices[0]?.message?.content || "";
-  // Strip any markdown code fences
-  const jsonStr = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-  calendar = JSON.parse(jsonStr) as GeneratedCalendar;
+  // Generate hashtags
+  const hashtags = getHashtags(post.platform, post.copy);
 
-  if (!calendar.posts || !Array.isArray(calendar.posts) || calendar.posts.length === 0) {
-    throw new Error("Invalid calendar: no posts generated");
-  }
-} catch (err: any) {
-  console.error("[content-gen] Calendar generation failed:", err.message);
-  return new Response(
-    JSON.stringify({ error: "Failed to generate content calendar", detail: err.message }),
-    { status: 500, headers: { "Content-Type": "application/json" } },
-  );
+  // Determine page_id from client's platform tokens
+  const pageIdRows = await sql`
+    SELECT page_id, ig_user_id FROM client_platform_tokens
+    WHERE client_id = ${client.client_id}
+      AND platform = ${post.platform === "instagram" ? "instagram" : "facebook"}
+      AND token_status = 'active'
+    LIMIT 1
+  `;
+  const pageId = pageIdRows.length > 0 ? (pageIdRows[0].page_id as string) : "";
+  const igUserId = pageIdRows.length > 0 ? (pageIdRows[0].ig_user_id as string) : undefined;
+
+  // Store in scheduled_posts (idempotent — a retried step won't duplicate the row)
+  const mediaUrls = imageUrl ? [imageUrl] : [];
+  await sql`
+    INSERT INTO scheduled_posts (
+      id, client_id, platform, page_id, ig_user_id,
+      content, media_urls, hashtags, due_at, status,
+      content_prompt
+    ) VALUES (
+      ${postId},
+      ${client.client_id},
+      ${post.platform},
+      ${pageId || "pending"},
+      ${igUserId || null},
+      ${post.copy},
+      ${JSON.stringify(mediaUrls)}::jsonb,
+      ${hashtags},
+      ${dueAt}::timestamptz,
+      'pending_review',
+      ${post.image_prompt}
+    )
+    ON CONFLICT (id) DO NOTHING
+  `;
+
+  return {
+    id: postId,
+    platform: post.platform,
+    due_at: dueAt,
+    image_url: imageUrl || "(none)",
+  };
 }
 
-// ── 4. Generate images and store posts ──
-const results: Array<{ id: string; platform: string; due_at: string; image_url: string }> = [];
-const errors: Array<{ platform: string; day_offset: number; error: string }> = [];
+// ── 4. Legacy full run (calendar + all posts + email) — offline/one-shot use ──
 
-for (const post of calendar.posts) {
+/**
+ * Execute the full content generation for one queued client.
+ * Kept for offline/one-shot use: calendar, then every post, then the review email.
+ * The async pipeline worker uses the incremental functions instead.
+ */
+export async function processContentGeneration(client_id: string) {
+  let client: ClientData;
   try {
-    const postId = generatePostId();
+    client = await loadClientData(client_id);
+  } catch (err: any) {
+    return new Response(
+      JSON.stringify({ error: "Client not found", detail: err.message }),
+      { status: 404, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
-    // Validate platform
-    if (!["facebook", "instagram"].includes(post.platform)) {
-      errors.push({ platform: post.platform, day_offset: post.day_offset, error: "Invalid platform" });
-      continue;
-    }
+  let calendar: GeneratedCalendar;
+  try {
+    calendar = await generateContentCalendar(client);
+  } catch (err: any) {
+    console.error("[content-gen] Calendar generation failed:", err.message);
+    return new Response(
+      JSON.stringify({ error: "Failed to generate content calendar", detail: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
-    // Validate time slot
-    const validSlots = post.platform === "instagram" ? IG_SLOTS : FB_SLOTS;
-    const timeSlot = validSlots.includes(post.time_slot) ? post.time_slot : validSlots[0];
+  const results: Array<{ id: string; platform: string; due_at: string; image_url: string }> = [];
+  const errors: Array<{ platform: string; day_offset: number; error: string }> = [];
 
-    // Build due_at
-    const dueAt = buildDueAt(post.day_offset, timeSlot);
-
-    // Generate image via gpt-image-2
-    let imageUrl = "";
+  for (let i = 0; i < calendar.posts.length; i++) {
     try {
-      const openai = new OpenAI({ apiKey, timeout: 50_000, maxRetries: 0 });
-      const imgResponse = await openai.images.generate({
-        model: "gpt-image-2",
-        prompt: `Premium social media graphic for a ${industry} business. ${post.image_prompt}. Clean, professional design with modern aesthetic. No text overlays. High contrast, brand-safe colors. Suitable for ${post.platform}.`,
-        size: "1024x1024",
-        quality: "high",
-        n: 1,
+      results.push(await generateOneImage(client, calendar, i));
+    } catch (postErr: any) {
+      const post = calendar.posts[i];
+      console.error(`[content-gen] Failed to create post for ${post.platform} day ${post.day_offset}:`, postErr.message);
+      errors.push({
+        platform: post.platform,
+        day_offset: post.day_offset,
+        error: postErr.message,
       });
-      const rawUrl = imgResponse.data[0]?.url;
-      if (rawUrl) {
-        imageUrl = await saveGeneratedImage(rawUrl, postId);
-      }
-    } catch (imgErr: any) {
-      console.error(`[content-gen] Image generation failed for post ${postId}:`, imgErr.message);
-      // Continue without image — post will still be created
     }
-
-    // Generate hashtags
-    const hashtags = getHashtags(post.platform, post.copy);
-
-    // Determine page_id from client's platform tokens
-    const pageIdRows = await sql`
-      SELECT page_id, ig_user_id FROM client_platform_tokens
-      WHERE client_id = ${client_id}
-        AND platform = ${post.platform === "instagram" ? "instagram" : "facebook"}
-        AND token_status = 'active'
-      LIMIT 1
-    `;
-    const pageId = pageIdRows.length > 0 ? (pageIdRows[0].page_id as string) : "";
-    const igUserId = pageIdRows.length > 0 ? (pageIdRows[0].ig_user_id as string) : undefined;
-
-    // Store in scheduled_posts
-    const mediaUrls = imageUrl ? [imageUrl] : [];
-    await sql`
-      INSERT INTO scheduled_posts (
-        id, client_id, platform, page_id, ig_user_id,
-        content, media_urls, hashtags, due_at, status,
-        content_prompt
-      ) VALUES (
-        ${postId},
-        ${client_id},
-        ${post.platform},
-        ${pageId || "pending"},
-        ${igUserId || null},
-        ${post.copy},
-        ${JSON.stringify(mediaUrls)}::jsonb,
-        ${hashtags},
-        ${dueAt}::timestamptz,
-        'pending_review',
-        ${post.image_prompt}
-      )
-    `;
-
-    results.push({
-      id: postId,
-      platform: post.platform,
-      due_at: dueAt,
-      image_url: imageUrl || "(none)",
-    });
-  } catch (postErr: any) {
-    console.error(`[content-gen] Failed to create post for ${post.platform} day ${post.day_offset}:`, postErr.message);
-    errors.push({
-      platform: post.platform,
-      day_offset: post.day_offset,
-      error: postErr.message,
-    });
   }
-}
 
-// ── 5. Send email notification to client ──
-if (clientEmail && results.length > 0) {
-  const portalUrl = `${getSiteUrl()}/portal/review`;
-  try {
-    await sendEmail({
-      to: clientEmail,
-      from: "support@metroreachagency.com",
-      subject: `Your content calendar is ready for review — ${businessName}`,
-      body: `
+  // ── 5. Send email notification to client ──
+  const clientEmail = client.email;
+  const businessName = client.businessName;
+  if (clientEmail && results.length > 0) {
+    const portalUrl = `${getSiteUrl()}/portal/review`;
+    try {
+      await sendEmail({
+        to: clientEmail,
+        from: "support@metroreachagency.com",
+        subject: `Your content calendar is ready for review — ${businessName}`,
+        body: `
 <!DOCTYPE html>
 <html>
 <body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;">
   <p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:0.05em;text-transform:uppercase;">MetroReach Media</p>
   <h2 style="color:#1a1a1a;font-size:20px;font-weight:700;">Your Content Calendar Is Ready</h2>
-  <p style="font-size:15px;color:#374151;">Hi ${clientName},</p>
+  <p style="font-size:15px;color:#374151;">Hi ${client.name},</p>
   <p style="font-size:15px;color:#374151;">Your 30-day content calendar has been created with <strong>${results.length} posts</strong> across Facebook and Instagram. Each post includes professional copy and a custom image designed for your brand.</p>
   <p style="font-size:15px;color:#374151;">Review and approve your posts in the client portal. Once approved, they'll be scheduled automatically.</p>
   <div style="margin:28px 0;">
@@ -355,13 +434,12 @@ if (clientEmail && results.length > 0) {
   <p style="font-size:12px;color:#9ca3af;">MetroReach Media — Premium Social Media Marketing</p>
 </body>
 </html>`.trim(),
-    });
-    console.log(`[content-gen] Review notification email sent to ${clientEmail}`);
-  } catch (emailErr: any) {
-    console.error(`[content-gen] Failed to send review email:`, emailErr.message);
+      });
+      console.log(`[content-gen] Review notification email sent to ${clientEmail}`);
+    } catch (emailErr: any) {
+      console.error(`[content-gen] Failed to send review email:`, emailErr.message);
+    }
   }
-}
 
-return { posts_generated: results.length, posts_with_errors: errors.length, results, errors };
-
+  return { posts_generated: results.length, posts_with_errors: errors.length, results, errors };
 }
