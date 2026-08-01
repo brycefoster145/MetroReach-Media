@@ -417,9 +417,9 @@ export async function migrate(): Promise<void> {
     }
 
     // ── PUBLISH SAFETY GUARD (004) ──
-    // Watchdog-era DB cleanup + approval gate. Context: /api/cron/publish was
+    // Watchdog-era DB cleanup + approval gate. Context: the custom publisher was
     // disabled (PR #118) after mass-posting; this is the safety prep before it
-    // can be re-enabled. CONTRACT: the publish cron claim query MUST filter for
+    // can be re-enabled. Buffer is the sole publishing layer; this schema remains only
     // `approved_at IS NOT NULL` (see COMMENT ON TABLE below).
     // ── 004a: Purge watchdog-era test posts (one-time cleanup; idempotent) ──
     // Stuck 'publishing' rows never finished (cron is the only 'publishing'
@@ -469,9 +469,9 @@ export async function migrate(): Promise<void> {
     // ── 004d: DB-level documentation of the cron contract ──
     try {
       await sql`COMMENT ON TABLE scheduled_posts IS
-        'Scheduled social posts. PUBLISH SAFETY GUARD: the publish cron MUST only claim rows WHERE status = ''pending'' AND approved_at IS NOT NULL AND due_at <= NOW(). Rows without approved_at are legacy/unapproved and must never be auto-published.'`;
+        'Content records for review and Buffer scheduling. Rows without approved_at are legacy/unapproved content.'`;
       await sql`COMMENT ON COLUMN scheduled_posts.approved_at IS
-        'When the post was explicitly approved for publishing (client via portal, or ''system'' for internal brand posts). NULL = never approved — the publish cron MUST filter for approved_at IS NOT NULL before claiming.'`;
+        'When the post was explicitly approved for Buffer scheduling (client via portal, or ''system'' for internal brand posts). NULL = never approved.'`;
       await sql`COMMENT ON COLUMN scheduled_posts.approved_by IS
         'Who approved the post: client email (portal approval) or ''system'' (internal operations). Required whenever approved_at is set.'`;
       console.log("[migration] ✓ scheduled_posts publish safety comments applied");

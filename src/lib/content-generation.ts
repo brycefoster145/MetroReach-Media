@@ -3,7 +3,7 @@
  *
  * This module powers the async pipeline:
  *   - `generateContentCalendar()`   — one OpenAI call to build the 30-day calendar (12 posts)
- *   - `generateOneImage()`          — ONE post: image generation + hashtags + scheduled_posts insert.
+ *   - `generateOneImage()`          — ONE reviewable content item: image + copy + metadata.
  *                                     Designed to run within Vercel's 60s function limit.
  *   - `processContentGeneration()`  — full legacy run (calendar + all 12 posts + email),
  *                                     kept for offline/one-shot use.
@@ -18,7 +18,6 @@ import { getHashtags } from "~/lib/hashtags";
 import { getSiteUrl } from "~/lib/site-url";
 import { sendEmail } from "~/lib/email";
 import { findLeadByEmail } from "~/lib/lead-store";
-import { getServiceConfig } from "~/lib/service-config";
 
 // ── Types ──
 
@@ -58,15 +57,28 @@ export interface GeneratedPostResult {
   image_url: string;
 }
 
-// ── Posting schedule (EST) ──
-const IG_SLOTS = ["13:00", "17:00", "21:00"]; // generic fallback
-const FB_SLOTS = ["14:00", "20:00"]; // generic fallback
+// ── Content cadence (Buffer owns scheduling and publishing) ──
+interface GenerationConfig {
+  totalPosts: number;
+  schedule: { instagram: string[]; facebook: string[] };
+}
+const GENERIC_CONFIG: GenerationConfig = {
+  totalPosts: 12,
+  schedule: { instagram: ["13:00", "17:00", "21:00"], facebook: ["14:00", "20:00"] },
+};
+const VIP_CONFIG: GenerationConfig = {
+  totalPosts: 180,
+  schedule: { instagram: ["09:00", "12:00", "15:00", "18:00", "21:00"], facebook: ["14:00"] },
+};
+function getGenerationConfig(serviceSlug?: string | null): GenerationConfig {
+  return serviceSlug === "vip-daily" ? VIP_CONFIG : GENERIC_CONFIG;
+}
 
 // ── Helpers ──
 
 /**
- * Build a due_at TIMESTAMPTZ from a day_offset (days from now) + time_slot (HH:MM EST).
- * All times are stored as UTC; EST = UTC-5 (or UTC-4 during EDT, but we use EST for consistency).
+ * Build a suggested Buffer scheduling timestamp from the requested cadence.
+ * Stored as review metadata; publishing and final scheduling happen in Buffer.
  */
 function buildDueAt(dayOffset: number, timeSlot: string): string {
   const [hours, minutes] = timeSlot.split(":").map(Number);
@@ -200,7 +212,7 @@ export async function loadClientData(client_id: string): Promise<ClientData> {
 export async function generateContentCalendar(client: ClientData): Promise<GeneratedCalendar> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-  const config = getServiceConfig(client.service_slug);
+  const config = getGenerationConfig(client.service_slug);
   const isVip = client.service_slug === "vip-daily";
   const platformRequirements = isVip
     ? `- Exactly 180 posts total: 150 Instagram and 30 Facebook (6 posts every day for 30 days).
@@ -254,7 +266,7 @@ Only use the exact slots listed above. Do not omit or duplicate a required daily
   throw new Error(`Calendar validation failed after retry: ${lastError}`);
 }
 
-function validateCalendar(calendar: GeneratedCalendar, config: ReturnType<typeof getServiceConfig>, vip: boolean): void {
+function validateCalendar(calendar: GeneratedCalendar, config: GenerationConfig, vip: boolean): void {
   if (!calendar.posts || calendar.posts.length !== config.totalPosts) {
     throw new Error(`Expected exactly ${config.totalPosts} posts, received ${calendar.posts?.length || 0}`);
   }
@@ -287,8 +299,8 @@ function validateCalendar(calendar: GeneratedCalendar, config: ReturnType<typeof
 // ── 3. One image + one post (one worker tick) ──
 
 /**
- * Generate ONE post at `index` from the calendar: image via gpt-image-2, hashtags,
- * platform token lookup, then INSERT into scheduled_posts (status 'pending_review').
+ * Generate ONE reviewable content item at `index`: image via gpt-image-2 and copy
+ * metadata, then INSERT the item for approval. Approved content is scheduled in Buffer.
  *
  * Throws on image-generation failure so the pipeline worker can count retries.
  * The insert is idempotent (deterministic id + ON CONFLICT DO NOTHING) so a
@@ -312,12 +324,10 @@ export async function generateOneImage(
     throw new Error(`Invalid platform: ${post.platform}`);
   }
 
-  // Validate time slot
-  const serviceConfig = getServiceConfig(client.service_slug);
-  const validSlots = serviceConfig.schedule[post.platform];
+  // Preserve the requested slot as review metadata; Buffer schedules approved content.
+  const config = getGenerationConfig(client.service_slug);
+  const validSlots = config.schedule[post.platform];
   const timeSlot = validSlots.includes(post.time_slot) ? post.time_slot : validSlots[0];
-
-  // Build due_at
   const dueAt = buildDueAt(post.day_offset, timeSlot);
 
   // Generate image via gpt-image-2 — throws on failure so the worker can retry
@@ -336,18 +346,8 @@ export async function generateOneImage(
   // Generate hashtags
   const hashtags = getHashtags(post.platform, post.copy);
 
-  // Determine page_id from client's platform tokens
-  const pageIdRows = await sql`
-    SELECT page_id, ig_user_id FROM client_platform_tokens
-    WHERE client_id = ${client.client_id}
-      AND platform = ${post.platform === "instagram" ? "instagram" : "facebook"}
-      AND token_status = 'active'
-    LIMIT 1
-  `;
-  const pageId = pageIdRows.length > 0 ? (pageIdRows[0].page_id as string) : "";
-  const igUserId = pageIdRows.length > 0 ? (pageIdRows[0].ig_user_id as string) : undefined;
-
-  // Store in scheduled_posts (idempotent — a retried step won't duplicate the row)
+  // Store generated content for review. Buffer is the only publishing layer.
+  // scheduled_posts remains the review/content record; it is never dispatched here.
   const mediaUrls = imageUrl ? [imageUrl] : [];
   await sql`
     INSERT INTO scheduled_posts (
@@ -358,8 +358,8 @@ export async function generateOneImage(
       ${postId},
       ${client.client_id},
       ${post.platform},
-      ${pageId || "pending"},
-      ${igUserId || null},
+      ${"pending"},
+      ${null},
       ${post.copy},
       ${JSON.stringify(mediaUrls)}::jsonb,
       ${hashtags},

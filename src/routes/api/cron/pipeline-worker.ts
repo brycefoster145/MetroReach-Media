@@ -2,8 +2,8 @@
  * GET/POST /api/cron/pipeline-worker — process exactly ONE unit of work per invocation.
  *
  * Each cron tick claims one pending job and advances it by a single step:
- *   step 0 — generate the 12-post content calendar (one OpenAI call, stored in payload)
- *   steps 1..N — generate ONE image + post (fits comfortably inside Vercel's 60s limit)
+ *   step 0 — generate the content calendar (one OpenAI call, stored in payload)
+ *   steps 1..N — generate ONE reviewable content item (fits comfortably inside Vercel's 60s limit)
  *
  * Progress lives in job.payload: { calendar, currentIndex, results[], retries }.
  * A job flips back to 'pending' after each step so the next tick picks it up;
@@ -36,7 +36,6 @@ interface JobPayload {
   results?: GeneratedPostResult[];
   retries?: number;
   completionEmailSent?: boolean;
-  tokensChecked?: boolean;
 }
 
 async function runWorker() {
@@ -61,11 +60,6 @@ async function runWorker() {
       const nextPayload = { ...payload, retries };
       const message = String(err?.message || err);
       console.error(`[pipeline-worker] step failed for job ${job.id}:`, message);
-      // Token absence is a configuration gate, not a transient generation failure.
-      if (message === "Publishing tokens not connected") {
-        await sql`UPDATE pipeline_jobs SET status = 'failed', error = ${message}, payload = ${JSON.stringify({ ...payload, retries })}::jsonb, updated_at = NOW() WHERE id = ${job.id}`;
-        return json({ processed: true, job_id: job.id, status: "failed", error: message }, 400);
-      }
       if (retries >= MAX_RETRIES) {
         await sql`UPDATE pipeline_jobs SET status = 'failed', error = ${message}, payload = ${JSON.stringify(nextPayload)}::jsonb, updated_at = NOW() WHERE id = ${job.id}`;
         return json({ processed: true, job_id: job.id, status: "failed", retries, error: message }, 500);
@@ -82,14 +76,6 @@ async function processOneStep(clientId: string, payload: JobPayload): Promise<{
   payload: JobPayload;
   detail: Record<string, unknown>;
 }> {
-  // Step 0: resolve client and require both publishing tokens before any generation.
-  if (!payload.tokensChecked) {
-    const tokens = await sql`SELECT platform FROM client_platform_tokens WHERE client_id = ${clientId} AND platform IN ('facebook', 'instagram') AND token_status = 'active'`;
-    const platforms = new Set(tokens.map((row: any) => String(row.platform)));
-    if (!platforms.has("facebook") || !platforms.has("instagram")) throw new Error("Publishing tokens not connected");
-    payload = { ...payload, tokensChecked: true };
-  }
-
   // Step 0: no calendar yet → generate it once and park back to pending.
   if (!payload.calendar) {
     const client = await loadClientData(clientId);
@@ -105,7 +91,7 @@ async function processOneStep(clientId: string, payload: JobPayload): Promise<{
   const currentIndex = payload.currentIndex || 0;
   const results = payload.results || [];
 
-  // All images done → mark the job completed (results already in payload).
+  // All content items generated → mark the job completed (results already in payload).
   if (currentIndex >= calendar.posts.length) {
     let nextPayload = { ...payload, results };
     if (!payload.completionEmailSent) {
@@ -129,7 +115,7 @@ async function processOneStep(clientId: string, payload: JobPayload): Promise<{
     };
   }
 
-  // One image + one post for the current index.
+  // One image + one reviewable content item for the current index.
   const client = await loadClientData(clientId);
   const result = await generateOneImage(client, calendar, currentIndex);
   const nextResults = [...results, result];
