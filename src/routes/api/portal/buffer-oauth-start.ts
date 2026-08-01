@@ -49,16 +49,15 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-start")({
         authUrl.searchParams.set("code_challenge_method", "S256");
         authUrl.searchParams.set("prompt", "consent");
 
-        const cookie = `buffer_oauth_state=${state}; Path=/; Max-Age=600; SameSite=Lax; Secure; HttpOnly`;
+        const stateCookie = `buffer_oauth_state=${state}; Path=/; Max-Age=600; SameSite=Lax; Secure; HttpOnly`;
         const verifierCookie = `buffer_code_verifier=${codeVerifier}; Path=/; Max-Age=600; SameSite=Lax; Secure; HttpOnly`;
 
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: authUrl.toString(),
-            "Set-Cookie": `${cookie}, ${verifierCookie}`,
-          },
-        });
+        const headers = new Headers();
+        headers.set("Location", authUrl.toString());
+        headers.append("Set-Cookie", stateCookie);
+        headers.append("Set-Cookie", verifierCookie);
+
+        return new Response(null, { status: 302, headers });
       },
     },
   },

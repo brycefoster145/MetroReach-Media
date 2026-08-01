@@ -105,7 +105,7 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
           const clearCookies = [
             "buffer_oauth_state=; Path=/; Max-Age=0; SameSite=Lax; Secure; HttpOnly",
             "buffer_code_verifier=; Path=/; Max-Age=0; SameSite=Lax; Secure; HttpOnly",
-          ].join(", ");
+          ];
 
           if (error || !code) {
             return errorPage(errorDescription || error || "Authorization was cancelled or failed.");
@@ -141,7 +141,6 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
 
           console.log("[buffer-oauth-callback] Access token stored in buffer_credentials");
 
-          // Return a success page directly — no redirect to avoid portal login gate
           const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Buffer Connected — MetroReach Media</title>
@@ -162,13 +161,11 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
 </div>
 </body></html>`;
 
-          return new Response(html, {
-            status: 200,
-            headers: {
-              "Content-Type": "text/html; charset=utf-8",
-              "Set-Cookie": clearCookies,
-            },
-          });
+          const successHeaders = new Headers();
+          successHeaders.set("Content-Type", "text/html; charset=utf-8");
+          for (const c of clearCookies) successHeaders.append("Set-Cookie", c);
+
+          return new Response(html, { status: 200, headers: successHeaders });
         } catch (err: any) {
           console.error("Buffer OAuth callback error:", err.message);
           return errorPage(err.message);
