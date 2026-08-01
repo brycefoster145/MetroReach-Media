@@ -23,7 +23,6 @@ const MAPPING: Array<[string, string]> = [
   ["The traditional agency model sets clients up to fail", "TEXT_ONLY_LINKEDIN"],
 
   // TUESDAY
-  ["If your agency can't tell you your CPL, run", "ig-w1-tue-auth-cpl.webp"],
   ["3 signs your Facebook ads need a creative refresh", "ig-w1-tue-edu-ads-carousel.webp"],
   ["Organic reach isn't dead. It's just harder", "fb-w1-tue-auth-organic-trend.webp"],
   ["Audit your Instagram in 10 minutes", "fb-w1-tue-edu-ig-audit.webp"],
@@ -48,7 +47,6 @@ const MAPPING: Array<[string, string]> = [
 
   // SATURDAY
   ["Saturday Scroll: what the MetroReach team is reading", "ig-w1-sat-brand-scroll.webp"],
-  ["The average local business spends $1,500/month on ads", "ig-w1-sat-auth-stat.webp"],
   ["This week at MetroReach: what we shipped", "fb-w1-sat-brand-roundup.webp"],
   ["What changed in social media marketing this month", "fb-w1-sat-auth-industry-roundup.webp"],
 
