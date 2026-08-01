@@ -19,6 +19,8 @@ import {
   type GeneratedCalendar,
   type GeneratedPostResult,
 } from "~/lib/content-generation";
+import { sendReviewReadyEmail } from "~/lib/email";
+import { getSiteUrl } from "~/lib/site-url";
 
 const STALE_MS = 5 * 60 * 1000;
 const MAX_RETRIES = 3;
@@ -33,6 +35,8 @@ interface JobPayload {
   currentIndex?: number;
   results?: GeneratedPostResult[];
   retries?: number;
+  completionEmailSent?: boolean;
+  tokensChecked?: boolean;
 }
 
 async function runWorker() {
@@ -57,6 +61,11 @@ async function runWorker() {
       const nextPayload = { ...payload, retries };
       const message = String(err?.message || err);
       console.error(`[pipeline-worker] step failed for job ${job.id}:`, message);
+      // Token absence is a configuration gate, not a transient generation failure.
+      if (message === "Publishing tokens not connected") {
+        await sql`UPDATE pipeline_jobs SET status = 'failed', error = ${message}, payload = ${JSON.stringify({ ...payload, retries })}::jsonb, updated_at = NOW() WHERE id = ${job.id}`;
+        return json({ processed: true, job_id: job.id, status: "failed", error: message }, 400);
+      }
       if (retries >= MAX_RETRIES) {
         await sql`UPDATE pipeline_jobs SET status = 'failed', error = ${message}, payload = ${JSON.stringify(nextPayload)}::jsonb, updated_at = NOW() WHERE id = ${job.id}`;
         return json({ processed: true, job_id: job.id, status: "failed", retries, error: message }, 500);
@@ -73,6 +82,14 @@ async function processOneStep(clientId: string, payload: JobPayload): Promise<{
   payload: JobPayload;
   detail: Record<string, unknown>;
 }> {
+  // Step 0: resolve client and require both publishing tokens before any generation.
+  if (!payload.tokensChecked) {
+    const tokens = await sql`SELECT platform FROM client_platform_tokens WHERE client_id = ${clientId} AND platform IN ('facebook', 'instagram') AND token_status = 'active'`;
+    const platforms = new Set(tokens.map((row: any) => String(row.platform)));
+    if (!platforms.has("facebook") || !platforms.has("instagram")) throw new Error("Publishing tokens not connected");
+    payload = { ...payload, tokensChecked: true };
+  }
+
   // Step 0: no calendar yet → generate it once and park back to pending.
   if (!payload.calendar) {
     const client = await loadClientData(clientId);
@@ -90,10 +107,25 @@ async function processOneStep(clientId: string, payload: JobPayload): Promise<{
 
   // All images done → mark the job completed (results already in payload).
   if (currentIndex >= calendar.posts.length) {
+    let nextPayload = { ...payload, results };
+    if (!payload.completionEmailSent) {
+      const client = await loadClientData(clientId);
+      if (client.email) {
+        const email = await sendReviewReadyEmail({
+          to: client.email,
+          clientName: client.name,
+          businessName: client.businessName,
+          postCount: results.length,
+          portalUrl: `${getSiteUrl()}/portal/review`,
+        });
+        if (!email.success) console.error(`[pipeline-worker] Review email failed for ${clientId}:`, email.error);
+      }
+      nextPayload = { ...nextPayload, completionEmailSent: true };
+    }
     return {
       status: "completed",
-      payload: { ...payload, results },
-      detail: { step: "all_done", posts_generated: results.length },
+      payload: nextPayload,
+      detail: { step: "all_done", posts_generated: results.length, review_email_sent: Boolean(nextPayload.completionEmailSent) },
     };
   }
 
@@ -103,9 +135,24 @@ async function processOneStep(clientId: string, payload: JobPayload): Promise<{
   const nextResults = [...results, result];
   const nextIndex = currentIndex + 1;
   const done = nextIndex >= calendar.posts.length;
+  let completionEmailSent = payload.completionEmailSent;
+  if (done && !completionEmailSent) {
+    const completedClient = await loadClientData(clientId);
+    if (completedClient.email) {
+      const email = await sendReviewReadyEmail({
+        to: completedClient.email,
+        clientName: completedClient.name,
+        businessName: completedClient.businessName,
+        postCount: nextResults.length,
+        portalUrl: `${getSiteUrl()}/portal/review`,
+      });
+      if (!email.success) console.error(`[pipeline-worker] Review email failed for ${clientId}:`, email.error);
+    }
+    completionEmailSent = true;
+  }
   return {
     status: done ? "completed" : "pending",
-    payload: { ...payload, client_id: clientId, calendar, currentIndex: nextIndex, results: nextResults, retries: 0 },
+    payload: { ...payload, client_id: clientId, calendar, currentIndex: nextIndex, results: nextResults, retries: 0, completionEmailSent },
     detail: {
       step: "image_generated",
       index: currentIndex,

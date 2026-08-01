@@ -97,6 +97,15 @@ async function getAccessToken(): Promise<string> {
  * `from` must be one of the agency's verified addresses:
  * bryce@, ads@, reports@, support@, contact@, info@metroreachagency.com
  */
+export async function sendReviewReadyEmail(params: { to: string; clientName: string; businessName: string; postCount: number; portalUrl: string }): Promise<SendResult> {
+  return sendEmail({
+    to: params.to,
+    from: "support@metroreachagency.com",
+    subject: `Your content is ready for review — ${params.businessName}`,
+    body: `<!DOCTYPE html><html><body style="font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;"><p style="font-size:13px;font-weight:600;color:#3B82F6;letter-spacing:.05em;text-transform:uppercase;">MetroReach Media</p><h2>Your Content Is Ready for Review</h2><p>Hi ${params.clientName},</p><p>Your content is ready for review: <strong>${params.postCount} posts</strong> with professional copy and custom images.</p><p>Review and approve your posts in the client portal. Once approved, they'll be scheduled automatically.</p><p style="margin:28px 0;"><a href="${params.portalUrl}" style="display:inline-block;background:#3B82F6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;">Review Your Posts →</a></p><p style="font-size:12px;color:#9ca3af;">MetroReach Media — Premium Social Media Marketing</p></body></html>`,
+  });
+}
+
 export async function sendEmail({
   to,
   from,

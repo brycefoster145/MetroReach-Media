@@ -18,6 +18,7 @@ import { getHashtags } from "~/lib/hashtags";
 import { getSiteUrl } from "~/lib/site-url";
 import { sendEmail } from "~/lib/email";
 import { findLeadByEmail } from "~/lib/lead-store";
+import { getServiceConfig } from "~/lib/service-config";
 
 // ── Types ──
 
@@ -46,6 +47,7 @@ export interface ClientData {
   goalsText: string;
   voiceText: string;
   audienceText: string;
+  service_slug: string;
 }
 
 /** One completed post (image + copy + slot) ready for review. */
@@ -57,8 +59,8 @@ export interface GeneratedPostResult {
 }
 
 // ── Posting schedule (EST) ──
-const IG_SLOTS = ["13:00", "17:00", "21:00"]; // 1pm, 5pm, 9pm
-const FB_SLOTS = ["14:00", "20:00"]; // 2pm, 8pm
+const IG_SLOTS = ["13:00", "17:00", "21:00"]; // generic fallback
+const FB_SLOTS = ["14:00", "20:00"]; // generic fallback
 
 // ── Helpers ──
 
@@ -188,19 +190,29 @@ export async function loadClientData(client_id: string): Promise<ClientData> {
     goalsText: goals.length > 0 ? goals.join(", ") : "grow brand awareness and generate leads",
     voiceText: brandVoice || "professional, confident, and approachable",
     audienceText: targetAudience || "local customers looking for quality services",
+    service_slug: (client.service_slug as string) || "",
   };
 }
 
 // ── 2. Calendar generation (one OpenAI call) ──
 
-/** Generate the 30-day content calendar (12 posts: 6 IG + 6 FB). Throws on failure. */
+/** Generate a service-specific content calendar. Invalid output is retried once. */
 export async function generateContentCalendar(client: ClientData): Promise<GeneratedCalendar> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-
-  const calendarPrompt = `You are a senior social media strategist at MetroReach Media, a premium marketing agency.
-
-Create a 30-day organic social media content calendar for a client. Return ONLY valid JSON — no markdown, no explanation.
+  const config = getServiceConfig(client.service_slug);
+  const isVip = client.service_slug === "vip-daily";
+  const platformRequirements = isVip
+    ? `- Exactly 180 posts total: 150 Instagram and 30 Facebook (6 posts every day for 30 days).
+- EVERY day_offset from 0 through 29 must have exactly 5 Instagram posts and 1 Facebook post.
+- Instagram slots each day: 09:00, 12:00, 15:00, 18:00, 21:00 EST (one post at each slot).
+- Facebook slot each day: 14:00 EST (one post at this slot).`
+    : `- Exactly 12 posts total: 6 for Instagram, 6 for Facebook.
+- Instagram posts use 13:00, 17:00, or 21:00 EST.
+- Facebook posts use 14:00 or 20:00 EST.
+- Spread posts evenly across the 30-day window.`;
+  const prompt = `You are a senior social media strategist at MetroReach Media, a premium marketing agency.
+Create a 30-day organic social media content calendar. Return ONLY valid JSON — no markdown, no explanation.
 
 CLIENT:
 - Business: ${client.businessName}
@@ -210,61 +222,65 @@ CLIENT:
 - Target audience: ${client.audienceText}
 
 REQUIREMENTS:
-- 12 posts total: 6 for Instagram, 6 for Facebook
-- Instagram posts go at: 1pm, 5pm, or 9pm EST (Mon–Sun)
-- Facebook posts go at: 2pm or 8pm EST (Mon–Sun)
-- Spread posts evenly across the 30-day window (roughly one post every 2-3 days)
-- Mix of content types: educational, promotional, behind-the-scenes, social proof, industry tips, engagement
-- Each post needs: platform, day_offset (days from today, 0-30), time_slot (HH:MM EST), copy (120-280 chars), image_prompt (for AI image generation — describe a premium, professional social media graphic that fits the post)
-- Copy must be punchy, value-driven, premium-agency quality. No filler. No jargon.
-- Image prompts should be detailed and specific — describe the visual scene, color palette, composition, and text overlay if any
+${platformRequirements}
+- Each post needs platform, day_offset (0-29), time_slot (HH:MM EST), copy (120-280 chars), image_prompt.
+- Mix educational, promotional, behind-the-scenes, social proof, industry tips, and engagement content.
+- Copy must be punchy, accurate, value-driven, and premium. Image prompts must be specific and describe a unique visual.
+Return JSON: {"client_name":"${client.businessName}","client_industry":"${client.industry}","posts":[{"platform":"instagram","day_offset":0,"time_slot":"09:00","copy":"...","image_prompt":"..."}]}
+Only use the exact slots listed above. Do not omit or duplicate a required daily slot.`;
 
-Return this exact JSON structure:
-{
-  "client_name": "${client.businessName}",
-  "client_industry": "${client.industry}",
-  "posts": [
-    {
-      "platform": "facebook",
-      "day_offset": 2,
-      "time_slot": "14:00",
-      "copy": "Post copy here...",
-      "image_prompt": "Detailed image description..."
+  let lastError = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const openai = new OpenAI({ apiKey, timeout: 60_000, maxRetries: 1 });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You output only valid JSON." },
+          { role: "user", content: prompt + (attempt ? "\nPrevious output failed validation. Rebuild it and satisfy every count and slot exactly." : "") },
+        ],
+        temperature: 0.8,
+        max_tokens: isVip ? 16000 : 4000,
+      });
+      const raw = completion.choices[0]?.message?.content || "";
+      const calendar = JSON.parse(raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim()) as GeneratedCalendar;
+      validateCalendar(calendar, config, isVip);
+      return calendar;
+    } catch (err: any) {
+      lastError = String(err?.message || err);
+      console.error(`[content-gen] Calendar attempt ${attempt + 1} failed:`, lastError);
     }
-  ]
+  }
+  throw new Error(`Calendar validation failed after retry: ${lastError}`);
 }
 
-IMPORTANT: Use valid time_slots only:
-- Instagram: "13:00", "17:00", "21:00"
-- Facebook: "14:00", "20:00"
-
-Ensure day_offset values are spread across 0-30 with no two posts on the same day for the same platform.`;
-
-  try {
-    const openai = new OpenAI({ apiKey, timeout: 60_000, maxRetries: 1 });
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: "You are a senior social media strategist. You output only valid JSON." },
-        { role: "user", content: calendarPrompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 4000,
-    });
-
-    const raw = completion.choices[0]?.message?.content || "";
-    // Strip any markdown code fences
-    const jsonStr = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-    const calendar = JSON.parse(jsonStr) as GeneratedCalendar;
-
-    if (!calendar.posts || !Array.isArray(calendar.posts) || calendar.posts.length === 0) {
-      throw new Error("Invalid calendar: no posts generated");
+function validateCalendar(calendar: GeneratedCalendar, config: ReturnType<typeof getServiceConfig>, vip: boolean): void {
+  if (!calendar.posts || calendar.posts.length !== config.totalPosts) {
+    throw new Error(`Expected exactly ${config.totalPosts} posts, received ${calendar.posts?.length || 0}`);
+  }
+  const counts = { facebook: 0, instagram: 0 };
+  for (const post of calendar.posts) {
+    if (!(post.platform in counts)) throw new Error(`Invalid platform: ${post.platform}`);
+    counts[post.platform]++;
+    const slots = config.schedule[post.platform];
+    if (!slots.includes(post.time_slot)) throw new Error(`Invalid ${post.platform} slot ${post.time_slot}`);
+    if (!Number.isInteger(post.day_offset) || post.day_offset < 0 || post.day_offset >= 30) throw new Error(`Invalid day_offset ${post.day_offset}`);
+  }
+  if (vip && (counts.instagram !== 150 || counts.facebook !== 30)) {
+    throw new Error(`VIP distribution mismatch: Instagram ${counts.instagram}, Facebook ${counts.facebook}`);
+  }
+  if (!vip && (counts.instagram !== 6 || counts.facebook !== 6)) {
+    throw new Error(`Generic distribution mismatch: Instagram ${counts.instagram}, Facebook ${counts.facebook}`);
+  }
+  if (vip) {
+    for (let day = 0; day < 30; day++) {
+      const posts = calendar.posts.filter((p) => p.day_offset === day);
+      const ig = posts.filter((p) => p.platform === "instagram");
+      const fb = posts.filter((p) => p.platform === "facebook");
+      if (ig.length !== 5 || fb.length !== 1 || new Set(ig.map((p) => p.time_slot)).size !== 5 || fb[0]?.time_slot !== "14:00") {
+        throw new Error(`VIP cadence mismatch on day ${day}`);
+      }
     }
-    return calendar;
-  } catch (err: any) {
-    console.error("[content-gen] Calendar generation failed:", err.message);
-    throw err;
   }
 }
 
@@ -297,7 +313,8 @@ export async function generateOneImage(
   }
 
   // Validate time slot
-  const validSlots = post.platform === "instagram" ? IG_SLOTS : FB_SLOTS;
+  const serviceConfig = getServiceConfig(client.service_slug);
+  const validSlots = serviceConfig.schedule[post.platform];
   const timeSlot = validSlots.includes(post.time_slot) ? post.time_slot : validSlots[0];
 
   // Build due_at
