@@ -63,11 +63,22 @@ async function exchangeCodeForToken(code: string, codeVerifier: string): Promise
   return json;
 }
 
-function errorRedirect(message: string): Response {
-  const url = new URL(`${PORTAL_BASE}/portal/connect`);
-  url.searchParams.set("oauth_result", "error");
-  url.searchParams.set("error_msg", message);
-  return new Response(null, { status: 302, headers: { Location: url.toString() } });
+function errorPage(message: string): Response {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Connection Failed — MetroReach Media</title>
+<style>
+  body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #e4e4e4; }
+  .card { background: #161616; border: 1px solid #2a2a2a; border-radius: 16px; padding: 40px 48px; text-align: center; max-width: 420px; }
+  h1 { font-size: 1.25rem; margin: 0 0 8px; color: #ef4444; }
+  p { color: #a0a0a0; font-size: 0.95rem; }
+  a { color: #4da6ff; }
+</style></head>
+<body><div class="card"><h1>Connection Failed</h1><p>${message}</p><p><a href="/portal/connect">Try Again</a></p></div></body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
 export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
@@ -97,15 +108,15 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
           ].join(", ");
 
           if (error || !code) {
-            return errorRedirect(errorDescription || error || "Authorization was cancelled or failed.");
+            return errorPage(errorDescription || error || "Authorization was cancelled or failed.");
           }
 
           if (expectedState && returnedState !== expectedState) {
-            return errorRedirect("Security check failed. Please try again.");
+            return errorPage("Security check failed. Please try again.");
           }
 
           if (!codeVerifier) {
-            return errorRedirect("Session expired — missing PKCE verifier. Please start again.");
+            return errorPage("Session expired — missing PKCE verifier. Please start again.");
           }
 
           // Step 1: Exchange the code for an access token
@@ -130,18 +141,37 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
 
           console.log("[buffer-oauth-callback] Access token stored in buffer_credentials");
 
-          // Step 3: Redirect back to the portal
-          const redirectUrl = new URL(`${PORTAL_BASE}/portal/connect`);
-          redirectUrl.searchParams.set("oauth_result", "success");
-          redirectUrl.searchParams.set("buffer", "connected");
+          // Return a success page directly — no redirect to avoid portal login gate
+          const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Buffer Connected — MetroReach Media</title>
+<style>
+  body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0a0a0a; color: #e4e4e4; }
+  .card { background: #161616; border: 1px solid #2a2a2a; border-radius: 16px; padding: 40px 48px; text-align: center; max-width: 420px; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  .check { font-size: 3rem; margin-bottom: 12px; }
+  p { color: #a0a0a0; font-size: 0.95rem; line-height: 1.5; }
+  a { color: #4da6ff; }
+</style></head>
+<body>
+<div class="card">
+  <div class="check">&#x2705;</div>
+  <h1>Buffer Connected</h1>
+  <p>MetroReach Media is now connected to Buffer. Posts can be scheduled and published through the agency's Buffer account.</p>
+  <p><a href="/portal/dashboard">Go to Dashboard</a></p>
+</div>
+</body></html>`;
 
-          return new Response(null, {
-            status: 302,
-            headers: { Location: redirectUrl.toString(), "Set-Cookie": clearCookies },
+          return new Response(html, {
+            status: 200,
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Set-Cookie": clearCookies,
+            },
           });
         } catch (err: any) {
           console.error("Buffer OAuth callback error:", err.message);
-          return errorRedirect(err.message);
+          return errorPage(err.message);
         }
       },
     },
