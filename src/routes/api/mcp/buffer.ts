@@ -2,7 +2,7 @@
  * MCP (Model Context Protocol) route for the Buffer API.
  *
  * Implements JSON-RPC 2.0 over HTTP at POST /api/mcp/buffer.
- * Wraps the Buffer Publishing API (https://buffer.com/developers/api)
+ * Wraps the Buffer GraphQL API (https://developers.buffer.com)
  * for scheduling and managing social media posts across connected channels.
  *
  * MetroReach Media — Premium Social Media Marketing Agency
@@ -22,7 +22,7 @@ import { requireMcpAuth } from "~/lib/mcp-auth";
 // Config
 // ---------------------------------------------------------------------------
 
-const BUFFER_API_BASE = "https://api.bufferapp.com";
+const BUFFER_API_BASE = "https://api.buffer.com";
 const SERVER_NAME = "mcp-buffer";
 const SERVER_VERSION = "1.0.0";
 
@@ -102,64 +102,40 @@ function toUnixSeconds(value: string | number): number {
  * application/x-www-form-urlencoded, which is what Buffer's create/destroy
  * endpoints expect.
  */
-async function bufferApiRequest<T = unknown>(
-  method: "GET" | "POST",
-  path: string,
-  params?: Record<string, unknown>,
-): Promise<T> {
-  const url = new URL(`${BUFFER_API_BASE}${path}`);
-  url.searchParams.set("access_token", getBufferAccessToken());
-
-  const fetchOpts: RequestInit = {
-    method,
-    headers: { Accept: "application/json" },
-  };
-
-  if (method === "POST" && params) {
-    const body = new URLSearchParams();
-    for (const [key, value] of flattenParams(params)) {
-      body.append(key, value);
-    }
-    fetchOpts.headers = {
-      ...(fetchOpts.headers as Record<string, string>),
-      "Content-Type": "application/x-www-form-urlencoded",
-    };
-    fetchOpts.body = body.toString();
-  } else if (params) {
-    for (const [key, value] of flattenParams(params)) {
-      url.searchParams.append(key, value);
-    }
-  }
-
-  const res = await fetch(url.toString(), fetchOpts);
+async function bufferGraphqlRequest<T = unknown>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const res = await fetch(BUFFER_API_BASE, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getBufferAccessToken()}`,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
   const text = await res.text();
-
-  let json: any;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(
-      `Buffer API returned non-JSON response (status ${res.status}): ${text.slice(0, 500)}`
-    );
+  let json: { data?: T; errors?: Array<{ message?: string; extensions?: { code?: string } }> };
+  try { json = JSON.parse(text) as typeof json; }
+  catch { throw new Error(`Buffer API returned non-JSON response (status ${res.status}): ${text.slice(0, 500)}`); }
+  if (!res.ok || json.errors?.length) {
+    const error = json.errors?.[0];
+    throw new Error(`Buffer GraphQL error: ${error?.message ?? `HTTP ${res.status}`} (${error?.extensions?.code ?? "unknown"})`);
   }
-
-  if (res.status >= 400 || json.error || json.success === false) {
-    const errMsg =
-      json.error ||
-      json.message ||
-      json.code ||
-      `HTTP ${res.status}`;
-    throw new Error(`Buffer API error: ${errMsg}`);
-  }
-
-  return json as T;
+  if (json.data === undefined) throw new Error("Buffer GraphQL response did not contain data");
+  return json.data;
 }
 
+/** GraphQL replacement for the retired REST request helper. */
+async function bufferApiRequest<T = unknown>(method: "GET" | "POST", path: string, params?: Record<string, unknown>): Promise<T> {
+  if (method === "GET" && path === "/1/user.json") {
+    return bufferGraphqlRequest<T>(`query GetAccount { account { id email name organizations { id name } } }`);
+  }
+  throw new Error(`Buffer GraphQL migration required for unsupported legacy resource: ${method} ${path}`);
+}
 // ---------------------------------------------------------------------------
 // Tool implementations
 // ---------------------------------------------------------------------------
 
-/** GET /1/user.json — verify the connection and return the Buffer account. */
+/** Query account — verify the connection and return the Buffer account. */
 async function getUser() {
   const data = await bufferApiRequest<Record<string, unknown>>(
     "GET",
@@ -175,16 +151,21 @@ async function getUser() {
 
 /** GET /1/profiles.json — list all connected social accounts (channels). */
 async function listProfiles() {
-  const data = await bufferApiRequest<{
-    total?: number;
-    profiles?: Array<Record<string, unknown>>;
-  }>("GET", "/1/profiles.json");
-
-  const profiles = data.profiles ?? data ?? [];
-  return {
-    total: Array.isArray(profiles) ? profiles.length : 0,
-    profiles,
-  };
+  const account = await bufferGraphqlRequest<{ account: { organizations?: Array<{ id: string }> } }>(
+    `query GetOrganizations { account { organizations { id } } }`,
+  );
+  const organizations = account.account?.organizations ?? [];
+  const profiles: Array<Record<string, unknown>> = [];
+  for (const organization of organizations) {
+    const data = await bufferGraphqlRequest<{ channels?: { edges?: Array<{ node: Record<string, unknown> }> } | Array<Record<string, unknown>> }>(
+      `query GetChannels($organizationId: String!) { channels(input: { organizationId: $organizationId }) { edges { node { id name displayName service avatar isQueuePaused } } } }`,
+      { organizationId: organization.id },
+    );
+    const channels = data.channels;
+    if (Array.isArray(channels)) profiles.push(...channels);
+    else profiles.push(...(channels?.edges ?? []).map((edge) => edge.node));
+  }
+  return { total: profiles.length, profiles };
 }
 
 /** POST /1/updates/create.json — schedule (or immediately publish) a post. */
