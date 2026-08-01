@@ -319,6 +319,25 @@ export async function migrate(): Promise<void> {
   `.catch(() => {});
   console.log("[migration] ✓ client_platform_tokens table ready (incl. refresh_token + unique constraint)");
 
+  // ── buffer_credentials table ──
+  // Singleton row (id = 'default') holding the agency's Buffer OAuth access
+  // token. Written by /api/portal/buffer-oauth-callback after a successful
+  // OAuth flow; read by the Buffer MCP bridge (/api/mcp/buffer) when
+  // BUFFER_ACCESS_TOKEN is not set in the environment.
+  await sql`
+    CREATE TABLE IF NOT EXISTS buffer_credentials (
+      id TEXT PRIMARY KEY,
+      access_token TEXT NOT NULL,
+      token_type TEXT DEFAULT 'Bearer',
+      refresh_token TEXT,
+      scope TEXT,
+      expires_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  console.log("[migration] ✓ buffer_credentials table ready");
+
   // ── cron_runs table (deduplicated from above — skipped if exists) ──
 
   // ── scheduled_posts table ──

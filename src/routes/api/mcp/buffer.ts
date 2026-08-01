@@ -17,6 +17,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { requireMcpAuth } from "~/lib/mcp-auth";
+import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -27,20 +28,34 @@ const SERVER_NAME = "mcp-buffer";
 const SERVER_VERSION = "1.0.0";
 
 /**
- * Resolve the Buffer access token from the environment.
- * Throws a clear, actionable error when it is missing so tool calls
+ * Resolve the Buffer access token.
+ *
+ * Priority: BUFFER_ACCESS_TOKEN env var first (set in Vercel), then the
+ * DB-stored token written by the Buffer OAuth callback
+ * (/api/portal/buffer-oauth-callback → buffer_credentials table).
+ *
+ * Throws a clear, actionable error when neither is available so tool calls
  * fail with an obvious message instead of a confusing 401.
  */
-function getBufferAccessToken(): string {
-  const token = process.env.BUFFER_ACCESS_TOKEN ?? "";
-  if (!token) {
-    throw new Error(
-      "BUFFER_ACCESS_TOKEN is not set in the environment. " +
-        "Add it to the Vercel environment variables (Buffer OAuth access token " +
-        "for the MetroReach Buffer account) before using the Buffer MCP tools."
-    );
+async function getBufferAccessToken(): Promise<string> {
+  const envToken = process.env.BUFFER_ACCESS_TOKEN ?? "";
+  if (envToken) return envToken;
+
+  try {
+    const rows = await sql`
+      SELECT access_token FROM buffer_credentials WHERE id = 'default' LIMIT 1
+    `;
+    const token = rows?.[0]?.access_token;
+    if (token) return token;
+  } catch (err: any) {
+    console.error("buffer_credentials lookup failed:", err.message);
   }
-  return token;
+
+  throw new Error(
+    "Buffer access token is not available. Either set BUFFER_ACCESS_TOKEN in the " +
+      "Vercel environment or complete the Buffer OAuth flow at " +
+      "/api/portal/buffer-oauth-start (which stores the token in buffer_credentials)."
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -103,12 +118,13 @@ function toUnixSeconds(value: string | number): number {
  * endpoints expect.
  */
 async function bufferGraphqlRequest<T = unknown>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const token = await getBufferAccessToken();
   const res = await fetch(BUFFER_API_BASE, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getBufferAccessToken()}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ query, variables }),
   });
