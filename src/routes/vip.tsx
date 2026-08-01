@@ -27,12 +27,12 @@ const features = [
   {
     icon: Camera,
     label: "Facebook + Instagram",
-    detail: "Full management across both platforms — 3 posts each, every day",
+    detail: "Full management across both platforms — 6 original posts every day",
   },
   {
     icon: CalendarCheck,
     label: "6 Posts / Day",
-    detail: "3 Facebook + 3 Instagram — ~180 original posts every month",
+    detail: "5 Instagram + 1 Facebook — ~180 original posts every month",
   },
   {
     icon: Sparkle,
@@ -51,8 +51,8 @@ const features = [
   },
   {
     icon: ChatCircleDots,
-    label: "Worldwide Time Zone Coverage",
-    detail: "Posts at 8am, 1pm, and 8pm EST — reaching every market",
+    label: "Multi-Window Scheduling",
+    detail: "Posts at optimized times across 5 daily windows — reaching every market",
   },
   {
     icon: ChartLine,
