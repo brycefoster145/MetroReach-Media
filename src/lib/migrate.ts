@@ -79,6 +79,20 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status)`;
   console.log("[migration] ✓ clients table ready");
 
+  // ── webhook_events table ──
+  // Idempotency ledger for inbound webhooks (primarily Stripe). Each event id
+  // is claimed here exactly once so duplicate deliveries (Stripe retries,
+  // serverless cold-start timeouts, double-sends) can never create duplicate
+  // or inconsistent client records.
+  await sql`
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      event_id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      processed_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  console.log("[migration] ✓ webhook_events table ready");
+
   // ── contact_leads table ──
   await sql`
     CREATE TABLE IF NOT EXISTS contact_leads (

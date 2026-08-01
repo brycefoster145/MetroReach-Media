@@ -4,6 +4,24 @@
  * Receives Stripe webhook events, verifies signatures, and triggers the
  * automated client delivery pipeline on checkout.session.completed.
  *
+ * ── Idempotency ──
+ * Every event id is claimed in the `webhook_events` table before processing.
+ * Duplicate deliveries (Stripe retries, serverless cold-start timeouts) of the
+ * same event are detected and skipped, so retries can never create duplicate
+ * or inconsistent client records. If processing fails, the claim is released
+ * so the retry reprocesses cleanly.
+ *
+ * ── Client upsert ──
+ * Client records are looked up by stripe_customer_id / email before insert.
+ * Existing clients are UPDATED in place — their original portal_token is
+ * preserved (never regenerated), so the token embedded in emails always
+ * matches the database.
+ *
+ * ── Reliability ──
+ * The critical path (client record + portal token + email dispatch) is
+ * awaited before the webhook acknowledges, so a serverless runtime cannot
+ * terminate mid-write.
+ *
  * MetroReach Media — Premium Social Media Marketing Agency
  */
 
@@ -26,6 +44,12 @@ import { generatePortalToken } from "~/lib/portal-auth";
 import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 import { getLead, markPurchased } from "~/lib/lead-store";
 
+// Emails are awaited so the webhook ACK isn't sent until they are dispatched,
+// but bounded so a slow mail provider can never hang the webhook past the
+// serverless function limit. If the batch times out, emails already in flight
+// still complete on the provider side and errors are logged.
+const EMAIL_BATCH_TIMEOUT_MS = 25_000;
+
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -35,7 +59,38 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2026-06-24.dahlia" as any });
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request: Request): Promise<void> {
+/**
+ * Claim a webhook event id in the idempotency ledger.
+ * Returns true when this event has NOT been processed before (caller should
+ * proceed); false when it is a duplicate delivery and must be skipped.
+ */
+async function claimWebhookEvent(eventId: string, eventType: string): Promise<boolean> {
+  const result: any = await sql`
+    INSERT INTO webhook_events (event_id, event_type)
+    VALUES (${eventId}, ${eventType})
+    ON CONFLICT (event_id) DO NOTHING
+  `;
+  const affected = Number(result?.rowCount ?? result?.count ?? 0);
+  return affected > 0;
+}
+
+/**
+ * Release an event claim after a processing failure so Stripe's retry of the
+ * same event id can reprocess from scratch.
+ */
+async function releaseWebhookEvent(eventId: string): Promise<void> {
+  try {
+    await sql`DELETE FROM webhook_events WHERE event_id = ${eventId}`;
+  } catch (err: any) {
+    console.error("Failed to release webhook event claim:", err.message);
+  }
+}
+
+async function handleCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+  request: Request,
+  eventId: string,
+): Promise<void> {
   const customerEmail = session.customer_details?.email || session.customer_email;
   const customerName = session.customer_details?.name || "Valued Client";
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
@@ -45,74 +100,103 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request
     return;
   }
 
-  // Determine which service was purchased
-  let serviceName = "MetroReach Service";
-  let serviceSlug = "unknown";
-
-  // Try metadata service_slug first (supports dynamically-priced services like Premium Growth Audit)
-  const serviceSlugMeta = session.metadata?.service_slug;
-  if (serviceSlugMeta) {
-    const mapping = getMappingBySlug(serviceSlugMeta);
-    if (mapping) {
-      serviceName = mapping.name;
-      serviceSlug = mapping.slug;
-    }
+  // Idempotency: claim this event id. If it was already processed (Stripe
+  // retried a webhook whose response we never acknowledged, or a duplicate
+  // delivery), skip entirely — no duplicate client rows, no duplicate emails,
+  // no token regeneration.
+  const claimed = await claimWebhookEvent(eventId, "checkout.session.completed");
+  if (!claimed) {
+    console.log(`Duplicate Stripe event ${eventId} — skipping (already processed)`);
+    return;
   }
 
-  // Payment Links omit service_slug metadata. First use the lead ID carried in
-  // client_reference_id, then fall back to the line-item price mapping.
-  if (serviceSlug === "unknown" && session.client_reference_id) {
-    try {
-      const lead = await getLead(session.client_reference_id);
-      const leadData = lead as (typeof lead & { service_slug?: string; serviceSlug?: string }) | null;
-      const leadSlug = leadData?.service_slug || leadData?.serviceSlug || leadData?.recommendedPackage;
-      if (leadSlug) {
-        const mapping = getMappingBySlug(leadSlug) || PRICE_TO_SERVICE[leadSlug];
-        if (mapping) {
-          serviceName = mapping.name;
-          serviceSlug = mapping.slug;
-        } else if (leadSlug === "premium-growth-audit") {
-          serviceName = "Premium Growth Audit";
-          serviceSlug = leadSlug;
+  try {
+    // Determine which service was purchased
+    let serviceName = "MetroReach Service";
+    let serviceSlug = "unknown";
+
+    // Try metadata service_slug first (supports dynamically-priced services like Premium Growth Audit)
+    const serviceSlugMeta = session.metadata?.service_slug;
+    if (serviceSlugMeta) {
+      const mapping = getMappingBySlug(serviceSlugMeta);
+      if (mapping) {
+        serviceName = mapping.name;
+        serviceSlug = mapping.slug;
+      }
+    }
+
+    // Payment Links omit service_slug metadata. First use the lead ID carried in
+    // client_reference_id, then fall back to the line-item price mapping.
+    if (serviceSlug === "unknown" && session.client_reference_id) {
+      try {
+        const lead = await getLead(session.client_reference_id);
+        const leadData = lead as (typeof lead & { service_slug?: string; serviceSlug?: string }) | null;
+        const leadSlug = leadData?.service_slug || leadData?.serviceSlug || leadData?.recommendedPackage;
+        if (leadSlug) {
+          const mapping = getMappingBySlug(leadSlug) || PRICE_TO_SERVICE[leadSlug];
+          if (mapping) {
+            serviceName = mapping.name;
+            serviceSlug = mapping.slug;
+          } else if (leadSlug === "premium-growth-audit") {
+            serviceName = "Premium Growth Audit";
+            serviceSlug = leadSlug;
+          }
+        }
+      } catch (err: any) {
+        console.error("Failed to resolve service from lead reference:", err.message);
+      }
+    }
+
+    if (serviceSlug === "unknown" && session.line_items?.data?.length) {
+      for (const item of session.line_items.data) {
+        const priceId = item.price?.id;
+        if (priceId && PRICE_TO_SERVICE[priceId]) {
+          serviceName = PRICE_TO_SERVICE[priceId].name;
+          serviceSlug = PRICE_TO_SERVICE[priceId].slug;
+          break;
         }
       }
-    } catch (err: any) {
-      console.error("Failed to resolve service from lead reference:", err.message);
     }
-  }
 
-  if (serviceSlug === "unknown" && session.line_items?.data?.length) {
-    for (const item of session.line_items.data) {
-      const priceId = item.price?.id;
-      if (priceId && PRICE_TO_SERVICE[priceId]) {
-        serviceName = PRICE_TO_SERVICE[priceId].name;
-        serviceSlug = PRICE_TO_SERVICE[priceId].slug;
-        break;
+    const company = session.metadata?.company || "";
+
+    // ── Upsert client record (critical path — awaited) ──
+    // Look up any existing client for this Stripe customer or email. A
+    // duplicate/retried checkout must update that record, never insert a
+    // second one — and must keep the original portal_token.
+    const existingRows: any[] = customerId
+      ? await sql`
+          SELECT id, portal_token FROM clients
+          WHERE stripe_customer_id = ${customerId}
+             OR LOWER(email) = LOWER(${customerEmail})
+          ORDER BY created_at ASC
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id, portal_token FROM clients
+          WHERE LOWER(email) = LOWER(${customerEmail})
+          ORDER BY created_at ASC
+          LIMIT 1
+        `;
+    const existing = existingRows?.[0];
+
+    let clientId: string;
+    let portalToken: string;
+
+    if (existing?.id) {
+      // Existing client — update in place, preserve the existing portal_token.
+      clientId = existing.id as string;
+      portalToken = existing.portal_token as string;
+      if (!portalToken) {
+        // Legacy record without a token yet — generate one AND persist it so
+        // the token in emails always matches the database.
+        portalToken = generatePortalToken();
+        await sql`
+          UPDATE clients
+          SET portal_token = ${portalToken}, updated_at = NOW()
+          WHERE id = ${clientId}
+        `;
       }
-    }
-  }
-
-  const clientId = `client-${randomBytes(8).toString("hex")}`;
-  const portalToken = generatePortalToken();
-  const company = session.metadata?.company || "";
-
-  // Insert client record
-  try {
-    await sql`
-      INSERT INTO clients (
-        id, email, name, company, service, service_slug,
-        status, stripe_customer_id, stripe_subscription_id,
-        pipeline_status, portal_token, created_at, updated_at
-      ) VALUES (
-        ${clientId}, ${customerEmail}, ${customerName}, ${company || null},
-        ${serviceName}, ${serviceSlug},
-        'onboarding', ${customerId || null}, ${session.subscription as string || null},
-        'pending', ${portalToken}, NOW(), NOW()
-      )
-    `;
-  } catch (err: any) {
-    // If duplicate (somehow), query and update instead
-    if (err.message?.includes("duplicate") || err.code === "23505") {
       await sql`
         UPDATE clients
         SET
@@ -128,99 +212,54 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request
           updated_at = NOW()
         WHERE id = ${clientId}
       `;
+      console.log(`Updated existing client ${clientId} (preserved portal_token)`);
     } else {
-      console.error("Failed to insert client:", err.message);
-      throw err;
+      // New client — generate id + portal token and insert.
+      clientId = `client-${randomBytes(8).toString("hex")}`;
+      portalToken = generatePortalToken();
+      await sql`
+        INSERT INTO clients (
+          id, email, name, company, service, service_slug,
+          status, stripe_customer_id, stripe_subscription_id,
+          pipeline_status, portal_token, created_at, updated_at
+        ) VALUES (
+          ${clientId}, ${customerEmail}, ${customerName}, ${company || null},
+          ${serviceName}, ${serviceSlug},
+          'onboarding', ${customerId || null}, ${session.subscription as string || null},
+          'pending', ${portalToken}, NOW(), NOW()
+        )
+      `;
+      console.log(`Inserted new client ${clientId}`);
     }
-  }
 
-  const client = {
-    id: clientId,
-    email: customerEmail,
-    name: customerName,
-    company: company || undefined,
-    service: serviceName,
-    service_slug: serviceSlug,
-    status: "onboarding" as const,
-    stripe_customer_id: customerId || undefined,
-    stripe_subscription_id: (session.subscription as string) || undefined,
-    pipeline_status: "pending",
-    portal_token: portalToken,
-  };
+    const client = {
+      id: clientId,
+      email: customerEmail,
+      name: customerName,
+      company: company || undefined,
+      service: serviceName,
+      service_slug: serviceSlug,
+      status: "onboarding" as const,
+      stripe_customer_id: customerId || undefined,
+      stripe_subscription_id: (session.subscription as string) || undefined,
+      pipeline_status: "pending",
+      portal_token: portalToken,
+    };
 
-  // ── Trigger delivery pipeline (non-blocking, fire-and-forget) ──
+    // ── Email dispatch (awaited — bounded so the webhook cannot hang) ──
+    // All emails use the stored portal_token via the `client` object above, so
+    // the token in the email always matches the database — even when a
+    // duplicate event updated an existing client.
+    const emailTasks: Array<{ name: string; task: Promise<unknown> }> = [
+      { name: "purchase-confirmation", task: sendPurchaseConfirmation(client, session.amount_total || 0) },
+      { name: "welcome", task: sendWelcomeEmail(client) },
+      { name: "onboarding", task: sendOnboardingRequest(client) },
+      { name: "internal-alert", task: sendInternalNewClientAlert(client) },
+    ];
 
-  // 1. Purchase confirmation email
-  sendPurchaseConfirmation(client, session.amount_total || 0).catch((e) =>
-    console.error("Purchase confirmation email failed:", e.message),
-  );
-
-  // 2. Welcome email
-  sendWelcomeEmail(client).catch((e) =>
-    console.error("Welcome email failed:", e.message),
-  );
-
-  // 3. Onboarding request
-  sendOnboardingRequest(client).catch((e) =>
-    console.error("Onboarding email failed:", e.message),
-  );
-
-  // 4. Internal notification
-  sendInternalNewClientAlert(client).catch((e) =>
-    console.error("Internal alert failed:", e.message),
-  );
-
-  // 5. Create order record (DB + shared file)
-  createOrder({
-    clientEmail: customerEmail,
-    clientName: customerName,
-    serviceName,
-    serviceSlug,
-    amountCents: session.amount_total || 0,
-    recurring: session.mode === "subscription",
-    stripeSessionId: session.id,
-  }).catch((e) =>
-    console.error("Order creation failed:", e.message),
-  );
-
-  // 4. Telegram notification
-  const tgLines = [
-    "🎉 <b>New Client — MetroReach Media</b>",
-    "",
-    `Name: ${customerName}`,
-    `Email: ${customerEmail}`,
-    `Company: ${company || "N/A"}`,
-    `Service: ${serviceName}`,
-    `Status: Onboarding`,
-    "",
-    `<a href="https://metroreachagency.com/portal?token=${portalToken}">View Client →</a>`,
-  ];
-  sendTelegramMessage(tgLines.join("\n")).catch(() => {});
-
-  // 5. Trigger automated pipeline execution (fire-and-forget)
-  executePipeline(client).catch((e) =>
-    console.error("Pipeline execution failed:", e.message),
-  );
-
-  // ── 6. Write conversion event with attribution (fire-and-forget) ──
-  resolveAttribution(request)
-    .then((attribution) => {
-      // Override client_id to the one we just created/updated
-      attribution.client_id = clientId;
-      return writeConversionEvent(
-        attribution,
-        "purchase",
-        session.amount_total || 0,
-        customerName,
-        customerEmail,
-      );
-    })
-    .catch((e) => console.error("Conversion event write failed:", e.message));
-
-  // ── 7. Premium Growth Audit: mark lead as paid + send report email ──
-  if (serviceSlug === "premium-growth-audit") {
+    // Premium Growth Audit: report-access email for the buyer.
     const leadId = session.metadata?.lead_id;
-    if (leadId) {
+    if (serviceSlug === "premium-growth-audit" && leadId) {
       try {
         await markPurchased(leadId);
         console.log(`Premium audit lead marked paid: ${leadId}`);
@@ -228,30 +267,125 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request
         console.error("Failed to mark premium audit lead as paid:", e.message);
       }
 
-      // Send report-access email with direct link
       const reportUrl = `https://metroreachagency.com/premium-audit/report?id=${leadId}&email=${encodeURIComponent(customerEmail)}`;
-      sendEmail({
-        to: customerEmail,
-        from: "reports@metroreachagency.com",
-        subject: "Your Premium Growth Audit Report Is Ready",
-        body: [
-          `Hi ${customerName},`,
-          "",
-          "Your Premium Growth Audit report is ready to view.",
-          "",
-          `View your report: ${reportUrl}`,
-          "",
-          "This comprehensive analysis includes 12-category scoring, a priority matrix, and a phased growth roadmap — all evidence-based and built by our team of marketing specialists.",
-          "",
-          "If you have any questions about your report or the service recommendations, just reply to this email — our team is here to help.",
-          "",
-          "— The MetroReach Media Team",
-        ].join("\n"),
-      }).catch((e) => console.error("Premium audit report email failed:", e.message));
+      emailTasks.push({
+        name: "premium-audit-report",
+        task: sendEmail({
+          to: customerEmail,
+          from: "reports@metroreachagency.com",
+          subject: "Your Premium Growth Audit Report Is Ready",
+          body: [
+            `Hi ${customerName},`,
+            "",
+            "Your Premium Growth Audit report is ready to view.",
+            "",
+            `View your report: ${reportUrl}`,
+            "",
+            "This comprehensive analysis includes 12-category scoring, a priority matrix, and a phased growth roadmap — all evidence-based and built by our team of marketing specialists.",
+            "",
+            "If you have any questions about your report or the service recommendations, just reply to this email — our team is here to help.",
+            "",
+            "— The MetroReach Media Team",
+          ].join("\n"),
+        }),
+      });
     }
-  }
 
-  console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
+    await dispatchEmails(emailTasks);
+
+    // ── Post-email fire-and-forget (non-critical path) ──
+
+    // 1. Create order record (DB + shared file)
+    createOrder({
+      clientEmail: customerEmail,
+      clientName: customerName,
+      serviceName,
+      serviceSlug,
+      amountCents: session.amount_total || 0,
+      recurring: session.mode === "subscription",
+      stripeSessionId: session.id,
+    }).catch((e) =>
+      console.error("Order creation failed:", e.message),
+    );
+
+    // 2. Telegram notification
+    const tgLines = [
+      "🎉 <b>New Client — MetroReach Media</b>",
+      "",
+      `Name: ${customerName}`,
+      `Email: ${customerEmail}`,
+      `Company: ${company || "N/A"}`,
+      `Service: ${serviceName}`,
+      `Status: Onboarding`,
+      "",
+      `<a href="https://metroreachagency.com/portal?token=${portalToken}">View Client →</a>`,
+    ];
+    sendTelegramMessage(tgLines.join("\n")).catch(() => {});
+
+    // 3. Trigger automated pipeline execution (fire-and-forget)
+    executePipeline(client).catch((e) =>
+      console.error("Pipeline execution failed:", e.message),
+    );
+
+    // 4. Write conversion event with attribution (fire-and-forget)
+    resolveAttribution(request)
+      .then((attribution) => {
+        // Override client_id to the one we just created/updated
+        attribution.client_id = clientId;
+        return writeConversionEvent(
+          attribution,
+          "purchase",
+          session.amount_total || 0,
+          customerName,
+          customerEmail,
+        );
+      })
+      .catch((e) => console.error("Conversion event write failed:", e.message));
+
+    console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
+  } catch (err: any) {
+    // Processing failed — release the idempotency claim so Stripe's retry of
+    // this same event id reprocesses from scratch instead of being skipped.
+    console.error("handleCheckoutCompleted failed, releasing event claim:", err.message);
+    await releaseWebhookEvent(eventId);
+    throw err;
+  }
+}
+
+/**
+ * Dispatch all pending emails, awaiting completion so the webhook ACK is not
+ * sent until emails are handed to the provider. Bounded by a timeout so a
+ * slow mail provider cannot hang the webhook; individual failures are logged
+ * and do not fail the webhook.
+ */
+async function dispatchEmails(tasks: Array<{ name: string; task: Promise<unknown> }>): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`email batch exceeded ${EMAIL_BATCH_TIMEOUT_MS}ms`)),
+      EMAIL_BATCH_TIMEOUT_MS,
+    );
+  });
+  try {
+    const settled = await Promise.race([
+      Promise.allSettled(tasks.map((t) => t.task)),
+      timeout,
+    ]);
+    if (settled) {
+      settled.forEach((result, i) => {
+        if (result.status === "rejected") {
+          console.error(
+            `Email "${tasks[i]?.name}" failed:`,
+            result.reason instanceof Error ? result.reason.message : String(result.reason),
+          );
+        }
+      });
+    }
+  } catch (err: any) {
+    console.error("Email dispatch timed out:", err.message);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // ── Route Handler ──
@@ -309,10 +443,10 @@ export const Route = createFileRoute("/api/stripe/webhook")({
           switch (event.type) {
             case "checkout.session.completed": {
               const session = event.data.object as Stripe.Checkout.Session;
-              // Process async — acknowledge webhook immediately
-              handleCheckoutCompleted(session, request).catch((err) =>
-                console.error("handleCheckoutCompleted failed:", err.message),
-              );
+              // AWAITED: the critical path (client record + portal token +
+              // email dispatch) must finish before we acknowledge, or the
+              // serverless runtime could terminate mid-write.
+              await handleCheckoutCompleted(session, request, event.id);
               break;
             }
             case "customer.subscription.updated": {
