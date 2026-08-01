@@ -24,7 +24,7 @@ import { sendTelegramMessage } from "~/lib/telegram";
 import { PRICE_TO_SERVICE, getMappingBySlug } from "~/lib/stripe-product-map";
 import { generatePortalToken } from "~/lib/portal-auth";
 import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
-import { markPurchased } from "~/lib/lead-store";
+import { getLead, markPurchased } from "~/lib/lead-store";
 
 // ── Stripe instance (lazy) ──
 function getStripe(): Stripe {
@@ -59,7 +59,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, request
     }
   }
 
-  // Fall back to line items' price IDs (for services that don't set service_slug metadata)
+  // Payment Links omit service_slug metadata. First use the lead ID carried in
+  // client_reference_id, then fall back to the line-item price mapping.
+  if (serviceSlug === "unknown" && session.client_reference_id) {
+    try {
+      const lead = await getLead(session.client_reference_id);
+      const leadData = lead as (typeof lead & { service_slug?: string; serviceSlug?: string }) | null;
+      const leadSlug = leadData?.service_slug || leadData?.serviceSlug || leadData?.recommendedPackage;
+      if (leadSlug) {
+        const mapping = getMappingBySlug(leadSlug) || PRICE_TO_SERVICE[leadSlug];
+        if (mapping) {
+          serviceName = mapping.name;
+          serviceSlug = mapping.slug;
+        } else if (leadSlug === "premium-growth-audit") {
+          serviceName = "Premium Growth Audit";
+          serviceSlug = leadSlug;
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to resolve service from lead reference:", err.message);
+    }
+  }
+
   if (serviceSlug === "unknown" && session.line_items?.data?.length) {
     for (const item of session.line_items.data) {
       const priceId = item.price?.id;

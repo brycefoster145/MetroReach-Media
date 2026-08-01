@@ -17,6 +17,7 @@ import { sql } from "~/lib/db";
 import { getHashtags } from "~/lib/hashtags";
 import { getSiteUrl } from "~/lib/site-url";
 import { sendEmail } from "~/lib/email";
+import { findLeadByEmail } from "~/lib/lead-store";
 
 // ── Types ──
 
@@ -149,14 +150,42 @@ export const Route = createFileRoute("/api/content/generate")({
         }
 
         const client = clientRows[0];
-        const onboarding = (client.onboarding_data as Record<string, unknown>) || {};
+        const onboarding = (client.onboarding_data as Record<string, any>) || {};
         const clientName = (client.name as string) || "Client";
         const clientEmail = (client.email as string) || "";
-        const industry = (onboarding.industry as string) || (client.service as string) || "business";
-        const goals = (onboarding.goals as string[]) || [];
-        const brandVoice = (onboarding.brandVoice as string) || "";
-        const targetAudience = (onboarding.targetAudience as string) || "";
-        const businessName = (onboarding.businessName as string) || clientName;
+
+        // Onboarding is persisted as { businessInfo, brandInfo, ... }. Keep the
+        // legacy flat reads as a compatibility fallback for older submissions.
+        const businessInfo = (onboarding.businessInfo as Record<string, any>) || {};
+        const brandInfo = (onboarding.brandInfo as Record<string, any>) || {};
+        let lead: Awaited<ReturnType<typeof findLeadByEmail>> = null;
+        if (Object.keys(onboarding).length === 0 && clientEmail) {
+          try {
+            lead = await findLeadByEmail(clientEmail);
+          } catch (err: any) {
+            console.error("[content-gen] Lead fallback lookup failed:", err.message);
+          }
+        }
+        const leadBusinessInfo = lead?.businessInfo || {};
+        const industry = (businessInfo.industry as string)
+          || (onboarding.industry as string)
+          || (leadBusinessInfo.industry as string)
+          || (client.service as string)
+          || "business";
+        const goals = (businessInfo.goals as string[])
+          || (onboarding.goals as string[])
+          || [];
+        const brandVoice = (brandInfo.brandVoice as string)
+          || (onboarding.brandVoice as string)
+          || "";
+        const targetAudience = (businessInfo.targetAudience as string)
+          || (onboarding.targetAudience as string)
+          || "local customers looking for quality services";
+        const businessName = (brandInfo.businessName as string)
+          || (businessInfo.businessName as string)
+          || (onboarding.businessName as string)
+          || (leadBusinessInfo.businessName as string)
+          || clientName;
 
         // ── 2. Build the content calendar prompt ──
         const goalsText = goals.length > 0 ? goals.join(", ") : "grow brand awareness and generate leads";
