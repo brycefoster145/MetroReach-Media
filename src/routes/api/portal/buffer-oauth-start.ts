@@ -11,7 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import crypto from "node:crypto";
 
 const BUFFER_CLIENT_ID = process.env.BUFFER_CLIENT_ID || "";
-const REDIRECT_URI = "https://www.metroreachagency.com/api/portal/buffer-oauth-callback";
+const REDIRECT_URI = "https://metroreachagency.com/api/portal/buffer-oauth-callback";
 const AUTHORIZE_URL = "https://auth.buffer.com/auth";
 const SCOPE = "posts:write posts:read ideas:read ideas:write account:read account:write offline_access";
 

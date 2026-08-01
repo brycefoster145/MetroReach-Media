@@ -20,7 +20,7 @@ import { sql } from "~/lib/db";
 
 const BUFFER_CLIENT_ID = process.env.BUFFER_CLIENT_ID || "";
 const BUFFER_CLIENT_SECRET = process.env.BUFFER_CLIENT_SECRET || "";
-const REDIRECT_URI = "https://www.metroreachagency.com/api/portal/buffer-oauth-callback";
+const REDIRECT_URI = "https://metroreachagency.com/api/portal/buffer-oauth-callback";
 const TOKEN_URL = "https://auth.buffer.com/token";
 const PORTAL_BASE = "https://metroreachagency.com";
 
