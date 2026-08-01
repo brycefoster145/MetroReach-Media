@@ -20,7 +20,6 @@ const MAPPING: Array<[string, string]> = [
   // MONDAY
   ["One client. Seven specialists. Zero handoffs", "ig-w1-mon-brand-team.webp"],
   ["We built MetroReach because the agency model is broken", "fb-w1-mon-brand-lockup.webp"],
-  ["2–3 leads a week to 15–20", "fb-w1-mon-proof-before-after.webp"],
   ["The traditional agency model sets clients up to fail", "TEXT_ONLY_LINKEDIN"],
 
   // TUESDAY
@@ -32,9 +31,7 @@ const MAPPING: Array<[string, string]> = [
 
   // WEDNESDAY
   ["Your business needs content pillars", "ig-w1-wed-edu-pillars-carousel.webp"],
-  ["40% lower cost per lead. 90 days", "ig-w1-wed-proof-metrics.webp"],
   ["The posting cadence that actually works", "fb-w1-wed-edu-cadence.webp"],
-  ["From invisible to booked solid", "fb-w1-wed-proof-medspa.webp"],
   ["Building a lead generation system that works across 7 platforms", "TEXT_ONLY_LINKEDIN"],
 
   // THURSDAY
@@ -45,9 +42,7 @@ const MAPPING: Array<[string, string]> = [
   ["What $5,000/month should actually buy you", "TEXT_ONLY_LINKEDIN"],
 
   // FRIDAY
-  ["July by the numbers", "ig-w1-fri-proof-july-numbers.webp"],
   ["Weekend project: optimize your Google Business Profile", "ig-w1-fri-edu-gbp-checklist.webp"],
-  ["When sellers can see you have a serious marketing operation", "fb-w1-fri-proof-realestate.webp"],
   ["5 content ideas for contractors this weekend", "fb-w1-fri-edu-contractor-ideas.webp"],
   ["The 4 numbers every service business should track weekly", "TEXT_ONLY_LINKEDIN"],
 
@@ -61,13 +56,9 @@ const MAPPING: Array<[string, string]> = [
   ["Sunday reset: audit your social profiles", "ig-w1-sun-edu-audit-checklist.webp"],
   ["Sunday reset", "ig-w1-sun-edu-audit-checklist.webp"],
   ["audit your social profiles in 15 minutes", "ig-w1-sun-edu-audit-checklist.webp"],
-  ["DIY marketing → dedicated team", "ig-w1-sun-proof-diy-to-team.webp"],
-  ["DIY marketing", "ig-w1-sun-proof-diy-to-team.webp"],
   ["One thing to fix on your Facebook page this week", "fb-w1-sun-edu-one-fix.webp"],
   ["One thing to fix on your Facebook", "fb-w1-sun-edu-one-fix.webp"],
   ["One thing to fix", "fb-w1-sun-edu-one-fix.webp"],
-  ["This is what consistent posting did for one client's pipeline", "fb-w1-sun-proof-compound-growth.webp"],
-  ["consistent posting did for one client", "fb-w1-sun-proof-compound-growth.webp"],
 
   // ALREADY SCHEDULED (Post #2 - IG Slot 2 Monday, skipped)
   ["already scheduled", "SKIP_ALREADY_SCHEDULED"],
