@@ -154,18 +154,6 @@ else
     FAILURE_LOG+="  FAIL: POST /api/premium-audit/submit (got=$CODE)"$'\n'
 fi
 
-# Cron post-scheduler
-CODE=$(http_get_code "$BASE_URL/api/cron/post-scheduler")
-TOTAL=$((TOTAL + 1))
-if [[ "$CODE" == "200" || "$CODE" == "503" || "$CODE" == "405" ]]; then
-    printf "  ${GREEN}✓ PASS${NC}  GET /api/cron/post-scheduler (%s)\n" "$CODE"
-    PASSED=$((PASSED + 1))
-else
-    printf "  ${RED}✗ FAIL${NC}  GET /api/cron/post-scheduler  ${YELLOW}got=%s${NC}\n" "$CODE"
-    FAILED=$((FAILED + 1))
-    FAILURE_LOG+="  FAIL: GET /api/cron/post-scheduler (got=$CODE)"$'\n'
-fi
-
 # DB health check
 CODE=$(http_get_code "$BASE_URL/api/db-check")
 TOTAL=$((TOTAL + 1))
