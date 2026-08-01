@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import { sql } from "~/lib/db";
 
 const X_CLIENT_ID = process.env.X_CLIENT_ID || "";
@@ -9,6 +10,8 @@ export const Route = createFileRoute("/api/admin/x-callback")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         const url = new URL(request.url);
         const code = url.searchParams.get("code");
         const error = url.searchParams.get("error");

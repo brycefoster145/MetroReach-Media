@@ -9,11 +9,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
 import { getSiteUrl } from "~/lib/site-url";
+import { requireApiKey } from "~/lib/env";
+import { getClientFromRequest } from "~/lib/client-auth";
 
 export const Route = createFileRoute("/api/schedule-post")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const adminAuth = requireApiKey(request);
+        if (adminAuth && !getClientFromRequest(request)) return adminAuth;
         let body: Record<string, unknown>;
         try {
           body = await request.json();

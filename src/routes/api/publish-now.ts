@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
 import { publishPost, deleteInstagramPost, listInstagramMedia, NoMediaError } from "~/lib/meta-poster";
+import { requireApiKey } from "~/lib/env";
 
 // ── MetroReach Media account defaults ──
 // Used when client_id === "metroreach" so publish-now works via curl
@@ -22,6 +23,8 @@ export const Route = createFileRoute("/api/publish-now")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         const url = new URL(request.url);
         const action = url.searchParams.get("action");
 
@@ -73,6 +76,8 @@ export const Route = createFileRoute("/api/publish-now")({
       },
 
       POST: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         let body: Record<string, unknown>;
         try {
           body = await request.json();
@@ -210,6 +215,8 @@ export const Route = createFileRoute("/api/publish-now")({
       },
 
       DELETE: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         let body: Record<string, unknown>;
         try {
           body = await request.json();

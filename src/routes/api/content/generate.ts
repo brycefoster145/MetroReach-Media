@@ -2,9 +2,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { randomBytes } from "node:crypto";
 import { sql } from "~/lib/db";
+import { requireApiKey } from "~/lib/env";
 
 export const Route = createFileRoute("/api/content/generate")({
   server: { handlers: { POST: async ({ request }) => {
+    const unauthorized = requireApiKey(request);
+    if (unauthorized) return unauthorized;
     try {
       const body = await request.json() as { client_id?: unknown; service_slug?: unknown };
       const clientId = typeof body.client_id === "string" ? body.client_id.trim() : "";

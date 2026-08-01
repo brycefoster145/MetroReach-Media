@@ -13,6 +13,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { requireMcpAuth } from "~/lib/mcp-auth";
 import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
@@ -707,6 +708,8 @@ export const Route = createFileRoute("/api/mcp/google")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauthorized = requireMcpAuth(request);
+        if (unauthorized) return unauthorized;
         const ct = request.headers.get("content-type") ?? "";
         if (!ct.includes("application/json")) {
           return new Response(
@@ -754,7 +757,7 @@ export const Route = createFileRoute("/api/mcp/google")({
           headers: {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Headers": "Content-Type, x-api-key",
           },
         });
       },

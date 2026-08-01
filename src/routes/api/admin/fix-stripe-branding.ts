@@ -12,12 +12,15 @@
  * MetroReach Media
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import Stripe from "stripe";
 
 export const Route = createFileRoute("/api/admin/fix-stripe-branding")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         const stripeKey = process.env.STRIPE_SECRET_KEY;
         if (!stripeKey) {
           return new Response(

@@ -5,6 +5,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { requireApiKey } from "~/lib/env";
 import { sql } from "~/lib/db";
 import { randomBytes } from "node:crypto";
 import { getMappingBySlug } from "~/lib/stripe-product-map";
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/api/admin/repair-client")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauthorized = requireApiKey(request);
+        if (unauthorized) return unauthorized;
         try {
           const body = await request.json() as {
             client_id?: unknown;
