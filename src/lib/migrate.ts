@@ -234,6 +234,8 @@ export async function migrate(): Promise<void> {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_token TEXT UNIQUE`;
   await sql`CREATE INDEX IF NOT EXISTS idx_clients_portal_token ON clients(portal_token)`;
   console.log("[migration] ✓ clients.portal_token column ready");
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS password_hash TEXT`;
+  console.log("[migration] ✓ clients.password_hash column ready");
 
   // ── portal_messages table ──
   await sql`
