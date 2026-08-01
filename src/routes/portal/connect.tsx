@@ -49,6 +49,8 @@ const GOOGLE_SCOPES = encodeURIComponent(
 );
 const GOOGLE_OAUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${GOOGLE_SCOPES}&access_type=offline&prompt=consent&state=metroreach`;
 
+const BUFFER_OAUTH_URL = "https://www.metroreachagency.com/api/portal/buffer-oauth-start";
+
 /**
  * Generate a cryptographically random PKCE code_verifier.
  * Uses characters from the unreserved set: A-Z, a-z, 0-9, -, ., _, ~
@@ -204,6 +206,12 @@ function PortalConnect() {
     setConnecting(true);
     setError("");
     window.location.href = GOOGLE_OAUTH_URL;
+  }
+
+  function handleBufferConnect() {
+    setConnecting(true);
+    setError("");
+    window.location.href = BUFFER_OAUTH_URL;
   }
 
   const hasFacebook = accounts.some((a) => a.platform === "facebook");
@@ -656,6 +664,36 @@ function PortalConnect() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* ── Buffer Connect Card ── */}
+          <div className="bg-bg-surface border border-border-subtle rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#2C4BFF]/10 border border-[#2C4BFF]/20 flex items-center justify-center">
+                <span className="text-[#2C4BFF] font-bold text-sm">B</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-heading text-text-primary">Buffer</h3>
+                <p className="text-xs text-text-muted">Connect agency publishing layer</p>
+              </div>
+            </div>
+
+            <div className="text-center py-8">
+              <p className="text-sm text-text-secondary mb-4">
+                Connect Buffer to enable scheduling and publishing across all client accounts.
+              </p>
+              <button
+                onClick={handleBufferConnect}
+                disabled={connecting}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2C4BFF] text-white text-sm font-semibold hover:bg-[#1E3ADB] transition-colors disabled:opacity-50"
+              >
+                {connecting ? (
+                  <><Spinner size={16} className="animate-spin" /> Connecting...</>
+                ) : (
+                  <>Connect Buffer</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
