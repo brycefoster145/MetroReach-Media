@@ -31,19 +31,23 @@ export const Route = createFileRoute("/api/portal/connected-accounts")({
             ORDER BY created_at DESC
           `;
 
-          // Map platform properly — Instagram pages have longer IDs for Meta platform.
-          // Other platforms (linkedin, tiktok, etc.) use the stored platform value directly.
-          const accounts = rows.map((r: any) => {
-            let displayPlatform = r.platform;
-            if (r.platform === "meta") {
-              displayPlatform = r.page_id && r.page_id.length > 20 ? "instagram" : "facebook";
-            }
-            return {
+          // New OAuth rows use explicit facebook/instagram platforms. Keep the
+          // legacy Meta heuristic for clients who have not reconnected yet.
+          // Deduplicate while the legacy and explicit rows coexist.
+          const seen = new Set<string>();
+          const accounts = rows.flatMap((r: any) => {
+            const displayPlatform = r.platform === "meta"
+              ? (r.page_id && r.page_id.length > 20 ? "instagram" : "facebook")
+              : r.platform;
+            const key = `${displayPlatform}:${r.page_id}`;
+            if (seen.has(key)) return [];
+            seen.add(key);
+            return [{
               platform: displayPlatform,
               page_id: r.page_id,
               account_name: r.account_name,
               created_at: String(r.created_at),
-            };
+            }];
           });
 
           return new Response(

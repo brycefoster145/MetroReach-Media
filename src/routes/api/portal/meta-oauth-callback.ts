@@ -178,46 +178,52 @@ export const Route = createFileRoute("/api/portal/meta-oauth-callback")({
           const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
 
           for (const page of pages) {
-            // Store the Facebook page token
-            await sql`
-              INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at, token_status)
-              VALUES (${client.sub}, 'meta', ${page.access_token}, ${page.id}, ${page.name}, ${expiresAt.toISOString()}, 'active')
-              ON CONFLICT DO NOTHING
-            `.catch(() => {});
-
-            // Try to update if already exists
-            await sql`
-              UPDATE client_platform_tokens
-              SET access_token = ${page.access_token},
-                  account_name = ${page.name},
-                  expires_at = ${expiresAt.toISOString()},
-                  token_status = 'active'
-              WHERE client_id = ${client.sub}
-                AND platform = 'meta'
-                AND page_id = ${page.id}
-            `;
-
-            // If page has an Instagram Business Account, store that too
-            if (page.instagram_business_account?.id) {
-              const igId = page.instagram_business_account.id;
-              const igName = page.instagram_business_account.name || `${page.name} (Instagram)`;
-
+            // Keep the legacy Meta row for older portal readers, but also write
+            // the platform-specific row required by the pipeline worker.
+            for (const platform of ["meta", "facebook"] as const) {
               await sql`
                 INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at, token_status)
-                VALUES (${client.sub}, 'meta', ${page.access_token}, ${igId}, ${igName}, ${expiresAt.toISOString()}, 'active')
+                VALUES (${client.sub}, ${platform}, ${page.access_token}, ${page.id}, ${page.name}, ${expiresAt.toISOString()}, 'active')
                 ON CONFLICT DO NOTHING
               `.catch(() => {});
 
               await sql`
                 UPDATE client_platform_tokens
                 SET access_token = ${page.access_token},
-                    account_name = ${igName},
+                    account_name = ${page.name},
                     expires_at = ${expiresAt.toISOString()},
                     token_status = 'active'
                 WHERE client_id = ${client.sub}
-                  AND platform = 'meta'
-                  AND page_id = ${igId}
+                  AND platform = ${platform}
+                  AND page_id = ${page.id}
               `;
+            }
+
+            // If page has an Instagram Business Account, store that too
+            if (page.instagram_business_account?.id) {
+              const igId = page.instagram_business_account.id;
+              const igName = page.instagram_business_account.name || `${page.name} (Instagram)`;
+
+              // Keep the legacy Meta row and add the platform-specific row used
+              // by the pipeline worker.
+              for (const platform of ["meta", "instagram"] as const) {
+                await sql`
+                  INSERT INTO client_platform_tokens (client_id, platform, access_token, page_id, account_name, expires_at, token_status)
+                  VALUES (${client.sub}, ${platform}, ${page.access_token}, ${igId}, ${igName}, ${expiresAt.toISOString()}, 'active')
+                  ON CONFLICT DO NOTHING
+                `.catch(() => {});
+
+                await sql`
+                  UPDATE client_platform_tokens
+                  SET access_token = ${page.access_token},
+                      account_name = ${igName},
+                      expires_at = ${expiresAt.toISOString()},
+                      token_status = 'active'
+                  WHERE client_id = ${client.sub}
+                    AND platform = ${platform}
+                    AND page_id = ${igId}
+                `;
+              }
             }
           }
 
