@@ -133,8 +133,13 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
             return errorPage("Missing PKCE verifier in state. Please start again.");
           }
 
-          // Ensure the buffer_credentials table exists (idempotent)
-          await migrate();
+          // Ensure the buffer_credentials table exists (idempotent).
+          // Wrapped in try/catch — if migration fails due to concurrent
+          // cold-start races or Neon driver quirks, the table likely
+          // already exists from a prior deploy and we proceed anyway.
+          try { await migrate(); } catch (e: any) {
+            console.error("[buffer-oauth-callback] Migration skipped (non-fatal):", e.message);
+          }
 
           // Exchange the code for an access token
           const tokenData = await exchangeCodeForToken(code, codeVerifier);
