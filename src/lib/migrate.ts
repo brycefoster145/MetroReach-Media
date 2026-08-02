@@ -715,6 +715,68 @@ export async function migrate(): Promise<void> {
     console.log(`[migration] ℹ source_platform CHECK migration skipped: ${err.message}`);
   }
 
+  // ── VIP Daily pipeline (007) ──
+  // Cycle/task metadata: pipeline_tasks VIP columns + idempotency, vip_cycles,
+  // vip_assets. Idempotent (ADD COLUMN IF NOT EXISTS / CREATE IF NOT EXISTS).
+  await sql`ALTER TABLE pipeline_tasks ADD COLUMN IF NOT EXISTS task_kind TEXT`;
+  await sql`ALTER TABLE pipeline_tasks ADD COLUMN IF NOT EXISTS cycle_id TEXT`;
+  await sql`ALTER TABLE pipeline_tasks ADD COLUMN IF NOT EXISTS batch_number INTEGER`;
+  await sql`ALTER TABLE pipeline_tasks ADD COLUMN IF NOT EXISTS timezone TEXT`;
+  await sql`ALTER TABLE pipeline_tasks ADD COLUMN IF NOT EXISTS idempotency_key TEXT`;
+  console.log("[migration] ✓ pipeline_tasks VIP metadata columns ready");
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_tasks_idempotency
+      ON pipeline_tasks (idempotency_key) WHERE idempotency_key IS NOT NULL
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_pipeline_tasks_cycle
+      ON pipeline_tasks (cycle_id, task_kind, batch_number)
+  `;
+  console.log("[migration] ✓ pipeline_tasks VIP indexes ready");
+  await sql`
+    CREATE TABLE IF NOT EXISTS vip_cycles (
+      id TEXT PRIMARY KEY DEFAULT ('cycle-' || gen_random_uuid()::text),
+      client_id TEXT NOT NULL,
+      cycle_start DATE NOT NULL,
+      cycle_end DATE NOT NULL,
+      timezone TEXT NOT NULL,
+      committed_ig_posts INTEGER NOT NULL DEFAULT 90,
+      committed_fb_posts INTEGER NOT NULL DEFAULT 90,
+      committed_total INTEGER NOT NULL DEFAULT 180,
+      status TEXT NOT NULL DEFAULT 'planned',
+      queue_alerted_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT vip_cycles_total_check CHECK (committed_total = committed_ig_posts + committed_fb_posts)
+    )
+  `;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_vip_cycles_client_cycle
+      ON vip_cycles (client_id, cycle_start)
+  `;
+  console.log("[migration] ✓ vip_cycles table ready");
+  await sql`
+    CREATE TABLE IF NOT EXISTS vip_assets (
+      id TEXT PRIMARY KEY DEFAULT ('asset-' || gen_random_uuid()::text),
+      client_id TEXT NOT NULL,
+      cycle_id TEXT NOT NULL,
+      day INTEGER NOT NULL,
+      ig_slot INTEGER NOT NULL,
+      asset_id TEXT NOT NULL,
+      concept TEXT,
+      png_path TEXT,
+      webp_path TEXT,
+      cdn_url TEXT,
+      reviewer TEXT,
+      review_timestamp TIMESTAMPTZ,
+      status TEXT NOT NULL DEFAULT 'briefed',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (client_id, cycle_id, asset_id)
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_vip_assets_cycle ON vip_assets (client_id, cycle_id, status)`;
+  console.log("[migration] ✓ vip_assets table ready");
+
   // ── Ensure generated image directory exists ──
   const generatedDir = join(process.cwd(), "public", "social", "generated");
   if (!existsSync(generatedDir)) {
