@@ -27,6 +27,14 @@ interface CheckoutSearch {
 }
 
 // ── Per-plan feature lists (from the business plan) ──
+const CATEGORY_LABELS: Record<string, string> = {
+  "organic-content": "Organic Content & Management",
+  "paid-advertising": "Paid Advertising",
+  "social-strategy": "Social Strategy",
+  "community-management": "Community Management",
+};
+const FEATURED_SLUGS = new Set(["starter", "growth", "scale", "vip-daily"]);
+
 const PLAN_FEATURES: Record<string, string[]> = {
   starter: [
     "Up to 2 platforms",
@@ -243,13 +251,21 @@ function Checkout() {
               </div>
             </form>
 
-            {/* Plans */}
+            {/* Featured business-plan packages and all available services */}
             <div className="grid md:grid-cols-2 gap-5 mb-10">
-              {STRIPE_PRODUCT_MAP.map((plan) => {
+              {[...STRIPE_PRODUCT_MAP].sort((a, b) => Number(FEATURED_SLUGS.has(b.slug)) - Number(FEATURED_SLUGS.has(a.slug))).map((plan, index, products) => {
                 const isSelected = selectedSlug === plan.slug;
                 const isPurchasing = purchasingSlug === plan.slug;
                 const isRecurring = plan.recurring;
                 return (
+                  {index === 0 && (
+                    <h2 className="md:col-span-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-accent mt-2 mb-1">Business plan packages</h2>
+                  )}
+                  {!FEATURED_SLUGS.has(plan.slug) && (index === 4 || products[index - 1]?.category !== plan.category) && (
+                    <h2 className="md:col-span-2 text-xl font-bold font-heading text-text-primary mt-8 mb-1">
+                      {plan.slug === "premium-growth-audit" ? "Premium Growth Audit" : (CATEGORY_LABELS[plan.category] || plan.category)}
+                    </h2>
+                  )}
                   <div
                     key={plan.slug}
                     role="button"
