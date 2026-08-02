@@ -575,11 +575,15 @@ function writeTaskBrief(brief: TaskBrief, markdown: string): string | null {
   }
 }
 /** Insert a task into the database queue. Returns false so the caller can use the file fallback. */
+function toRoleSlug(role: string): string {
+  return role.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 async function insertPipelineTask(brief: TaskBrief, taskBrief: string): Promise<boolean> {
   try {
     await sql`INSERT INTO pipeline_tasks
       (client_id, service_slug, service_name, deliverable_type, client_name, client_email, company, task_brief, assigned_roles, deadline, status)
-      VALUES (${brief.clientId}, ${brief.serviceSlug}, ${brief.serviceName}, ${brief.deliverableType}, ${brief.clientName}, ${brief.clientEmail}, ${brief.company}, ${taskBrief}, ${brief.assignedTeam}, ${brief.deadline}::timestamptz, 'pending')`;
+      VALUES (${brief.clientId}, ${brief.serviceSlug}, ${brief.serviceName}, ${brief.deliverableType}, ${brief.clientName}, ${brief.clientEmail}, ${brief.company}, ${taskBrief}, ${brief.assignedTeam.map(toRoleSlug)}, ${brief.deadline}::timestamptz, 'pending')`;
     return true;
   } catch (err: any) {
     console.error(`[pipeline-executor] Failed to insert pipeline task for ${brief.clientId}:`, err.message);
