@@ -36,7 +36,7 @@ async function main() {
   for (const p of posts) {
     const reasons = [];
 
-    if (p.content && p.content.toLowerCase().includes("metroreach digital")) {
+    if (p.content && p.content.toLowerCase().includes("metroreach media")) {
       reasons.push("OLD_NAME");
     }
 

@@ -377,7 +377,7 @@ async function handleCleanupOldName(): Promise<Response> {
       FROM scheduled_posts
       WHERE platform IN ('facebook', 'instagram')
         AND (
-          LOWER(content) LIKE '%metroreach digital%'
+          LOWER(content) LIKE '%metroreach media%'
           OR created_at < '2026-07-26T00:00:00Z'::timestamptz
           OR (status = 'pending' AND due_at < NOW())
         )
@@ -410,7 +410,7 @@ async function handleCleanupOldName(): Promise<Response> {
     // Verify zero "MetroReach Media" posts remain
     const oldNameCheck = await pg`
       SELECT COUNT(*) as cnt FROM scheduled_posts
-      WHERE LOWER(content) LIKE '%metroreach digital%'
+      WHERE LOWER(content) LIKE '%metroreach media%'
     `;
     report.old_name_remaining = Number(oldNameCheck[0]?.cnt);
 
