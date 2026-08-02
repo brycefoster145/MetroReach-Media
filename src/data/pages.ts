@@ -171,16 +171,16 @@ export const pricingPage = {
       price: "$5,500",
       period: "/month",
       description: "For businesses that want to dominate their market across all relevant channels.",
-      comingSoon: true,
       features: [
-        "Up to 7 platforms — organic on all",
+        "3 platforms: Instagram, Facebook, and X",
+        "4 additional platforms available after LLC formation",
         "30+ original posts per month",
         "Short-form video scripts",
         "Custom reporting",
       ],
       bestFor: "Multi-location businesses, high-growth real estate teams, regional contractors.",
       featured: false,
-      serviceSlug: "vip-daily",
+      serviceSlug: "scale",
     },
   ],
   noLockPledge:
@@ -521,7 +521,7 @@ export const subServices = [
   { slug: "google-ads-management", category: "paid-advertising", name: "Google Ads Management", description: "We will run high‑intent search campaigns designed to capture demand and drive conversions. This service unlocks once client accounts and credentials are verified.", price: "From $1,000/month + 10% ad spend", pipelineStatus: "coming-soon" },
   { slug: "tiktok-ads-management", category: "paid-advertising", name: "TikTok Ads Management", description: "We will strategize, script, and manage TikTok ad campaigns optimized for reach and engagement. Creative direction included — final video production by client or partner.", price: "From $1,200/month + 10% ad spend", pipelineStatus: "coming-soon" },
   { slug: "linkedin-ads-management", category: "paid-advertising", name: "LinkedIn Ads Management", description: "We will build professional B2B ad campaigns targeting decision‑makers and industry professionals. This positions your brand in front of high‑value audiences.", price: "From $1,200/month + 10% ad spend", pipelineStatus: "coming-soon" },
-  { slug: "x-ads-management", category: "paid-advertising", name: "X (Twitter) Ads Management", description: "We will run targeted ad campaigns built for real‑time engagement and visibility. This helps your brand stay relevant in fast‑moving conversations.", price: "From $1,000/month + 10% ad spend", pipelineStatus: "coming-soon" },
+  { slug: "x-ads-management", category: "paid-advertising", name: "X (Twitter) Ads Management", description: "We will run targeted ad campaigns built for real‑time engagement and visibility. This helps your brand stay relevant in fast‑moving conversations.", price: "From $1,000/month + 10% ad spend", pipelineStatus: "verified" },
   { slug: "youtube-ads-management", category: "paid-advertising", name: "YouTube Ads Management", description: "We will strategize and manage YouTube ad campaigns engineered to increase brand awareness and drive action. Creative direction included — final video production by client or partner.", price: "From $1,200/month + 10% ad spend", pipelineStatus: "coming-soon" },
 
   // Social Strategy

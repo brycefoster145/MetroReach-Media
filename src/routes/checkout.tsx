@@ -35,6 +35,14 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 const FEATURED_SLUGS = new Set(["starter", "growth", "scale", "vip-daily"]);
 
+// These offerings depend on platforms that are unavailable until LLC formation.
+const BLOCKED_PLATFORM_SLUGS = new Set([
+  "google-ads-management",
+  "tiktok-ads-management",
+  "linkedin-ads-management",
+  "youtube-ads-management",
+]);
+
 const PLAN_FEATURES: Record<string, string[]> = {
   starter: [
     "Up to 2 platforms",
@@ -47,7 +55,8 @@ const PLAN_FEATURES: Record<string, string[]> = {
     "Weekly performance snapshots",
   ],
   scale: [
-    "Up to 7 platforms",
+    "3 platforms: Instagram, Facebook, and X",
+    "4 additional platforms available after LLC formation",
     "30+ posts per month",
     "Video scripts + custom reporting",
   ],
@@ -257,6 +266,7 @@ function Checkout() {
                 const isSelected = selectedSlug === plan.slug;
                 const isPurchasing = purchasingSlug === plan.slug;
                 const isRecurring = plan.recurring;
+                const isComingSoon = BLOCKED_PLATFORM_SLUGS.has(plan.slug) || plan.slug === "growth";
                 return (
                   <>
                   {index === 0 && (
@@ -324,6 +334,15 @@ function Checkout() {
                       ))}
                     </ul>
 
+                    {isComingSoon ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold bg-bg-surface-high text-text-muted cursor-not-allowed border border-border-subtle"
+                      >
+                        Coming Soon
+                      </button>
+                    ) : (
                     <button
                       type="button"
                       disabled={isPurchasing}
@@ -350,6 +369,7 @@ function Checkout() {
                         </>
                       )}
                     </button>
+                    )}
                   </div>
                   </>
                 );
