@@ -9,7 +9,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { migrate } from "~/lib/migrate";
-import { requireApiKey } from "~/lib/mcp-auth";
+import { requireApiKey } from "~/lib/env";
 
 export const Route = createFileRoute("/api/admin/run-migrations")({
   server: {
