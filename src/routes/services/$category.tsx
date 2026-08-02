@@ -5,6 +5,13 @@ import { subServices } from "~/data/pages";
 import { useCart, type CartItem } from "~/context/CartContext";
 import { useState } from "react";
 
+const BLOCKED_PLATFORM_SLUGS = new Set([
+  "google-ads-management",
+  "tiktok-ads-management",
+  "linkedin-ads-management",
+  "youtube-ads-management",
+]);
+
 const categoryDisplayNames: Record<string, string> = {
   "organic-content": "Organic Content Management",
   "paid-advertising": "Paid Advertising",
@@ -129,7 +136,7 @@ function ServiceCategory() {
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {categoryServices.map((svc) => {
-              const isCartReady = ["verified", "production-proven", "optimized"].includes(svc.pipelineStatus);
+              const isCartReady = ["verified", "production-proven", "optimized"].includes(svc.pipelineStatus) && !BLOCKED_PLATFORM_SLUGS.has(svc.slug);
               const isInCart = items.some((i) => i.slug === svc.slug);
               const justAdded = addedSlug === svc.slug;
 
