@@ -94,28 +94,33 @@ function flattenParams(
 }
 
 /**
- * Convert a tool argument into a Buffer-compatible scheduled_at unix timestamp.
- * Accepts ISO 8601 strings ("2026-08-05T14:00:00Z"), unix second numbers,
- * or numeric strings — all normalized to whole unix seconds.
+ * Convert a tool argument into a Buffer GraphQL dueAt value (ISO 8601
+ * string, UTC). The GraphQL API accepts ISO 8601 strings only — it dropped
+ * REST's unix-seconds format — so unix second numbers / numeric strings are
+ * converted here. Accepts ISO 8601 strings ("2026-08-05T14:00:00Z"),
+ * unix second numbers, or numeric strings.
  */
-function toUnixSeconds(value: string | number): number {
-  if (typeof value === "number") return Math.floor(value);
+function toIsoString(value: string | number): string {
+  if (typeof value === "number") {
+    return new Date(value * 1000).toISOString();
+  }
   const trimmed = value.trim();
-  if (/^\d+$/.test(trimmed)) return Math.floor(Number(trimmed));
+  if (/^\d+$/.test(trimmed)) {
+    return new Date(Number(trimmed) * 1000).toISOString();
+  }
   const ms = Date.parse(trimmed);
   if (Number.isNaN(ms)) {
     throw new Error(
-      `Invalid scheduled_at: "${value}" — expected an ISO 8601 timestamp or unix seconds.`
+      `Invalid scheduled_at/since: "${value}" — expected an ISO 8601 timestamp or unix seconds.`
     );
   }
-  return Math.floor(ms / 1000);
+  return new Date(ms).toISOString();
 }
 
 /**
- * Make a request to the Buffer API. Auth is passed as an access_token query
- * parameter (Buffer's documented auth pattern). POST bodies are sent as
- * application/x-www-form-urlencoded, which is what Buffer's create/destroy
- * endpoints expect.
+ * Make a request to the Buffer GraphQL API
+ * (https://api.buffer.com/graphql). Auth is passed as a Bearer token in the
+ * Authorization header. POST bodies are JSON: { query, variables }.
  */
 async function bufferGraphqlRequest<T = unknown>(query: string, variables?: Record<string, unknown>): Promise<T> {
   const token = await getBufferAccessToken();
@@ -146,6 +151,36 @@ async function bufferApiRequest<T = unknown>(method: "GET" | "POST", path: strin
     return bufferGraphqlRequest<T>(`query GetAccount { account { id email name organizations { id name } } }`);
   }
   throw new Error(`Buffer GraphQL migration required for unsupported legacy resource: ${method} ${path}`);
+}
+
+/** Default Buffer organization for this agency account (overridable via BUFFER_ORGANIZATION_ID). */
+const DEFAULT_ORGANIZATION_ID = "6a603e49b90c45bdaab82cee";
+
+/** Resolve the Buffer organization ID to scope posts queries to. */
+function getOrganizationId(): string {
+  return process.env.BUFFER_ORGANIZATION_ID ?? DEFAULT_ORGANIZATION_ID;
+}
+
+/**
+ * Wraps bufferGraphqlRequest with a single retry for Buffer's aggressive
+ * rate limiting (observed RATE_LIMIT responses that can persist for minutes).
+ * Retries once after a short delay, then rethrows so the caller sees the error.
+ */
+async function bufferGraphqlRequestWithRetry<T = unknown>(
+  query: string,
+  variables?: Record<string, unknown>,
+  retries = 1,
+): Promise<T> {
+  try {
+    return await bufferGraphqlRequest<T>(query, variables);
+  } catch (err: any) {
+    const message = err?.message ?? String(err);
+    if (retries > 0 && message.includes("RATE_LIMIT")) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      return bufferGraphqlRequest<T>(query, variables);
+    }
+    throw err;
+  }
 }
 // ---------------------------------------------------------------------------
 // Tool implementations
@@ -184,7 +219,26 @@ async function listProfiles() {
   return { total: profiles.length, profiles };
 }
 
-/** POST /1/updates/create.json — schedule (or immediately publish) a post. */
+/**
+ * Create (schedule or immediately publish) a post via the Buffer GraphQL
+ * createPost mutation. The GraphQL API accepts ONE channel per call
+ * (channelId), so one mutation is issued per profile/channel ID — the
+ * REST-era multi-profile batching is gone. Buffer rate-limits aggressively,
+ * so the loop is sequential (never parallel) and a single short retry is
+ * attempted on RATE_LIMIT before the error surfaces.
+ *
+ * Scheduling semantics (mapped from REST args):
+ *   - scheduled_at (ISO 8601 or unix seconds) → dueAt (ISO 8601), mode customScheduled
+ *   - now: true                                → mode shareNow (publish immediately, no dueAt)
+ *   - neither given                            → mode addToQueue (end of queue)
+ *   - top: true (only when no explicit time)   → mode shareNext (top of queue)
+ *
+ * Known GraphQL limitations (surfaced as warnings in the response):
+ *   - media_link / media_title / media_description / media_picture are NOT
+ *     supported by createPost — the mutation has no media-link field (assets
+ *     requires a separate upload flow). Provided media args are ignored.
+ *   - shorten_links is not supported and is ignored.
+ */
 async function createPost(args: {
   profile_ids: string[];
   text: string;
@@ -204,85 +258,134 @@ async function createPost(args: {
     throw new Error("text is required");
   }
 
-  const body: Record<string, unknown> = {
-    profile_ids: args.profile_ids,
-    text: args.text,
-  };
-
-  // Buffer nests media fields under media[link], media[title], etc.
-  const media: Record<string, unknown> = {};
-  if (args.media_link) media.link = args.media_link;
-  if (args.media_title) media.title = args.media_title;
-  if (args.media_description) media.description = args.media_description;
-  if (args.media_picture) media.picture = args.media_picture;
-  if (Object.keys(media).length > 0) body.media = media;
-
+  // Decide the scheduling mode once; applies to every channel.
+  let mode: "customScheduled" | "shareNow" | "addToQueue" | "shareNext" = "addToQueue";
+  let dueAt: string | null = null;
   if (args.scheduled_at !== undefined && args.scheduled_at !== null) {
-    // Buffer schedules in UTC unix seconds. `now: true` forces immediate
-    // publishing instead (Buffer rejects scheduled_at combined with now).
-    body.scheduled_at = toUnixSeconds(args.scheduled_at);
+    mode = "customScheduled";
+    dueAt = toIsoString(args.scheduled_at);
   } else if (args.now) {
-    body.now = true;
+    mode = "shareNow";
+  } else if (args.top) {
+    mode = "shareNext";
   }
-  if (args.top) body.top = true;
-  if (args.shorten_links !== undefined) body.shorten_links = args.shorten_links;
 
-  const data = await bufferApiRequest<{
-    success?: boolean;
-    buffer_count?: number;
-    updates?: Array<Record<string, unknown>>;
-  }>("POST", "/1/updates/create.json", body);
+  const warnings: string[] = [];
+  if (args.media_link || args.media_title || args.media_description || args.media_picture) {
+    warnings.push(
+      "media_link/media_title/media_description/media_picture are not supported by the Buffer GraphQL " +
+        "createPost mutation (attaching media requires a separate asset upload flow). " +
+        "The media was NOT attached to the post."
+    );
+  }
+  if (args.shorten_links) {
+    warnings.push("shorten_links is not supported by the Buffer GraphQL createPost mutation and was ignored.");
+  }
+
+  const created: Array<Record<string, unknown>> = [];
+  for (const channelId of args.profile_ids) {
+    const input: Record<string, unknown> = {
+      channelId,
+      text: args.text,
+      assets: [],
+      mode,
+      needsApproval: false,
+      schedulingType: "automatic",
+    };
+    if (dueAt) input.dueAt = dueAt;
+
+    const data = await bufferGraphqlRequestWithRetry<{ createPost?: { post?: { id?: string } } }>(
+      `mutation CreatePost($input: CreatePostInput!) {
+        createPost(input: $input) {
+          ... on PostActionSuccess {
+            post { id }
+          }
+        }
+      }`,
+      { input },
+    );
+    created.push({
+      profile_id: channelId,
+      post_id: data.createPost?.post?.id ?? null,
+      mode,
+      due_at: dueAt,
+    });
+  }
 
   return {
-    success: data.success ?? true,
-    buffer_count: data.buffer_count ?? 0,
-    updates: data.updates ?? [],
+    success: true,
+    created,
+    total_created: created.length,
     profiles: args.profile_ids,
-    scheduled_at: body.scheduled_at ?? (args.now ? "immediate" : "next_in_queue"),
+    scheduled_at: dueAt ?? (args.now ? "immediate" : mode === "shareNext" ? "next_in_queue" : "queue_end"),
+    warnings,
   };
 }
 
-/** GET /1/updates/pending.json — list pending scheduled updates. */
+/**
+ * List scheduled posts via the Buffer GraphQL posts query. profile_ids map
+ * to channel IDs in the new API. Timestamps come back as ISO 8601 UTC
+ * strings (GraphQL has no unix-seconds mode, so the old `utc` flag is
+ * accepted and ignored — output is always UTC).
+ */
 async function listPendingUpdates(args: {
   profile_ids?: string[];
   count?: number;
   since?: string | number;
   utc?: boolean;
 }) {
-  const params: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { status: ["scheduled"] };
   if (args.profile_ids && args.profile_ids.length > 0) {
-    params.profile_ids = args.profile_ids;
+    filter.channelIds = args.profile_ids;
   }
-  if (args.count !== undefined) params.count = args.count;
   if (args.since !== undefined && args.since !== null) {
-    params.since = toUnixSeconds(args.since);
+    filter.dueAt = { start: toIsoString(args.since) };
   }
-  if (args.utc !== undefined) params.utc = args.utc;
 
-  const data = await bufferApiRequest<{
-    total?: number;
-    updates?: Array<Record<string, unknown>>;
-  }>("GET", "/1/updates/pending.json", params);
+  const input: Record<string, unknown> = {
+    organizationId: getOrganizationId(),
+    filter,
+  };
 
+  const data = await bufferGraphqlRequest<{
+    posts?: { edges?: Array<{ node: Record<string, unknown> }> };
+  }>(
+    `query ListPending($input: PostsInput!, $first: Int) {
+      posts(input: $input, first: $first) {
+        edges { node { id text dueAt status channelId channelService } }
+      }
+    }`,
+    { input, first: args.count },
+  );
+
+  const updates = (data.posts?.edges ?? []).map((edge) => edge.node);
   return {
-    total: data.total ?? (Array.isArray(data.updates) ? data.updates.length : 0),
-    updates: data.updates ?? [],
+    total: updates.length,
+    updates,
+    limit: args.count,
   };
 }
 
-/** POST /1/updates/:id/destroy.json — delete a scheduled update. */
+/** Delete a scheduled post via the Buffer GraphQL deletePost mutation. */
 async function deleteUpdate(args: { update_id: string }) {
   if (!args.update_id) {
     throw new Error("update_id is required");
   }
-  const data = await bufferApiRequest<{ success?: boolean }>(
-    "POST",
-    `/1/updates/${args.update_id}/destroy.json`,
+  const data = await bufferGraphqlRequest<{ deletePost?: { id?: string } }>(
+    `mutation DeletePost($input: DeletePostInput!) {
+      deletePost(input: $input) {
+        ... on DeletePostSuccess {
+          id
+        }
+      }
+    }`,
+    { input: { id: args.update_id } },
   );
   return {
-    success: data.success ?? true,
+    success: true,
     update_id: args.update_id,
     deleted: true,
+    returned_id: data.deletePost?.id ?? null,
   };
 }
 
@@ -332,12 +435,17 @@ const tools: ToolDef[] = [
   {
     name: "buffer_create_post",
     description:
-      "Schedule a post to one or more Buffer-connected profiles. " +
-      "Requires profile_ids (array of profile IDs from buffer_list_profiles) and text. " +
-      "Optionally accepts media_link (public image URL, mapped to Buffer's media[link]), " +
-      "media_title, media_description, media_picture, and scheduled_at " +
-      "(ISO 8601 timestamp or unix seconds — if omitted, the post goes to the top of the queue " +
-      "or publishes immediately when now=true). Returns the created update(s) and buffer count.",
+      "Schedule a post to one or more Buffer-connected channels via the GraphQL API. " +
+      "Requires profile_ids (array of channel IDs from buffer_list_profiles) and text. " +
+      "One post is created per channel ID — the GraphQL API accepts a single channelId " +
+      "per call, and Buffer rate-limits aggressively, so expect one API call per channel. " +
+      "Optionally pass scheduled_at (ISO 8601 timestamp OR unix seconds; converted to " +
+      "ISO 8601 for GraphQL). When scheduled_at is omitted the post is added to the end of " +
+      "the queue, or publishes immediately with now=true. " +
+      "LIMITATIONS: media_link/media_title/media_description/media_picture are NOT supported " +
+      "by the GraphQL createPost mutation (attaching media requires a separate asset upload " +
+      "flow) and are ignored with a warning; shorten_links is ignored; top=true maps to " +
+      "'share next' and is only honored when no explicit schedule time is given.",
     inputSchema: {
       type: "object",
       properties: {
@@ -391,10 +499,10 @@ const tools: ToolDef[] = [
   {
     name: "buffer_list_pending_updates",
     description:
-      "List pending (scheduled, not yet published) updates in the Buffer queue. " +
-      "Optionally filter by profile_ids and limit with count. " +
-      "Returns the total pending count and each update's ID, text, status, and scheduled time. " +
-      "Use the returned update IDs with buffer_delete_update to cancel posts.",
+      "List pending (scheduled, not yet published) posts in the Buffer queue via the GraphQL API. " +
+      "Optionally filter by profile_ids (channel IDs) and limit with count. " +
+      "Returns the total count and each post's id, text, status, dueAt (ISO 8601 UTC), " +
+      "channelId, and channelService. Use the returned ids with buffer_delete_update to cancel posts.",
     inputSchema: {
       type: "object",
       properties: {
