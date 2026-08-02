@@ -1,5 +1,6 @@
 import { sql } from "~/lib/db";
 import { sendEmail } from "~/lib/email";
+import { sendTelegramMessage } from "~/lib/telegram";
 
 export type ClientChannelStatus = "pending_manual" | "active" | "cancelled" | "agency_reference";
 export interface ClientChannelRecord {
@@ -28,6 +29,7 @@ function normalisePlatform(value: string): string {
 function displayPlatform(value: string): string {
   return value === "instagram" ? "Instagram" : value === "facebook" ? "Facebook" : value;
 }
+
 
 /**
  * Buffer's public GraphQL API can publish/delete posts, but does not expose a
@@ -72,12 +74,20 @@ export async function requestBufferChannels(params: {
 
   const adminEmail = process.env.BUFFER_CHANNEL_ADMIN_EMAIL || "support@metroreachagency.com";
   if (requested.length) {
-    const result = await sendEmail({
-      to: adminEmail,
-      from: "support@metroreachagency.com",
-      subject: `Buffer channel setup required — ${params.email}`,
-      body: `<p>Manual Buffer OAuth setup is required for <strong>${params.email}</strong>.</p><p>Package: ${params.packageSlug}; requested: ${requested.map(displayPlatform).join(", ")}.</p><p>Buffer does not expose programmatic channel creation/disconnection. After connecting each channel, link its real channel ID through the protected client-channels admin endpoint.</p>`,
-    });
+    const [result] = await Promise.all([
+      sendEmail({
+        to: adminEmail,
+        from: "support@metroreachagency.com",
+        subject: `Buffer channel setup required — ${params.email}`,
+        body: `<p>Manual Buffer OAuth setup is required for <strong>${params.email}</strong>.</p><p>Package: ${params.packageSlug}; requested: ${requested.map(displayPlatform).join(", ")}.</p><p>Buffer does not expose programmatic channel creation/disconnection. After connecting each channel, link its real channel ID through the protected client-channels admin endpoint.</p>`,
+      }),
+      sendTelegramMessage([
+        "<b>Manual Buffer channel setup required</b>",
+        `Customer: ${params.email}`,
+        `Package: ${params.packageSlug}`,
+        `Requested platforms: ${requested.map(displayPlatform).join(", ")}`,
+      ].join("\n")),
+    ]);
     if (!result.success) console.error("[buffer] Admin setup notification failed:", result.error);
   }
   return { requested, unsupported };
