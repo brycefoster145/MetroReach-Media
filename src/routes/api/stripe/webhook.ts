@@ -42,6 +42,7 @@ import { PRICE_TO_SERVICE, getMappingBySlug } from "~/lib/stripe-product-map";
 import { generatePortalToken } from "~/lib/portal-auth";
 import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
 import { getLead } from "~/lib/lead-store";
+import { requestBufferChannels, cancelBufferChannels } from "~/lib/buffer-client-lifecycle";
 
 // Emails are awaited so the webhook ACK isn't sent until they are dispatched,
 // but bounded so a slow mail provider can never hang the webhook past the
@@ -158,6 +159,10 @@ async function handleCheckoutCompleted(
     }
 
     const company = session.metadata?.company || "";
+    const preferredPlatforms = (session.metadata?.preferred_platforms || "")
+      .split(",")
+      .map((platform) => platform.trim())
+      .filter(Boolean);
 
     // ── Upsert client record (critical path — awaited) ──
     // Look up any existing client for this Stripe customer or email. A
@@ -312,7 +317,14 @@ async function handleCheckoutCompleted(
       })
       .catch((e) => console.error("Conversion event write failed:", e.message));
 
-    console.log(`Client pipeline triggered: ${clientId} (${serviceSlug})`);
+    await requestBufferChannels({
+      stripeCustomerId: customerId || null,
+      email: customerEmail,
+      packageSlug: serviceSlug,
+      preferredPlatforms,
+    });
+
+    console.log(`Client pipeline triggered: ${clientId} (${serviceSlug}); Buffer channel setup recorded`);
   } catch (err: any) {
     // Processing failed — release the idempotency claim so Stripe's retry of
     // this same event id reprocesses from scratch instead of being skipped.
@@ -457,6 +469,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                   SET status = 'inactive', updated_at = NOW()
                   WHERE stripe_customer_id = ${subscription.customer}
                 `.catch(() => {});
+                await cancelBufferChannels(subscription.customer);
               }
               break;
             }
