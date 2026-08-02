@@ -169,6 +169,27 @@ export async function migrate(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_task_log_client ON task_log(client_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_task_log_executed ON task_log(executed_at DESC)`;
   console.log("[migration] ✓ task_log table ready");
+  // ── pipeline_tasks table (DB-backed task queue for team delegation) ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS pipeline_tasks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id TEXT NOT NULL,
+      service_slug TEXT NOT NULL,
+      service_name TEXT NOT NULL,
+      deliverable_type TEXT NOT NULL,
+      client_name TEXT NOT NULL,
+      client_email TEXT NOT NULL,
+      company TEXT,
+      task_brief TEXT NOT NULL,
+      assigned_roles TEXT[] NOT NULL DEFAULT '{}',
+      deadline TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '48 hours'),
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_pipeline_tasks_pending ON pipeline_tasks (status, created_at) WHERE status = 'pending'`;
+  console.log("[migration] ✓ pipeline_tasks table ready");
 
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS onboarding_data JSONB`;
   console.log("[migration] ✓ clients.onboarding_data column ready");
