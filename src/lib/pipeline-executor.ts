@@ -28,6 +28,7 @@ import { sendPremiumAuditReady } from "~/lib/email-sequences";
 import type { Client } from "~/lib/email-sequences";
 import { findLeadByEmail, saveAuditResult, markPurchased } from "~/lib/lead-store";
 import { runPremiumAudit } from "~/lib/premium-audit-analyzer";
+import { runVipTaskGeneration } from "~/lib/vip-daily";
 
 // ── Types ──
 
@@ -332,6 +333,11 @@ export const PIPELINE_MAP: Record<string, PipelineDefinition[]> = {
   ],
 
   // ── VIP Daily ($8,500/mo) ──
+  // NOTE: executePipeline() routes "vip-daily" to the dedicated VIP pipeline
+  // (executeVipDailyPipeline → runVipTaskGeneration in src/lib/vip-daily.ts),
+  // which builds the 12-task cycle (onboarding + 5 batches + 5 scheduling +
+  // reporting). This map entry is retained for the recurring scheduler and the
+  // pipeline status API only.
   "vip-daily": [
     { file: "daily-engagement.md", steps: ["setup", "monitor", "engage"], label: "Daily Engagement", recurring: true, intervalHours: 24 },
     { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Content Calendar", recurring: true, intervalHours: 720 },
@@ -714,6 +720,16 @@ export async function executePipeline(client: Client): Promise<void> {
     return;
   }
 
+  // ── VIP Daily: dedicated 180-post cycle pipeline ──
+  // Builds the 12-task cycle (1 onboarding/research + 5 content batches of
+  // 18 IG + 18 FB + 5 scheduling + 1 reporting) in the client's IANA timezone,
+  // idempotently. Blocked (onboarding task only) when timezone or the client's
+  // Buffer channel IDs are missing — see src/lib/vip-daily.ts.
+  if (serviceSlug === "vip-daily") {
+    await executeVipDailyPipeline(client);
+    return;
+  }
+
   // Milestone 1: received — payment confirmed
   await updatePipelineStatus(client.id, "received");
 
@@ -746,6 +762,40 @@ export async function executePipeline(client: Client): Promise<void> {
 
   console.log(
     `Pipeline routed for client ${client.id} (${serviceSlug}): ${DELIVERABLE_TYPE_LABELS[deliverableType]} — team: ${brief.assignedTeam.join(", ")} — brief: ${briefPath}`,
+  );
+}
+
+/**
+ * Execute the VIP Daily pipeline ($8,500/mo): generate the 12-task cycle
+ * (onboarding/research + 5 batches + 5 scheduling + reporting) idempotently,
+ * and mark the pipeline assigned/in_progress. When onboarding data (IANA
+ * timezone + client Buffer channels) is missing, only the onboarding task is
+ * created and the pipeline waits for it — re-run generation via
+ * POST /api/admin/run-vip-tasks once the gaps are filled.
+ */
+async function executeVipDailyPipeline(client: Client): Promise<void> {
+  // Milestone 1: received — payment confirmed
+  await updatePipelineStatus(client.id, "received");
+
+  const summary = await runVipTaskGeneration(client);
+
+  if (summary.blocked) {
+    console.warn(
+      `[vip-daily] Onboarding incomplete for ${client.id} — scheduling blocked until: ${summary.missing.join("; ")}. Onboarding task created (idempotency key vip-daily:${client.id}:${summary.cycleId}:onboarding).`,
+    );
+    // The onboarding/research task is the active work item; keep the pipeline
+    // at 'assigned' (not 'in_progress') until scheduling can actually start.
+    await updatePipelineStatus(client.id, "assigned");
+    return;
+  }
+
+  // Milestone 2+3: assigned → in_progress (12 tasks exist; team notified via
+  // shared tasks dir + pipeline_tasks queue)
+  await updatePipelineStatus(client.id, "assigned");
+  await updatePipelineStatus(client.id, "in_progress");
+
+  console.log(
+    `VIP Daily pipeline routed for client ${client.id}: cycle ${summary.cycleId} — ${summary.tasksCreated} tasks created (${summary.briefsWritten} briefs written), ${summary.occurrences} occurrences (90 IG + 90 FB) in ${summary.timezone}`,
   );
 }
 
