@@ -10,6 +10,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { sql } from "~/lib/db";
+import { migrate } from "~/lib/migrate";
 
 const BUFFER_CLIENT_ID = process.env.BUFFER_CLIENT_ID || "";
 const BUFFER_CLIENT_SECRET = process.env.BUFFER_CLIENT_SECRET || "";
@@ -131,6 +132,9 @@ export const Route = createFileRoute("/api/portal/buffer-oauth-callback")({
           if (!codeVerifier) {
             return errorPage("Missing PKCE verifier in state. Please start again.");
           }
+
+          // Ensure the buffer_credentials table exists (idempotent)
+          await migrate();
 
           // Exchange the code for an access token
           const tokenData = await exchangeCodeForToken(code, codeVerifier);
