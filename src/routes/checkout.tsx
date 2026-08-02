@@ -258,6 +258,7 @@ function Checkout() {
                 const isPurchasing = purchasingSlug === plan.slug;
                 const isRecurring = plan.recurring;
                 return (
+                  <>
                   {index === 0 && (
                     <h2 className="md:col-span-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-accent mt-2 mb-1">Business plan packages</h2>
                   )}
@@ -350,6 +351,7 @@ function Checkout() {
                       )}
                     </button>
                   </div>
+                  </>
                 );
               })}
             </div>

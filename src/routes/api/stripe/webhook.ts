@@ -35,14 +35,13 @@ import {
   sendInternalNewClientAlert,
   sendPurchaseConfirmation,
 } from "~/lib/email-sequences";
-import { sendEmail } from "~/lib/email";
 import { createOrder } from "~/lib/order-router";
 import { executePipeline } from "~/lib/pipeline-executor";
 import { sendTelegramMessage } from "~/lib/telegram";
 import { PRICE_TO_SERVICE, getMappingBySlug } from "~/lib/stripe-product-map";
 import { generatePortalToken } from "~/lib/portal-auth";
 import { resolveAttribution, writeConversionEvent } from "~/lib/attribution";
-import { getLead, markPurchased } from "~/lib/lead-store";
+import { getLead } from "~/lib/lead-store";
 
 // Emails are awaited so the webhook ACK isn't sent until they are dispatched,
 // but bounded so a slow mail provider can never hang the webhook past the
@@ -257,45 +256,16 @@ async function handleCheckoutCompleted(
       { name: "internal-alert", task: sendInternalNewClientAlert(client) },
     ];
 
-    // Premium Growth Audit: report-access email for the buyer.
-    const leadId = session.metadata?.lead_id;
-    if (serviceSlug === "premium-growth-audit" && leadId) {
-      try {
-        await markPurchased(leadId);
-        console.log(`Premium audit lead marked paid: ${leadId}`);
-      } catch (e: any) {
-        console.error("Failed to mark premium audit lead as paid:", e.message);
-      }
-
-      const reportUrl = `https://metroreachagency.com/premium-audit/report?id=${leadId}&email=${encodeURIComponent(customerEmail)}`;
-      emailTasks.push({
-        name: "premium-audit-report",
-        task: sendEmail({
-          to: customerEmail,
-          from: "reports@metroreachagency.com",
-          subject: "Your Premium Growth Audit Report Is Ready",
-          body: [
-            `Hi ${customerName},`,
-            "",
-            "Your Premium Growth Audit report is ready to view.",
-            "",
-            `View your report: ${reportUrl}`,
-            "",
-            "This comprehensive analysis includes 12-category scoring, a priority matrix, and a phased growth roadmap — all evidence-based and built by our team of marketing specialists.",
-            "",
-            "If you have any questions about your report or the service recommendations, just reply to this email — our team is here to help.",
-            "",
-            "— The MetroReach Media Team",
-          ].join("\n"),
-        }),
-      });
-    }
+    // Premium Growth Audit: NO premature report email here. The pipeline's
+    // executePremiumAuditPipeline runs the real analysis and sends the report
+    // email only after analysis completes (status: delivered).
+    // (markPurchased is handled inside executePremiumAuditPipeline.)
 
     await dispatchEmails(emailTasks);
 
     // ── Post-email fire-and-forget (non-critical path) ──
 
-    // 1. Create order record (DB + shared file)
+    // 1. Create order record (DB only — task briefs are written by the pipeline executor)
     createOrder({
       clientEmail: customerEmail,
       clientName: customerName,
@@ -373,10 +343,22 @@ async function dispatchEmails(tasks: Array<{ name: string; task: Promise<unknown
     ]);
     if (settled) {
       settled.forEach((result, i) => {
+        const taskName = tasks[i]?.name || `email-${i}`;
         if (result.status === "rejected") {
           console.error(
-            `Email "${tasks[i]?.name}" failed:`,
+            `Email "${taskName}" failed:`,
             result.reason instanceof Error ? result.reason.message : String(result.reason),
+          );
+        } else if (
+          result.value &&
+          typeof result.value === "object" &&
+          (result.value as { success?: boolean }).success === false
+        ) {
+          // Email sequences resolve with { success:false } instead of throwing —
+          // surface those failures here so they are not silently swallowed.
+          console.error(
+            `Email "${taskName}" reported failure:`,
+            (result.value as { error?: string }).error || "unknown error",
           );
         }
       });

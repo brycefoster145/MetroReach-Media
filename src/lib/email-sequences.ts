@@ -4,6 +4,9 @@
  *
  * Uses the existing sendEmail() from ~/lib/email (SendGrid primary, Graph API fallback).
  * All templates are premium, human-crafted — no AI/automation language in client-facing copy.
+ *
+ * Every sequence returns the SendResult from sendEmail() so callers can detect
+ * failures, and logs an error when dispatch fails.
  */
 
 import { sendEmail } from "~/lib/email";
@@ -23,6 +26,13 @@ export interface Client {
   pipeline_status: string;
   portal_token?: string;
   onboarding_data?: Record<string, unknown>;
+}
+
+/** Result of an email dispatch attempt (mirrors ~/lib/email's SendResult). */
+export interface SendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
 }
 
 export type PipelineStage =
@@ -47,6 +57,38 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
 const CONTACT_ADDRESS = "contact@metroreachagency.com";
 const SUPPORT_ADDRESS = "support@metroreachagency.com";
 const REPORTS_ADDRESS = "reports@metroreachagency.com";
+
+// ── Dispatch helper ──
+
+interface DispatchParams {
+  to: string;
+  from: string;
+  subject: string;
+  body: string;
+  replyTo?: string;
+}
+
+/**
+ * Send via the transport layer, log any failure, and return the result so
+ * callers can detect and act on failures.
+ */
+async function dispatch(label: string, params: DispatchParams): Promise<SendResult> {
+  try {
+    const result = await sendEmail(params);
+    if (!result.success) {
+      console.error(
+        `[email-sequences] ${label} failed for ${params.to}: ${result.error || "unknown error"}`,
+      );
+    }
+    return result;
+  } catch (err: any) {
+    console.error(
+      `[email-sequences] ${label} threw for ${params.to}:`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 // ── Helpers ──
 
@@ -110,7 +152,7 @@ function emailShell(title: string, content: string): string {
 
 // ── Sequence 1: Welcome (sent immediately after payment) ──
 
-export async function sendWelcomeEmail(client: Client): Promise<void> {
+export async function sendWelcomeEmail(client: Client): Promise<SendResult> {
   const isOneTime = isOneTimeService(client.service_slug);
 
   const timelineItems = isOneTime
@@ -141,20 +183,20 @@ ${timelineItems}
   We'll keep you updated at every stage. If you have questions before then, just reply to this email — our team monitors this inbox directly.
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
-  — The MetroReach Team
+  — The MetroReach Media Team
 </p>`;
 
-  await sendEmail({
+  return dispatch("sendWelcomeEmail", {
     to: client.email,
     from: CONTACT_ADDRESS,
-    subject: `Welcome to MetroReach — ${client.service}`,
-    body: emailShell(`Welcome to MetroReach`, content),
+    subject: `Welcome to MetroReach Media — ${client.service}`,
+    body: emailShell(`Welcome to MetroReach Media`, content),
   });
 }
 
 // ── Sequence 2: Onboarding Request ──
 
-export async function sendOnboardingRequest(client: Client): Promise<void> {
+export async function sendOnboardingRequest(client: Client): Promise<SendResult> {
   const onboardingUrl = client.portal_token
     ? `https://metroreachagency.com/portal?token=${client.portal_token}`
     : `https://metroreachagency.com/portal`;
@@ -188,10 +230,10 @@ export async function sendOnboardingRequest(client: Client): Promise<void> {
   Once submitted, our strategy team reviews everything and reaches out within 24 hours with your custom plan.
 </p>`;
 
-  await sendEmail({
+  return dispatch("sendOnboardingRequest", {
     to: client.email,
     from: SUPPORT_ADDRESS,
-    subject: `Next step: Complete your onboarding — MetroReach`,
+    subject: `Next step: Complete your onboarding — MetroReach Media`,
     body: emailShell(`Let's get you set up`, content),
   });
 }
@@ -202,7 +244,7 @@ export async function sendStatusUpdate(
   client: Client,
   stage: PipelineStage,
   detail?: string,
-): Promise<void> {
+): Promise<SendResult> {
   const stageLabel = STAGE_LABELS[stage] || stage;
   const detailHtml = detail
     ? `<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">${escapeHtml(detail)}</p>`
@@ -224,10 +266,10 @@ ${detailHtml}
   We'll notify you as soon as the next stage begins. No action needed from you right now — our team is handling everything.
 </p>`;
 
-  await sendEmail({
+  return dispatch("sendStatusUpdate", {
     to: client.email,
     from: SUPPORT_ADDRESS,
-    subject: `Update: ${stageLabel} — MetroReach`,
+    subject: `Update: ${stageLabel} — MetroReach Media`,
     body: emailShell(`Your project: ${stageLabel}`, content),
   });
 }
@@ -238,7 +280,7 @@ export async function sendDeliverableReady(
   client: Client,
   url: string,
   description?: string,
-): Promise<void> {
+): Promise<SendResult> {
   const descriptionHtml = description
     ? `<p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 16px;">${escapeHtml(description)}</p>`
     : "";
@@ -258,13 +300,13 @@ ${descriptionHtml}
   Review it at your convenience. If you'd like any revisions, just reply to this email with your feedback. Our typical revision turnaround is 24-48 hours.
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
-  — The MetroReach Team
+  — The MetroReach Media Team
 </p>`;
 
-  await sendEmail({
+  return dispatch("sendDeliverableReady", {
     to: client.email,
     from: REPORTS_ADDRESS,
-    subject: `Your deliverable is ready — MetroReach`,
+    subject: `Your deliverable is ready — MetroReach Media`,
     body: emailShell(`Your deliverable is ready`, content),
   });
 }
@@ -275,7 +317,7 @@ export async function sendPremiumAuditReady(
   client: Client,
   reportUrl: string,
   overallScore: number,
-): Promise<void> {
+): Promise<SendResult> {
   const scoreColor = overallScore >= 70 ? "#10b981" : overallScore >= 40 ? "#f59e0b" : "#ef4444";
   const scoreLabel = overallScore >= 70 ? "Strong" : overallScore >= 40 ? "Needs Work" : "Needs Attention";
 
@@ -312,20 +354,20 @@ export async function sendPremiumAuditReady(
   Your report is accessible anytime from the link above. If you'd like to discuss the findings or explore how MetroReach Media can implement the recommendations, reply to this email — our strategy team reviews every response personally.
 </p>
 <p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">
-  — The MetroReach Team
+  — The MetroReach Media Team
 </p>`;
 
-  await sendEmail({
+  return dispatch("sendPremiumAuditReady", {
     to: client.email,
     from: REPORTS_ADDRESS,
-    subject: `Your Premium Growth Audit is ready — MetroReach`,
+    subject: `Your Premium Growth Audit is ready — MetroReach Media`,
     body: emailShell(`Your Premium Growth Audit is ready`, content),
   });
 }
 
 // ── Purchase confirmation (sent immediately after payment) ──
 
-export async function sendPurchaseConfirmation(client: Client, amountCents: number): Promise<void> {
+export async function sendPurchaseConfirmation(client: Client, amountCents: number): Promise<SendResult> {
   const amountDisplay = `${(amountCents / 100).toFixed(2)}`;
   const orderDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -356,17 +398,17 @@ export async function sendPurchaseConfirmation(client: Client, amountCents: numb
   If you have any questions in the meantime, reply to this email and we'll get back to you right away.
 </p>`;
 
-  await sendEmail({
+  return dispatch("sendPurchaseConfirmation", {
     to: client.email,
     from: CONTACT_ADDRESS,
-    subject: `Purchase confirmed: ${client.service} — MetroReach`,
+    subject: `Purchase confirmed: ${client.service} — MetroReach Media`,
     body: emailShell(`Your purchase is confirmed`, content),
   });
 }
 
 // ── Internal notification: new client alert ──
 
-export async function sendInternalNewClientAlert(client: Client): Promise<void> {
+export async function sendInternalNewClientAlert(client: Client): Promise<SendResult> {
   const content = `
 <div style="background:#fef3c7;border-radius:12px;padding:16px;margin:16px 0;">
   <p style="font-size:15px;font-weight:600;color:#92400e;margin:0 0 8px;">New Client — ${escapeHtml(client.service)}</p>
@@ -381,7 +423,7 @@ export async function sendInternalNewClientAlert(client: Client): Promise<void> 
 <p style="font-size:14px;color:#6b7280;margin:8px 0 0;">Client ID: ${escapeHtml(client.id)}</p>
 ${client.portal_token ? `<p style="font-size:14px;color:#6b7280;margin:8px 0 0;"><a href="https://metroreachagency.com/portal?token=${escapeHtml(client.portal_token)}">View Client Portal →</a></p>` : ""}`;
 
-  await sendEmail({
+  return dispatch("sendInternalNewClientAlert", {
     to: "bryce@metroreachagency.com",
     from: SUPPORT_ADDRESS,
     subject: `New Client: ${client.name} — ${client.service}`,
