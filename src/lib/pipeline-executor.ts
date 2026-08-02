@@ -60,6 +60,27 @@ export interface PipelineProgress {
 export const PIPELINE_MAP: Record<string, PipelineDefinition[]> = {
   // ── Package-level mappings (retained for legacy / bundled purchases) ──
 
+  // Monthly retainer packages — strategy → content creation → scheduling → reporting
+  // These slugs are used by the recurring scheduler for Starter/Growth/Scale clients.
+  starter: [
+    { file: "content-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Strategy", recurring: true, intervalHours: 720 },
+    { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Content Creation", recurring: true, intervalHours: 720 },
+    { file: "posting-schedule-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Content Scheduling", recurring: true, intervalHours: 720 },
+    { file: "analytics-reporting.md", steps: ["research", "create", "review", "report"], label: "Monthly Reporting", recurring: true, intervalHours: 720 },
+  ],
+  growth: [
+    { file: "content-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Strategy", recurring: true, intervalHours: 720 },
+    { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Content Creation", recurring: true, intervalHours: 720 },
+    { file: "posting-schedule-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Content Scheduling", recurring: true, intervalHours: 720 },
+    { file: "analytics-reporting.md", steps: ["research", "create", "review", "report"], label: "Monthly Reporting", recurring: true, intervalHours: 720 },
+  ],
+  scale: [
+    { file: "content-strategy.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Strategy", recurring: true, intervalHours: 720 },
+    { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Content Creation", recurring: true, intervalHours: 720 },
+    { file: "posting-schedule-optimization.md", steps: ["research", "create", "review", "deliver"], label: "Content Scheduling", recurring: true, intervalHours: 720 },
+    { file: "analytics-reporting.md", steps: ["research", "create", "review", "report"], label: "Monthly Reporting", recurring: true, intervalHours: 720 },
+  ],
+
   // Organic Content Management packages
   "organic-content-starter": [
     { file: "content-calendar.md", steps: ["research", "create", "review", "deliver"], label: "Monthly Content Calendar", recurring: true, intervalHours: 720 },
@@ -495,6 +516,10 @@ interface TaskBrief {
   deliverableType: DeliverableType;
   deadline: string;
   assignedTeam: string[];
+}
+
+export function getAssignedTeamForDeliverableType(deliverableType: DeliverableType): string[] {
+  return DELIVERABLE_TEAM[deliverableType];
 }
 
 function buildTaskBrief(client: Client, deliverableType: DeliverableType): TaskBrief {
