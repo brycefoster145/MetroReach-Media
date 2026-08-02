@@ -1,22 +1,68 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+/**
+ * /checkout — Real Payment Checkout
+ *
+ * Customers pick a plan (Starter / Growth / Scale / VIP Daily) or the
+ * Premium Growth Audit, enter their details, and are redirected to
+ * Stripe-hosted checkout to pay. No lead form, no proposal request.
+ *
+ * MetroReach Media — Premium Social Media Marketing Agency
+ */
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { ArrowLeft, Check, ShoppingCart } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  Check,
+  CreditCard,
+  Lightning,
+  LockKey,
+  Spinner,
+  Star,
+} from "@phosphor-icons/react";
 import { Container } from "~/components/Container";
-import { useCart } from "~/context/CartContext";
+import { STRIPE_PRODUCT_MAP, getMappingBySlug } from "~/lib/stripe-product-map";
 
-const categoryLabels: Record<string, string> = {
-  "organic-content": "Organic Content",
-  "paid-advertising": "Paid Advertising",
-  "social-strategy": "Social Strategy",
-  "analytics-reporting": "Analytics & Reporting",
-  "community-management": "Community Management",
+// ── Search params ──
+interface CheckoutSearch {
+  service?: string;
+}
+
+// ── Per-plan feature lists (from the business plan) ──
+const PLAN_FEATURES: Record<string, string[]> = {
+  starter: [
+    "Up to 2 platforms",
+    "12 original posts per month",
+    "Monthly strategy report",
+  ],
+  growth: [
+    "Up to 4 platforms",
+    "20 posts per month",
+    "Weekly performance snapshots",
+  ],
+  scale: [
+    "Up to 7 platforms",
+    "30+ posts per month",
+    "Video scripts + custom reporting",
+  ],
+  "vip-daily": [
+    "180 posts/month (5 IG + 1 FB daily)",
+    "Service-aware pipeline",
+    "Token-gated portal + review-ready workflow",
+  ],
+  "premium-growth-audit": [
+    "Deep-dive audit of your social presence",
+    "Growth roadmap with prioritized wins",
+    "One-time investment — no commitment",
+  ],
 };
 
 export const Route = createFileRoute("/checkout")({
+  validateSearch: (search: Record<string, unknown>): CheckoutSearch => ({
+    service: typeof search.service === "string" ? search.service : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Checkout — MetroReach Media" },
-      { name: "description", content: "Complete your MetroReach Media service purchase securely." },
+      { name: "description", content: "Choose a plan and pay securely through Stripe. MetroReach Media — premium social media marketing." },
       { property: "og:url", content: "https://www.metroreachagency.com/checkout" },
     ],
     links: [
@@ -27,367 +73,296 @@ export const Route = createFileRoute("/checkout")({
 });
 
 function Checkout() {
-  const { items, clearCart, itemCount } = useCart();
-  const navigate = useNavigate();
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const search = Route.useSearch();
+
+  // Preselect from ?service= param when it's a valid product slug.
+  const initialSlug =
+    search.service && getMappingBySlug(search.service)
+      ? search.service
+      : "starter";
+
+  const [selectedSlug, setSelectedSlug] = useState<string>(initialSlug);
+  const [purchasingSlug, setPurchasingSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
+  // Customer details
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
-  const [message, setMessage] = useState("");
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
-  const [promoMessage, setPromoMessage] = useState<string | null>(null);
 
-  // Redirect if cart is empty and not submitted
-  if (items.length === 0 && !submitted) {
-    return (
-      <main className="min-h-dvh flex flex-col items-center justify-center gap-6 px-6 text-center bg-bg-root">
-        <div className="w-16 h-16 rounded-2xl bg-bg-surface border border-border-subtle flex items-center justify-center mb-2">
-          <ShoppingCart size={28} weight="duotone" className="text-text-muted" />
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary">
-          Nothing to check out.
-        </h1>
-        <p className="text-lg text-text-secondary max-w-md">
-          Your cart is empty. Add services to your cart before checking out.
-        </p>
-        <Link
-          to="/services"
-          className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200 mt-4"
-        >
-          Browse Services →
-        </Link>
-      </main>
-    );
-  }
-
-  function handleApplyPromo() {
-    const trimmed = promoCode.trim();
-    if (trimmed) {
-      setAppliedPromo(trimmed);
-      setPromoMessage("Code applied!");
-      setTimeout(() => setPromoMessage(null), 3000);
-    } else {
-      setAppliedPromo(null);
-      setPromoMessage(null);
+  function validateDetails(): string | null {
+    if (!name.trim()) return "Please enter your name.";
+    if (!email.trim()) return "Please enter your email address.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return "Please enter a valid email address.";
     }
+    return null;
   }
 
-  function handlePromoKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleApplyPromo();
-    }
-  }
-
-  async function handleSubmit(e: FormEvent) {
+  async function handlePurchase(e: FormEvent, slug: string) {
     e.preventDefault();
     setError(null);
 
-    if (!name.trim() || !email.trim() || !company.trim()) {
-      setError("Please fill in all required fields.");
+    const validationError = validateDetails();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    setSubmitting(true);
-
-    // Build cart summary for the message field
-    const cartSummary = items
-      .map(
-        (item) =>
-          `- ${item.name} (${categoryLabels[item.category] || item.category}): ${item.price}`
-      )
-      .join("\n");
-
-    const fullMessage = [
-      message.trim() || "No additional message provided.",
-      "",
-      "--- Selected Services ---",
-      cartSummary,
-      appliedPromo ? `\nPromo Code: ${appliedPromo}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
+    setPurchasingSlug(slug);
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          company: company.trim(),
-          industry: "Service Cart Inquiry",
-          message: fullMessage,
+          slug,
+          customerEmail: email.trim(),
+          customerName: name.trim(),
+          company: company.trim() || undefined,
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error("Failed to submit");
+        throw new Error(data?.error || "Failed to create checkout session. Please try again.");
+      }
+      if (!data?.url) {
+        throw new Error("No checkout URL returned. Please try again.");
       }
 
-      clearCart();
-      setSubmitted(true);
-    } catch {
-      setError("Something went wrong. Please try again or contact us directly at contact@metroreachagency.com.");
-    } finally {
-      setSubmitting(false);
+      // Redirect to Stripe-hosted checkout.
+      window.location.assign(data.url);
+    } catch (err: any) {
+      setError(err?.message || "Something went wrong. Please try again.");
+      setPurchasingSlug(null);
     }
   }
 
-  if (submitted) {
-    return (
-      <main className="min-h-dvh flex flex-col items-center justify-center gap-6 px-6 text-center bg-bg-root">
-        <div className="w-16 h-16 rounded-2xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mb-2">
-          <Check size={28} weight="bold" className="text-brand-accent" />
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary">
-          Thanks, {name || "we've got your request"}!
-        </h1>
-        <div className="max-w-lg space-y-4">
-          <p className="text-lg text-text-secondary">
-            Your proposal request has been submitted. Our team is reviewing your selections and will reach out within one business day with a tailored proposal and timeline.
-          </p>
-          <div className="rounded-2xl bg-bg-surface border border-border-subtle p-6 text-left">
-            <h3 className="text-sm font-semibold text-brand-primary uppercase tracking-wide mb-3">
-              What to expect
-            </h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3 text-sm text-text-secondary">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mt-0.5">
-                  <span className="text-xs font-bold text-brand-accent">1</span>
-                </span>
-                <span><strong className="text-text-primary">Today:</strong> Check your email — we've sent a confirmation with your request details.</span>
-              </li>
-              <li className="flex items-start gap-3 text-sm text-text-secondary">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mt-0.5">
-                  <span className="text-xs font-bold text-brand-accent">2</span>
-                </span>
-                <span><strong className="text-text-primary">Within 24 hours:</strong> A strategist reviews your needs and prepares a custom proposal.</span>
-              </li>
-              <li className="flex items-start gap-3 text-sm text-text-secondary">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mt-0.5">
-                  <span className="text-xs font-bold text-brand-accent">3</span>
-                </span>
-                <span><strong className="text-text-primary">After approval:</strong> Your service is set up and our team begins execution within 5–7 business days.</span>
-              </li>
-            </ul>
-          </div>
-          <p className="text-sm text-text-muted">
-            No charges have been made. This is a proposal request — payment happens after you approve the scope.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
-          <Link
-            to="/services"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary transition-all duration-200"
-          >
-            Back to Services →
-          </Link>
-          <Link
-            to="/contact"
-            className="inline-flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-colors text-sm font-medium"
-          >
-            Questions? Contact us →
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const selectedMapping = getMappingBySlug(selectedSlug);
 
   return (
     <main>
       <section className="py-20 lg:py-28 bg-bg-root">
         <Container>
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm text-text-muted mb-8">
               <Link to="/" className="hover:text-brand-primary transition-colors">
                 Home
               </Link>
               <span>/</span>
-              <Link to="/services" className="hover:text-brand-primary transition-colors">
-                Services
-              </Link>
-              <span>/</span>
-              <Link to="/cart" className="hover:text-brand-primary transition-colors">
-                Cart
+              <Link to="/pricing" className="hover:text-brand-primary transition-colors">
+                Pricing
               </Link>
               <span>/</span>
               <span className="text-text-primary font-medium">Checkout</span>
             </div>
 
             <h1 className="text-3xl md:text-4xl font-bold font-heading text-text-primary mb-2">
-              Request Your Proposal
+              Choose Your Plan
             </h1>
-            <p className="text-text-secondary mb-10">
-              Review your selections below, then fill in your details. Our team will follow up with a tailored proposal — no payment required today.
+            <p className="text-text-secondary mb-2">
+              Select a plan below and pay securely with Stripe. Your service starts the moment payment clears.
+            </p>
+            <p className="flex items-center gap-1.5 text-sm text-text-muted mb-10">
+              <LockKey size={15} weight="bold" className="text-brand-accent" />
+              Secure checkout — payments processed by Stripe.
             </p>
 
-            {/* Cart Summary (read-only) */}
-            <div className="mb-10">
-              <h2 className="text-lg font-semibold font-heading text-text-primary mb-4">
-                Selected Services ({itemCount})
-              </h2>
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <div
-                    key={item.slug}
-                    className="flex items-center justify-between gap-4 rounded-xl bg-bg-surface border border-border-subtle p-4"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">
-                        {item.name}
-                      </p>
-                      <span className="text-xs text-text-muted">
-                        {categoryLabels[item.category] || item.category}
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-brand-primary flex-shrink-0">
-                      {item.price}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Promo Code */}
-            <div className="mb-10">
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  onKeyDown={handlePromoKeyDown}
-                  placeholder="Enter promo code"
-                  aria-label="Promo Code"
-                  className="bg-bg-surface border border-border-subtle rounded-full px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200 w-48"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyPromo}
-                  className="inline-flex items-center gap-2 border border-border-emphasis text-text-primary rounded-full px-5 py-2 text-sm font-semibold hover:border-brand-primary hover:text-brand-primary transition-all duration-200"
-                >
-                  Apply
-                </button>
-              </div>
-              {promoMessage && (
-                <p className="text-sm text-brand-accent font-medium mt-2">
-                  {promoMessage}
-                </p>
-              )}
-            </div>
-
-            {/* Contact Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <h2 className="text-lg font-semibold font-heading text-text-primary mb-2">
+            {/* Customer details */}
+            <form
+              onSubmit={(e) => selectedMapping && handlePurchase(e, selectedMapping.slug)}
+              className="rounded-2xl bg-bg-surface border border-border-subtle p-6 md:p-8 mb-10"
+            >
+              <h2 className="text-lg font-semibold font-heading text-text-primary mb-1">
                 Your Details
               </h2>
+              <p className="text-sm text-text-muted mb-6">
+                Used for your invoice and service setup.
+              </p>
 
               {error && (
-                <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400">
+                <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400 mb-6">
                   {error}
                 </div>
               )}
 
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-text-secondary mb-1.5"
-                >
-                  Name <span className="text-brand-accent">*</span>
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="Your full name"
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
-                />
-              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-text-secondary mb-1.5"
+                  >
+                    Name <span className="text-brand-accent">*</span>
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder="Your full name"
+                    className="w-full bg-bg-root border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
+                  />
+                </div>
 
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-text-secondary mb-1.5"
-                >
-                  Email <span className="text-brand-accent">*</span>
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="you@company.com"
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
-                />
-              </div>
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-text-secondary mb-1.5"
+                  >
+                    Email <span className="text-brand-accent">*</span>
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="you@company.com"
+                    className="w-full bg-bg-root border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
+                  />
+                </div>
 
-              <div>
-                <label
-                  htmlFor="company"
-                  className="block text-sm font-medium text-text-secondary mb-1.5"
-                >
-                  Company <span className="text-brand-accent">*</span>
-                </label>
-                <input
-                  id="company"
-                  type="text"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  required
-                  placeholder="Your company name"
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="message"
-                  className="block text-sm font-medium text-text-secondary mb-1.5"
-                >
-                  Message <span className="text-text-muted">(optional)</span>
-                </label>
-                <textarea
-                  id="message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={4}
-                  placeholder="Tell us about your business, your goals, and what you're looking for in a marketing partner."
-                  className="w-full bg-bg-surface border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200 resize-none"
-                />
-              </div>
-
-              {/* Submit */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4">
-                <Link
-                  to="/cart"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-border-emphasis text-text-primary px-8 py-3.5 text-base font-semibold hover:border-brand-primary hover:text-brand-primary transition-all duration-200"
-                >
-                  <ArrowLeft size={18} weight="bold" />
-                  Back to Cart
-                </Link>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-primary text-text-primary px-8 py-3.5 text-base font-semibold hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)] transition-all duration-200 flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? "Submitting..." : "Send to Our Team"}
-                </button>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="company"
+                    className="block text-sm font-medium text-text-secondary mb-1.5"
+                  >
+                    Company <span className="text-text-muted">(optional)</span>
+                  </label>
+                  <input
+                    id="company"
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Your company name"
+                    className="w-full bg-bg-root border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-brand-primary focus-visible:outline-offset-2 focus:border-brand-primary transition-colors duration-200"
+                  />
+                </div>
               </div>
             </form>
+
+            {/* Plans */}
+            <div className="grid md:grid-cols-2 gap-5 mb-10">
+              {STRIPE_PRODUCT_MAP.map((plan) => {
+                const isSelected = selectedSlug === plan.slug;
+                const isPurchasing = purchasingSlug === plan.slug;
+                const isRecurring = plan.recurring;
+                return (
+                  <div
+                    key={plan.slug}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedSlug(plan.slug)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedSlug(plan.slug);
+                      }
+                    }}
+                    className={`rounded-2xl border p-6 flex flex-col transition-all duration-200 cursor-pointer ${
+                      isSelected
+                        ? "bg-bg-surface border-brand-primary shadow-[0_0_24px_rgba(0,143,255,0.12)]"
+                        : "bg-bg-surface/60 border-border-subtle hover:border-border-emphasis"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-semibold font-heading text-text-primary">
+                            {plan.name}
+                          </h3>
+                          {plan.slug === "vip-daily" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-brand-accent/10 border border-brand-accent/20 px-2.5 py-0.5 text-xs font-semibold text-brand-accent">
+                              <Star size={12} weight="fill" /> Most complete
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                          {isRecurring ? "Monthly retainer" : "One-time"}
+                        </span>
+                      </div>
+                      <span
+                        className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          isSelected
+                            ? "border-brand-primary bg-brand-primary"
+                            : "border-border-emphasis"
+                        }`}
+                      >
+                        {isSelected && <Check size={13} weight="bold" className="text-text-primary" />}
+                      </span>
+                    </div>
+
+                    <p className="text-2xl font-bold font-heading text-text-primary mb-4">
+                      {plan.priceLabel}
+                    </p>
+
+                    <ul className="space-y-2 mb-6 flex-1">
+                      {(PLAN_FEATURES[plan.slug] || []).map((feature) => (
+                        <li key={feature} className="flex items-start gap-2.5 text-sm text-text-secondary">
+                          <Check size={16} weight="bold" className="text-brand-accent flex-shrink-0 mt-0.5" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      type="button"
+                      disabled={isPurchasing}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePurchase(e as unknown as FormEvent, plan.slug);
+                      }}
+                      className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isSelected
+                          ? "bg-brand-primary text-text-primary hover:shadow-[0_0_20px_rgba(0,143,255,0.15)]"
+                          : "border border-border-emphasis text-text-primary hover:border-brand-primary hover:text-brand-primary"
+                      }`}
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Spinner size={16} weight="bold" className="animate-spin" />
+                          Redirecting to Stripe…
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={16} weight="bold" />
+                          Purchase {plan.slug === "premium-growth-audit" ? "Audit" : "Plan"} —{" "}
+                          {plan.priceLabel}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Reassurance */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-bg-surface/60 border border-border-subtle p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+                  <Lightning size={20} weight="duotone" className="text-brand-accent" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">
+                    Start immediately after payment
+                  </p>
+                  <p className="text-sm text-text-muted">
+                    You'll be redirected to Stripe to complete payment. Questions? Email{" "}
+                    <a href="mailto:contact@metroreachagency.com" className="text-brand-primary hover:underline">
+                      contact@metroreachagency.com
+                    </a>
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/pricing"
+                className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors flex-shrink-0"
+              >
+                Compare plans <ArrowRight size={15} weight="bold" />
+              </Link>
+            </div>
           </div>
         </Container>
       </section>
