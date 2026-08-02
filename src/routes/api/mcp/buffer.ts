@@ -13,6 +13,15 @@
  *   buffer_create_post          — schedule or publish a post to one or more profiles
  *   buffer_list_pending_updates — list pending scheduled updates
  *   buffer_delete_update        — delete/destroy a scheduled update
+ *
+ * Platform metadata (verified against Buffer's live schema 2026-08):
+ *   - Facebook requires  metadata.facebook.type  (PostTypeFacebook: post|reel|story)
+ *   - Instagram requires metadata.instagram.type (PostType: post|carousel|reel|story|...)
+ *     AND metadata.instagram.shouldShareToFeed, plus at least one image/video asset
+ *   - LinkedIn has NO type field (PostTypeLinkedIn does not exist) — `linkedin: {}`
+ *     satisfies the input.
+ *   - There is no createAsset/uploadAsset mutation; assets are always already-hosted
+ *     public URLs (assets: [{ image: { url } }] or the { url } shorthand).
  */
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -209,7 +218,7 @@ async function listProfiles() {
   const profiles: Array<Record<string, unknown>> = [];
   for (const organization of organizations) {
     const data = await bufferGraphqlRequest<{ channels?: { edges?: Array<{ node: Record<string, unknown> }> } | Array<Record<string, unknown>> }>(
-      `query GetChannels($organizationId: String!) { channels(input: { organizationId: $organizationId }) { edges { node { id name displayName service avatar isQueuePaused } } } }`,
+      `query GetChannels($organizationId: OrganizationId!) { channels(input: { organizationId: $organizationId }) { id name displayName service avatar isQueuePaused } }`,
       { organizationId: organization.id },
     );
     const channels = data.channels;
@@ -217,6 +226,76 @@ async function listProfiles() {
     else profiles.push(...(channels?.edges ?? []).map((edge) => edge.node));
   }
   return { total: profiles.length, profiles };
+}
+
+// ---------------------------------------------------------------------------
+// Platform metadata + asset helpers (verified against Buffer's live schema)
+// ---------------------------------------------------------------------------
+
+/**
+ * Default platform metadata injected by createPost when the caller doesn't
+ * provide a service-specific metadata object. Verified live 2026-08:
+ *   - FacebookPostMetadataInput requires `type` (PostTypeFacebook: post|reel|story)
+ *   - InstagramPostMetadataInput requires `type` (PostType: post|carousel|reel|story|...)
+ *     AND `shouldShareToFeed` (Boolean!)
+ *   - LinkedInPostMetadataInput has NO `type` field (a PostTypeLinkedIn enum does
+ *     not exist in Buffer's schema) — an empty object satisfies the input.
+ */
+const DEFAULT_CHANNEL_METADATA: Record<string, Record<string, unknown>> = {
+  facebook: { type: "post" },
+  instagram: { type: "post", shouldShareToFeed: true },
+  linkedin: {},
+};
+
+/**
+ * Normalize a caller-provided asset into Buffer's AssetInput shape.
+ * Accepts the GraphQL-native form ({ image: { url }, video: {...}, ... }) or
+ * the shorthand used by callers: { url: "https://..." } or a bare URL string,
+ * both of which map to an image asset.
+ *
+ * Buffer has NO createAsset/uploadAsset mutation (verified via schema
+ * introspection — the only mutations are createPost/deletePost/editPost/
+ * movePostInQueue/templates/ideas), so assets are ALWAYS referenced by an
+ * already-hosted public URL.
+ */
+function normalizeAsset(asset: unknown): Record<string, unknown> {
+  if (typeof asset === "string") return { image: { url: asset } };
+  if (asset && typeof asset === "object") {
+    const a = asset as Record<string, unknown>;
+    if (typeof a.url === "string") return { image: { url: a.url } };
+    // Already in AssetInput form ({ image | video | link | document })
+    return a;
+  }
+  throw new Error(
+    'Invalid asset — expected { url: "https://..." }, { image: { url: "..." } }, or a URL string'
+  );
+}
+
+/**
+ * Resolve the Buffer service (facebook, instagram, linkedin, twitter, ...) for
+ * a set of channel IDs with a SINGLE GraphQL query (channels returns a plain
+ * list — the old `edges` shape is gone). Falls back to an empty map if the
+ * query fails so callers' explicit metadata still passes through untouched.
+ */
+async function resolveChannelServices(profileIds: string[]): Promise<Map<string, string>> {
+  const services = new Map<string, string>();
+  try {
+    const data = await bufferGraphqlRequest<{ channels?: Array<{ id: string; service: string }> }>(
+      `query GetChannelServices($organizationId: OrganizationId!) {
+        channels(input: { organizationId: $organizationId }) { id service }
+      }`,
+      { organizationId: getOrganizationId() },
+    );
+    for (const channel of data.channels ?? []) {
+      if (profileIds.includes(channel.id)) services.set(channel.id, channel.service);
+    }
+  } catch (err: any) {
+    console.error(
+      "resolveChannelServices failed — continuing without service detection:",
+      err?.message ?? err,
+    );
+  }
+  return services;
 }
 
 /**
@@ -233,11 +312,21 @@ async function listProfiles() {
  *   - neither given                            → mode addToQueue (end of queue)
  *   - top: true (only when no explicit time)   → mode shareNext (top of queue)
  *
- * Known GraphQL limitations (surfaced as warnings in the response):
- *   - media_link / media_title / media_description / media_picture are NOT
- *     supported by createPost — the mutation has no media-link field (assets
- *     requires a separate upload flow). Provided media args are ignored.
- *   - shorten_links is not supported and is ignored.
+ * Platform metadata (Buffer REQUIRES it for FB/IG):
+ *   - channel service is resolved once via a single channels query, then
+ *     DEFAULT_CHANNEL_METADATA is injected per service unless the caller
+ *     overrides it with the `metadata` argument (deep-merged so required
+ *     fields like instagram.shouldShareToFeed are always present).
+ *   - Instagram also requires at least one image/video — createPost fails
+ *     fast with a clear message when an IG channel has no assets instead of
+ *     relying on Buffer's rejection.
+ *
+ * Media:
+ *   - `assets` accepts an array of { url } / { image: { url } } / URL strings
+ *     (Buffer has no asset upload mutation — URLs must already be hosted).
+ *   - `media_link` is mapped to an image asset for backward compatibility.
+ *   - media_title / media_description / media_picture are NOT supported by
+ *     createPost and are ignored with a warning; shorten_links likewise.
  */
 async function createPost(args: {
   profile_ids: string[];
@@ -246,6 +335,8 @@ async function createPost(args: {
   media_title?: string;
   media_description?: string;
   media_picture?: string;
+  assets?: unknown[];
+  metadata?: Record<string, unknown>;
   scheduled_at?: string | number;
   now?: boolean;
   top?: boolean;
@@ -270,43 +361,105 @@ async function createPost(args: {
     mode = "shareNext";
   }
 
+  // Collect assets: explicit assets[] first, then legacy media_link as an image.
   const warnings: string[] = [];
-  if (args.media_link || args.media_title || args.media_description || args.media_picture) {
+  const assets: Array<Record<string, unknown>> = [];
+  if (args.assets && args.assets.length > 0) {
+    for (const asset of args.assets) assets.push(normalizeAsset(asset));
+  } else if (args.media_link) {
+    assets.push({ image: { url: args.media_link } });
+  }
+  if (args.media_title || args.media_description || args.media_picture) {
     warnings.push(
-      "media_link/media_title/media_description/media_picture are not supported by the Buffer GraphQL " +
-        "createPost mutation (attaching media requires a separate asset upload flow). " +
-        "The media was NOT attached to the post."
+      "media_title/media_description/media_picture are not supported by the Buffer GraphQL " +
+        "createPost mutation and were ignored."
     );
   }
   if (args.shorten_links) {
     warnings.push("shorten_links is not supported by the Buffer GraphQL createPost mutation and was ignored.");
   }
 
+  // Resolve each channel's service once (single query) so platform metadata
+  // can be injected per channel.
+  const services = await resolveChannelServices(args.profile_ids);
+
   const created: Array<Record<string, unknown>> = [];
   for (const channelId of args.profile_ids) {
+    const service = services.get(channelId) ?? null;
+
+    // Instagram requires at least one image or video — fail fast with a clear
+    // message instead of an opaque Buffer rejection.
+    if (service === "instagram" && assets.length === 0) {
+      throw new Error(
+        `Instagram channel ${channelId} requires at least one image or video: pass ` +
+          'assets: [{ url: "https://..." }] (or media_link). Buffer: "Instagram posts ' +
+          'require at least one image or video."'
+      );
+    }
+
+    // Build metadata: per-service defaults first, caller values merged on top
+    // so required fields (e.g. instagram.shouldShareToFeed) are always present.
+    const metadata: Record<string, unknown> = {};
+    if (service && DEFAULT_CHANNEL_METADATA[service]) {
+      metadata[service] = { ...DEFAULT_CHANNEL_METADATA[service] };
+    }
+    if (args.metadata) {
+      for (const [platform, platformMeta] of Object.entries(args.metadata)) {
+        if (platformMeta && typeof platformMeta === "object" && !Array.isArray(platformMeta)) {
+          const existing = metadata[platform];
+          metadata[platform] = {
+            ...(existing && typeof existing === "object" && !Array.isArray(existing)
+              ? (existing as Record<string, unknown>)
+              : {}),
+            ...(platformMeta as Record<string, unknown>),
+          };
+        } else {
+          metadata[platform] = platformMeta;
+        }
+      }
+    }
+
     const input: Record<string, unknown> = {
       channelId,
       text: args.text,
-      assets: [],
+      assets,
       mode,
       needsApproval: false,
       schedulingType: "automatic",
     };
     if (dueAt) input.dueAt = dueAt;
+    if (Object.keys(metadata).length > 0) input.metadata = metadata;
 
-    const data = await bufferGraphqlRequestWithRetry<{ createPost?: { post?: { id?: string } } }>(
+    const data = await bufferGraphqlRequestWithRetry<{
+      createPost?: { post?: { id?: string }; message?: string };
+    }>(
       `mutation CreatePost($input: CreatePostInput!) {
         createPost(input: $input) {
           ... on PostActionSuccess {
             post { id }
           }
+          ... on InvalidInputError { message }
+          ... on NotFoundError { message }
+          ... on UnauthorizedError { message }
+          ... on UnexpectedError { message }
+          ... on RestProxyError { message }
+          ... on LimitReachedError { message }
         }
       }`,
       { input },
     );
+
+    const result = data.createPost;
+    // Buffer returned an error union member (InvalidInputError, etc.) instead
+    // of PostActionSuccess — surface the actual reason to the caller.
+    if (!result?.post?.id && result?.message) {
+      throw new Error(`Buffer rejected post for channel ${channelId}: ${result.message}`);
+    }
+
     created.push({
       profile_id: channelId,
-      post_id: data.createPost?.post?.id ?? null,
+      service,
+      post_id: result?.post?.id ?? null,
       mode,
       due_at: dueAt,
     });
@@ -442,10 +595,19 @@ const tools: ToolDef[] = [
       "Optionally pass scheduled_at (ISO 8601 timestamp OR unix seconds; converted to " +
       "ISO 8601 for GraphQL). When scheduled_at is omitted the post is added to the end of " +
       "the queue, or publishes immediately with now=true. " +
-      "LIMITATIONS: media_link/media_title/media_description/media_picture are NOT supported " +
-      "by the GraphQL createPost mutation (attaching media requires a separate asset upload " +
-      "flow) and are ignored with a warning; shorten_links is ignored; top=true maps to " +
-      "'share next' and is only honored when no explicit schedule time is given.",
+      "PLATFORM METADATA (handled automatically): Buffer requires per-platform metadata " +
+      "for Facebook and Instagram. The bridge detects each channel's service and injects " +
+      "metadata: { facebook: { type: post } } or { instagram: { type: post, shouldShareToFeed: true } } " +
+      "by default; pass the `metadata` argument to override (e.g. metadata: { facebook: { type: reel } } — " +
+      "caller values are deep-merged over defaults so required fields are preserved). " +
+      "LinkedIn accepts metadata: { linkedin: {} } (no type field exists). " +
+      "IMAGES: Instagram requires at least one image/video — pass assets: [{ url: \"https://...\" }] " +
+      "(or the legacy media_link). Assets are already-hosted public URLs only (Buffer has no " +
+      "asset-upload mutation); { image: { url } }, { video: { url } }, and { link: { url } } forms are " +
+      "accepted too. IG posts without any asset fail fast with a clear message. " +
+      "LIMITATIONS: media_title/media_description/media_picture are NOT supported by the GraphQL " +
+      "createPost mutation and are ignored with a warning; shorten_links is ignored; top=true maps " +
+      "to 'share next' and is only honored when no explicit schedule time is given.",
     inputSchema: {
       type: "object",
       properties: {
@@ -460,19 +622,36 @@ const tools: ToolDef[] = [
         },
         media_link: {
           type: "string",
-          description: "Optional publicly accessible image URL to attach to the post.",
+          description:
+            "Optional publicly accessible image URL to attach to the post. Maps to an image asset.",
         },
         media_title: {
           type: "string",
-          description: "Optional media title (e.g. for link previews).",
+          description: "Optional media title (e.g. for link previews). NOT supported by GraphQL; ignored.",
         },
         media_description: {
           type: "string",
-          description: "Optional media description (e.g. for link previews).",
+          description: "Optional media description (e.g. for link previews). NOT supported by GraphQL; ignored.",
         },
         media_picture: {
           type: "string",
-          description: "Optional media picture URL (e.g. for link previews).",
+          description: "Optional media picture URL (e.g. for link previews). NOT supported by GraphQL; ignored.",
+        },
+        assets: {
+          type: "array",
+          items: { type: "object" },
+          description:
+            "Optional array of already-hosted media URLs. Each item may be " +
+            '{ url: "https://..." } (shorthand → image), { image: { url } }, { video: { url } }, ' +
+            "{ link: { url } }, or a plain URL string. Instagram REQUIRES at least one asset.",
+        },
+        metadata: {
+          type: "object",
+          description:
+            "Optional per-platform metadata, e.g. { facebook: { type: reel } } or " +
+            "{ instagram: { type: reel, shouldShareToFeed: false } }. Deep-merged over the " +
+            "bridge's automatic defaults (facebook type=post; instagram type=post, " +
+            "shouldShareToFeed=true; linkedin {}).",
         },
         scheduled_at: {
           type: "string",
@@ -489,7 +668,7 @@ const tools: ToolDef[] = [
         },
         shorten_links: {
           type: "boolean",
-          description: "If true, automatically shorten links in the post text.",
+          description: "If true, automatically shorten links in the post text. NOT supported by GraphQL; ignored.",
         },
       },
       required: ["profile_ids", "text"],
