@@ -21,6 +21,36 @@ export interface StripeProductMapping {
 
 export const STRIPE_PRODUCT_MAP: StripeProductMapping[] = [
   {
+    slug: "starter",
+    stripePriceId: "price_1Tzxk7DGk9TbScamKYr6zmuR",
+    stripeProductId: "prod_Uzxflo4CIl88D4",
+    name: "Starter — 2 Platforms",
+    category: "social-media-management",
+    amount: 150000,
+    recurring: true,
+    priceLabel: "$1,500/month",
+  },
+  {
+    slug: "growth",
+    stripePriceId: "price_1TzxkDDGk9TbScamF5jDdxeU",
+    stripeProductId: "prod_UzxfgJr30ygZUg",
+    name: "Growth — 4 Platforms",
+    category: "social-media-management",
+    amount: 300000,
+    recurring: true,
+    priceLabel: "$3,000/month",
+  },
+  {
+    slug: "scale",
+    stripePriceId: "price_1TzxkDDGk9TbScamMYpzSgqh",
+    stripeProductId: "prod_UzxfDmMLTIMZMG",
+    name: "Scale — 7 Platforms",
+    category: "social-media-management",
+    amount: 550000,
+    recurring: true,
+    priceLabel: "$5,500/month",
+  },
+  {
     slug: "social-media-audit",
     stripePriceId: "price_1TwsDx1v80UmMrLIbypnerFp",
     stripeProductId: "prod_UwllXDhVxrNNPj",
