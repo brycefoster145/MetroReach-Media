@@ -9,7 +9,12 @@
  */
 
 import { sql } from "~/lib/db";
-import { PIPELINE_MAP } from "~/lib/pipeline-executor";
+import {
+  PIPELINE_MAP,
+  getDeliverableTypeForSlug,
+  getAssignedTeamForDeliverableType,
+  insertPipelineTask,
+} from "~/lib/pipeline-executor";
 import type { PipelineDefinition, PipelineStep } from "~/lib/pipeline-executor";
 import { sendStatusUpdate } from "~/lib/email-sequences";
 import type { Client } from "~/lib/email-sequences";
@@ -20,6 +25,7 @@ interface ScheduledTask {
   clientId: string;
   clientEmail: string;
   clientName: string;
+  company: string;
   service: string;
   serviceSlug: string;
   pipelineLabel: string;
@@ -133,7 +139,7 @@ async function findDueTasks(): Promise<ScheduledTask[]> {
   try {
     // Get all active clients
     const clients = await sql`
-      SELECT id, email, name, service, service_slug, pipeline_status, onboarding_data, created_at
+      SELECT id, email, name, company, service, service_slug, pipeline_status, onboarding_data, created_at
       FROM clients
       WHERE status = 'active' OR status = 'onboarding'
       ORDER BY created_at ASC
@@ -164,6 +170,7 @@ async function findDueTasks(): Promise<ScheduledTask[]> {
               clientId: client.id as string,
               clientEmail: client.email as string,
               clientName: client.name as string,
+              company: (client.company as string) || "N/A",
               service: client.service as string,
               serviceSlug: client.service_slug as string,
               pipelineLabel: pipeline.label,
@@ -409,6 +416,25 @@ async function executeStepAction(
     const stepKey = `${pipelineKey}:${task.step}`;
     await recordStep(task.clientId, stepKey, data);
 
+    // Keep the JSON pipeline log for backward compatibility, but also enqueue
+    // an actionable brief for the recurring delivery worker.
+    const deliverableType = getDeliverableTypeForSlug(task.serviceSlug);
+    if (deliverableType) {
+      await insertPipelineTask({
+        clientId: client.id,
+        clientName: client.name,
+        clientEmail: client.email,
+        company: task.company,
+        serviceName: task.pipelineLabel,
+        serviceSlug: task.serviceSlug,
+        deliverableType,
+        deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        assignedTeam: getAssignedTeamForDeliverableType(deliverableType),
+      });
+    } else {
+      console.error(`No deliverable mapping for recurring service ${task.serviceSlug}`);
+    }
+
     return { success: true, data };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -483,7 +509,7 @@ export async function triggerPipelineCycle(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const clientRows = await sql`
-      SELECT id, email, name, service, service_slug, pipeline_status
+      SELECT id, email, name, company, service, service_slug, pipeline_status
       FROM clients WHERE id = ${clientId} LIMIT 1
     `;
 
@@ -508,6 +534,7 @@ export async function triggerPipelineCycle(
       clientId: client.id as string,
       clientEmail: client.email as string,
       clientName: client.name as string,
+      company: (client.company as string) || "N/A",
       service: client.service as string,
       serviceSlug: client.service_slug as string,
       pipelineLabel: pipeline.label,
