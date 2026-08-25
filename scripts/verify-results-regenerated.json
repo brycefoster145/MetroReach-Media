@@ -1,0 +1,30 @@
+[
+  {
+    "slug": "ig-one-question-content-2026-08-10",
+    "ok": true,
+    "attempts": 1,
+    "quoted": "The image contains the exact text \"MetroReach Media\" in title case.\n\nHere are the customer questions shown on the image:\n\n1. How long will it take?\n2. Do you serve my area?\n3. How will you communicate?\n4. What happens first?\n5. What results can I expect?\n6. How much does it cost?\n\nThese questions are service-business related, as they pertain to cost, timeline, area served, and process.",
+    "reason": "OK"
+  },
+  {
+    "slug": "ig-comments-are-content-2026-08-12",
+    "ok": true,
+    "attempts": 2,
+    "quoted": "Yes, the image contains the exact text \"MetroReach Media.\" The visible words are:\n\n- MetroReach Media\n- REPLY\n- COUNTS",
+    "reason": "OK"
+  },
+  {
+    "slug": "ig-friday-planning-2026-08-14",
+    "ok": true,
+    "attempts": 3,
+    "quoted": "Yes, the image contains the exact text \"MetroReach Media\" in title case. The visible words are:\n\n- SUN\n- MON\n- TUE\n- WED\n- THU\n- FRI\n- SAT\n- 1\n- 2\n- 3\n- 4\n- 5\n- 6\n- 7\n- 8\n- 9\n- 10\n- 11\n- 12\n- 13\n- 14\n- 15\n- 16\n- 17\n- 18\n- 19\n- 20\n- 21\n- 22\n- 23\n- 24\n- 25\n- 26\n- 27\n- 28\n- 29\n- 30\n- 31\n- FRIDAY\n- FIRST\n- MetroReach Media",
+    "reason": "OK"
+  },
+  {
+    "slug": "ig-case-marina-2026-08-17",
+    "ok": true,
+    "attempts": 4,
+    "quoted": "Yes, the image contains the exact text \"MetroReach Media\" in title case. The visible words in the image are:\n\n- THE\n- DOCK\n- MAP\n- N\n- W\n- S\n- E\n- MetroReach Media",
+    "reason": "OK"
+  }
+]
