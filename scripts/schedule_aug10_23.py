@@ -7,11 +7,11 @@ CHANNELS={'Instagram':'6a6156cee2638b94d7b9abf0','Facebook':'6a615653e2638b94d7b
 BASE='https://www.metroreachagency.com/images/social/'
 SRC='/home/team/shared/social/captions-aug10-23.md'
 LOG='/tmp/aug10-23-buffer.log'
-# +21-day shift: original Aug 10-23 calendar -> fully-future window Mon Aug 31 -> Sun Sep 13, 2026.
-# (Original brief said +14 = Aug 24 -> Sep 6, but execution date is Aug 24 evening, so day-one slots
-#  were already in the past and Buffer rejected them with "Scheduled time must be in the future".
-#  +21 lands on the next Monday with the full 58-post Mon-Sun structure entirely in the future.)
-SHIFT_DAYS=21
+# +15-day shift: original Aug 10-23 calendar -> Tue Aug 25 -> Mon Sep 7, 2026.
+# Recentered from the +21 shift (Aug 31 -> Sep 13) because the owner pays monthly for Buffer
+#  and refused a week of silence: +15 pulls day one forward to Tue Aug 25 (tomorrow),
+#  entirely in the future, and yields a full 58-post structure in one Aug 25 -> Sep 7 window.
+SHIFT_DAYS=15
 
 def gql(q):
     req=urllib.request.Request(ENDPOINT,data=json.dumps({'query':q}).encode(),headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},method='POST')
