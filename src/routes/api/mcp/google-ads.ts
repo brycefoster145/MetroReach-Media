@@ -15,16 +15,148 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { requireMcpAuth } from "~/lib/mcp-auth";
+import { sql } from "~/lib/db";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
 const GOOGLE_ADS_BASE = "https://googleads.googleapis.com/v17";
-const ACCESS_TOKEN = process.env.GOOGLE_ADS_ACCESS_TOKEN ?? "";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+// Static env fallback. The refresh-token flow below is preferred — Google
+// OAuth access tokens expire in ~1h, so a static var alone is not viable.
+// If this var IS set, it is used as a last-resort fallback only.
+const ENV_ACCESS_TOKEN = process.env.GOOGLE_ADS_ACCESS_TOKEN ?? "";
 const DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 const SERVER_NAME = "mcp-google-ads";
 const SERVER_VERSION = "1.0.0";
+
+// In-memory access-token cache. Google Ads access tokens last ~1h; we refresh
+// from the stored refresh token when the cached token is within 5 minutes of
+// expiry. Module-level so it survives across tool calls within the same
+// server instance (Vercel lambda warm starts).
+let cachedGoogleAdsToken: string | null = null;
+let cachedGoogleAdsExpiresAt = 0;
+
+/**
+ * Obtain a fresh Google Ads access token.
+ *
+ * Resolution order:
+ *   1. In-memory cache (if not within 5 min of expiry)
+ *   2. Stored refresh token in client_platform_tokens (platform 'google_ads',
+ *      client 'metroreach') — exchanged at https://oauth2.googleapis.com/token
+ *   3. Fallback to the shared 'google' platform row (its refresh token also
+ *      covers adwords when granted via the portal flow)
+ *   4. Static GOOGLE_ADS_ACCESS_TOKEN env var (last resort)
+ */
+async function getGoogleAdsAccessToken(): Promise<string> {
+  // Fast path: cached token still healthy (5 min skew)
+  if (cachedGoogleAdsToken && cachedGoogleAdsExpiresAt > Date.now() + 5 * 60 * 1000) {
+    return cachedGoogleAdsToken;
+  }
+
+  let stored = { access_token: "", refresh_token: "", page_id: "" };
+
+  // Prefer the dedicated google_ads row, fall back to the shared google row.
+  for (const platform of ["google_ads", "google"]) {
+    try {
+      const rows = await sql`
+        SELECT access_token, refresh_token, page_id
+        FROM client_platform_tokens
+        WHERE client_id = 'metroreach'
+          AND platform = ${platform}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+      if (rows.length > 0) {
+        stored = {
+          access_token: (rows[0].access_token as string) ?? "",
+          refresh_token: (rows[0].refresh_token as string) ?? "",
+          page_id: (rows[0].page_id as string) ?? "",
+        };
+        break;
+      }
+    } catch (err: any) {
+      console.error("[google-ads] token lookup failed:", err.message);
+    }
+  }
+
+  const refreshToken = stored.refresh_token || stored.page_id;
+
+  if (refreshToken && refreshToken !== "primary") {
+    try {
+      const params = new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      });
+
+      const res = await fetch(GOOGLE_TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      const json = await res.json();
+      if (json.error) {
+        throw new Error(
+          `Google token refresh failed: ${json.error_description || json.error}`,
+        );
+      }
+
+      cachedGoogleAdsToken = json.access_token as string;
+      cachedGoogleAdsExpiresAt =
+        Date.now() + (json.expires_in ?? 3600) * 1000;
+
+      // Best-effort: persist the fresh access token + expiry so other paths
+      // (status checks, cron) see current values. Never fatal.
+      try {
+        const newExpiresAt = new Date(cachedGoogleAdsExpiresAt);
+        await sql`
+          UPDATE client_platform_tokens
+          SET access_token = ${cachedGoogleAdsToken},
+              expires_at = ${newExpiresAt.toISOString()},
+              token_status = 'active'
+          WHERE client_id = 'metroreach'
+            AND platform = 'google_ads'
+        `;
+        await sql`
+          UPDATE client_platform_tokens
+          SET access_token = ${cachedGoogleAdsToken},
+              expires_at = ${newExpiresAt.toISOString()},
+              token_status = 'active'
+          WHERE client_id = 'metroreach'
+            AND platform = 'google'
+            AND page_id = ${refreshToken}
+        `.catch(() => {});
+      } catch (err: any) {
+        console.error("[google-ads] failed to persist refreshed token:", err.message);
+      }
+
+      return cachedGoogleAdsToken;
+    } catch (err: any) {
+      console.error("[google-ads] refresh token exchange failed:", err.message);
+      // Fall through to stored access token / env var
+    }
+  }
+
+  // Fallback 1: stored (possibly still-valid) access token
+  if (stored.access_token) {
+    return stored.access_token;
+  }
+
+  // Fallback 2: static env var
+  if (ENV_ACCESS_TOKEN) {
+    return ENV_ACCESS_TOKEN;
+  }
+
+  throw new Error(
+    "No Google Ads access token available. The owner must authorize at " +
+      "https://metroreachagency.com/api/admin/google-ads-auth (or set GOOGLE_ADS_ACCESS_TOKEN).",
+  );
+}
 
 // ---------------------------------------------------------------------------
 // REST request helper
@@ -49,9 +181,7 @@ async function googleAdsRequest<T = unknown>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  if (!ACCESS_TOKEN) {
-    throw new Error("GOOGLE_ADS_ACCESS_TOKEN environment variable is not set");
-  }
+  const accessToken = await getGoogleAdsAccessToken();
   if (!DEVELOPER_TOKEN) {
     throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN environment variable is not set");
   }
@@ -60,7 +190,7 @@ async function googleAdsRequest<T = unknown>(
   url.searchParams.set("developer_token", DEVELOPER_TOKEN);
 
   const headers: Record<string, string> = {
-    "Authorization": `Bearer ${ACCESS_TOKEN}`,
+    "Authorization": `Bearer ${accessToken}`,
     "Accept": "application/json",
   };
 

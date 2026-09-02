@@ -169,6 +169,7 @@ export function getGoogleAuthUrl(state: string): string {
       "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/business.manage",
       "https://www.googleapis.com/auth/youtube.upload",
+      "https://www.googleapis.com/auth/adwords",
     ].join(" ")
   );
   url.searchParams.set("access_type", "offline");
